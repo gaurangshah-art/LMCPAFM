@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import type { AppRole } from "../../app/roles";
 
 const navItems = [
   { to: "/", label: "Dashboard" },
@@ -9,7 +10,12 @@ const navItems = [
   { to: "/experiments", label: "Experiment" },
 ];
 
-export function Navbar() {
+interface NavbarProps {
+  role: AppRole;
+  onRoleChange: (role: AppRole) => void;
+}
+
+export function Navbar({ role, onRoleChange }: NavbarProps) {
   return (
     <header className="top-nav">
       <div className="brand">
@@ -27,6 +33,17 @@ export function Navbar() {
           </NavLink>
         ))}
       </nav>
+      <div className="role-switch">
+        <label htmlFor="app-role">Role</label>
+        <select
+          id="app-role"
+          value={role}
+          onChange={(event) => onRoleChange(event.target.value as AppRole)}
+        >
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
     </header>
   );
 }

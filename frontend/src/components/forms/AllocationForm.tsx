@@ -2,10 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { createAllocation } from "../../api/requisitionApi";
+import { getRequisitionItemOptions, getRequisitionOptions } from "../../api/lookupApi";
 import { getApiErrorMessage } from "../../api/errors";
 import type { AnimalAllocation } from "../../api/types";
+import { useLookupOptions } from "../../hooks/useLookupOptions";
 import { useSubmitState } from "../../hooks/useSubmitState";
 import { ErrorAlert } from "../common/ErrorAlert";
+import { LookupSelectField } from "../common/LookupSelectField";
 import { SuccessNote } from "../common/SuccessNote";
 
 const itemSchema = z.object({
@@ -29,7 +32,7 @@ interface AllocationFormProps {
 }
 
 export function AllocationForm({ onCreated }: AllocationFormProps) {
-  const { register, control, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
+  const { register, control, watch, setValue, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       requisition_id: 0,
@@ -41,6 +44,8 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
+  const requisitionLookup = useLookupOptions(getRequisitionOptions);
+  const requisitionItemLookup = useLookupOptions(getRequisitionItemOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
   const onSubmit = handleSubmit(async (values) => {
@@ -63,10 +68,17 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
 
   return (
     <form className="form-grid" onSubmit={onSubmit}>
-      <label>
-        Requisition ID
-        <input type="number" {...register("requisition_id")} />
-      </label>
+      <LookupSelectField
+        label="Requisition"
+        value={watch("requisition_id")}
+        onChange={(value) => setValue("requisition_id", value, { shouldValidate: true })}
+        options={requisitionLookup.options}
+        loading={requisitionLookup.isLoading}
+        error={requisitionLookup.error}
+        placeholder="Select requisition"
+        loadingLabel="Loading requisitions..."
+        fieldError={errors.requisition_id?.message}
+      />
       <label>
         Date
         <input type="date" {...register("date")} />
@@ -94,16 +106,47 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
       {fields.map((field, index) => (
         <div key={field.id} className="item-row full-width">
           <label>
-            Requisition Item ID
-            <input type="number" {...register(`items.${index}.requisition_item_id`)} />
+            Requisition Item
+            <select
+              value={watch(`items.${index}.requisition_item_id`) || ""}
+              onChange={(event) => {
+                setValue(`items.${index}.requisition_item_id`, Number(event.target.value), { shouldValidate: true });
+              }}
+              disabled={requisitionItemLookup.isLoading || Boolean(requisitionItemLookup.error)}
+            >
+              <option value="">
+                {requisitionItemLookup.isLoading ? "Loading requisition items..." : "Select requisition item"}
+              </option>
+              {requisitionItemLookup.options.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+            {requisitionItemLookup.error ? <small className="field-error">{requisitionItemLookup.error}</small> : null}
+            {errors.items?.[index]?.requisition_item_id ? (
+              <small className="field-error">{errors.items[index]?.requisition_item_id?.message}</small>
+            ) : null}
           </label>
           <label>
             Allocated Count
-            <input type="number" {...register(`items.${index}.allocated_count`)} />
+            <input
+              type="number"
+              min={0}
+              step={1}
+              onWheel={(event) => event.currentTarget.blur()}
+              {...register(`items.${index}.allocated_count`)}
+            />
           </label>
           <label>
             Remaining Count
-            <input type="number" {...register(`items.${index}.remaining_count`)} />
+            <input
+              type="number"
+              min={0}
+              step={1}
+              onWheel={(event) => event.currentTarget.blur()}
+              {...register(`items.${index}.remaining_count`)}
+            />
           </label>
           <button
             type="button"

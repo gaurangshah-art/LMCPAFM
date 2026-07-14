@@ -1,11 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { createExperiment } from "../../api/experimentApi";
+import { getAllocationOptions, getAnimalOptions, getProtocolOptions } from "../../api/lookupApi";
+import { getFormBDetails, type FormBDetails } from "../../api/formbApi";
+import { getFormDDetails, type FormDDetails } from "../../api/formdApi";
 import { getApiErrorMessage } from "../../api/errors";
 import type { Experiment } from "../../api/types";
+import { useLookupOptions } from "../../hooks/useLookupOptions";
 import { useSubmitState } from "../../hooks/useSubmitState";
 import { ErrorAlert } from "../common/ErrorAlert";
+import { LookupSelectField } from "../common/LookupSelectField";
 import { SuccessNote } from "../common/SuccessNote";
 
 const schema = z.object({
@@ -29,7 +35,7 @@ interface ExperimentFormProps {
 }
 
 export function ExperimentForm({ onCreated }: ExperimentFormProps) {
-  const { register, control, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
+  const { register, control, watch, setValue, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       protocol_id: 0,
@@ -47,7 +53,57 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "animals" });
+  const [protocolDetails, setProtocolDetails] = useState<FormBDetails | null>(null);
+  const [protocolUsage, setProtocolUsage] = useState<FormDDetails | null>(null);
+  const [protocolDetailsLoading, setProtocolDetailsLoading] = useState(false);
+  const [protocolDetailsError, setProtocolDetailsError] = useState<string | null>(null);
+  const protocolLookup = useLookupOptions(getProtocolOptions);
+  const allocationLookup = useLookupOptions(getAllocationOptions);
+  const animalLookup = useLookupOptions(getAnimalOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
+
+  const selectedProtocolId = watch("protocol_id");
+
+  useEffect(() => {
+    async function loadProtocolDetails() {
+      if (!selectedProtocolId || selectedProtocolId <= 0) {
+        setProtocolDetails(null);
+        setProtocolUsage(null);
+        setProtocolDetailsError(null);
+        return;
+      }
+
+      try {
+        setProtocolDetailsLoading(true);
+        setProtocolDetailsError(null);
+        const details = await getFormBDetails(selectedProtocolId);
+        setProtocolDetails(details);
+
+        try {
+          const usage = await getFormDDetails(selectedProtocolId);
+          setProtocolUsage(usage);
+        } catch {
+          setProtocolUsage(null);
+        }
+
+        if (details.purpose) {
+          setValue("purpose", details.purpose, { shouldValidate: true });
+        }
+
+        if (details.principal_investigator) {
+          setValue("performed_by", details.principal_investigator, { shouldValidate: true });
+        }
+      } catch (error) {
+        setProtocolDetailsError(getApiErrorMessage(error));
+        setProtocolDetails(null);
+        setProtocolUsage(null);
+      } finally {
+        setProtocolDetailsLoading(false);
+      }
+    }
+
+    void loadProtocolDetails();
+  }, [selectedProtocolId, setValue]);
 
   const onSubmit = handleSubmit(async (values) => {
     start();
@@ -80,14 +136,28 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
 
   return (
     <form className="form-grid" onSubmit={onSubmit}>
-      <label>
-        Protocol ID
-        <input type="number" {...register("protocol_id")} />
-      </label>
-      <label>
-        Allocation ID
-        <input type="number" {...register("allocation_id")} />
-      </label>
+      <LookupSelectField
+        label="Protocol"
+        value={watch("protocol_id")}
+        onChange={(value) => setValue("protocol_id", value, { shouldValidate: true })}
+        options={protocolLookup.options}
+        loading={protocolLookup.isLoading}
+        error={protocolLookup.error}
+        placeholder="Select protocol"
+        loadingLabel="Loading protocols..."
+        fieldError={errors.protocol_id?.message}
+      />
+      <LookupSelectField
+        label="Allocation"
+        value={watch("allocation_id")}
+        onChange={(value) => setValue("allocation_id", value, { shouldValidate: true })}
+        options={allocationLookup.options}
+        loading={allocationLookup.isLoading}
+        error={allocationLookup.error}
+        placeholder="Select allocation"
+        loadingLabel="Loading allocations..."
+        fieldError={errors.allocation_id?.message}
+      />
       <label>
         Date
         <input type="date" {...register("date")} />
@@ -121,6 +191,21 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
         <input placeholder="2026-07-14T11:00:00Z" {...register("end_time")} />
       </label>
 
+      {protocolDetailsLoading ? <small className="full-width">Loading protocol details...</small> : null}
+      {protocolDetailsError ? <small className="field-error full-width">{protocolDetailsError}</small> : null}
+      {protocolDetails ? (
+        <div className="full-width info-card">
+          <strong>Auto-Populated from Zoho Form B</strong>
+          <p>Title: {protocolDetails.title ?? "-"}</p>
+          <p>Protocol Number: {protocolDetails.protocol_number ?? "-"}</p>
+          <p>Approval Date: {protocolDetails.approval_date ?? "-"}</p>
+          <p>Principal Investigator: {protocolDetails.principal_investigator ?? "-"}</p>
+          {protocolUsage ? (
+            <p>Allocated: {protocolUsage.allocated_count} | Remaining: {protocolUsage.remaining_count}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="full-width subform-header">
         <h3>Animals</h3>
         <button
@@ -135,8 +220,27 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
       {fields.map((field, index) => (
         <div className="item-row full-width" key={field.id}>
           <label>
-            Animal ID
-            <input type="number" {...register(`animals.${index}.animal_id`)} />
+            Animal
+            <select
+              value={watch(`animals.${index}.animal_id`) || ""}
+              onChange={(event) => {
+                setValue(`animals.${index}.animal_id`, Number(event.target.value), { shouldValidate: true });
+              }}
+              disabled={animalLookup.isLoading || Boolean(animalLookup.error)}
+            >
+              <option value="">
+                {animalLookup.isLoading ? "Loading animals..." : "Select animal"}
+              </option>
+              {animalLookup.options.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+            {animalLookup.error ? <small className="field-error">{animalLookup.error}</small> : null}
+            {errors.animals?.[index]?.animal_id ? (
+              <small className="field-error">{errors.animals[index]?.animal_id?.message}</small>
+            ) : null}
           </label>
           <button
             type="button"

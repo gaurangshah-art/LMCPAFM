@@ -74,6 +74,22 @@ body {
   gap: 0.5rem;
 }
 
+.role-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #d2e9ff;
+  font-size: 0.9rem;
+}
+
+.role-switch select {
+  border-radius: 999px;
+  border: 1px solid rgba(210, 233, 255, 0.24);
+  background: rgba(8, 19, 35, 0.55);
+  color: #ecf7ff;
+  padding: 0.35rem 0.55rem;
+}
+
 .nav-link {
   color: #d2e9ff;
   text-decoration: none;
@@ -128,6 +144,7 @@ body {
 
 .form-grid input,
 .form-grid textarea,
+.form-grid select,
 .lookup-row input {
   width: 100%;
   border-radius: 10px;
@@ -138,6 +155,7 @@ body {
 
 .form-grid input:focus,
 .form-grid textarea:focus,
+.form-grid select:focus,
 .lookup-row input:focus {
   outline: 2px solid rgba(31, 123, 224, 0.25);
   border-color: var(--accent-2);
@@ -270,6 +288,27 @@ th {
 
 .empty-text {
   color: var(--ink-soft);
+}
+
+.info-card {
+  border: 1px solid #d5e5f8;
+  background: #f5faff;
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+}
+
+.info-card p {
+  margin: 0.3rem 0;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 .info-grid {

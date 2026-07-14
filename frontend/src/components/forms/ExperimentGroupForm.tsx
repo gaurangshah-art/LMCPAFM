@@ -2,10 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { createGroup } from "../../api/iaecApi";
+import { getProjectOptions } from "../../api/lookupApi";
 import { getApiErrorMessage } from "../../api/errors";
 import type { ExperimentGroup } from "../../api/types";
+import { useLookupOptions } from "../../hooks/useLookupOptions";
 import { useSubmitState } from "../../hooks/useSubmitState";
 import { ErrorAlert } from "../common/ErrorAlert";
+import { LookupSelectField } from "../common/LookupSelectField";
 import { SuccessNote } from "../common/SuccessNote";
 
 const schema = z.object({
@@ -20,11 +23,12 @@ interface ExperimentGroupFormProps {
 }
 
 export function ExperimentGroupForm({ onCreated }: ExperimentGroupFormProps) {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
+  const { register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { name: "", project_id: 0 },
   });
 
+  const projectLookup = useLookupOptions(getProjectOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
   const onSubmit = handleSubmit(async (values) => {
@@ -46,10 +50,17 @@ export function ExperimentGroupForm({ onCreated }: ExperimentGroupFormProps) {
         <input {...register("name")} />
         {errors.name ? <small className="field-error">{errors.name.message}</small> : null}
       </label>
-      <label>
-        Project ID
-        <input type="number" {...register("project_id")} />
-      </label>
+      <LookupSelectField
+        label="Project"
+        value={watch("project_id")}
+        onChange={(value) => setValue("project_id", value, { shouldValidate: true })}
+        options={projectLookup.options}
+        loading={projectLookup.isLoading}
+        error={projectLookup.error}
+        placeholder="Select project"
+        loadingLabel="Loading projects..."
+        fieldError={errors.project_id?.message}
+      />
       <button className="btn" type="submit" disabled={isSubmitting}>
         Create Group
       </button>
