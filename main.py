@@ -11,6 +11,7 @@ from routers.router_formb import router as formb_router
 from routers.router_disposal import router as disposal_router
 from routers.experiments import router as experiments_router
 from routers.router_lookups import router as lookups_router, lookup_router as approved_lookups_router
+from routers.router_users import router as users_router
 
 
 @asynccontextmanager
@@ -36,3 +37,4 @@ app.include_router(disposal_router)
 app.include_router(experiments_router)
 app.include_router(lookups_router)
 app.include_router(approved_lookups_router)
+app.include_router(users_router)
