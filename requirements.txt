@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pytest
+httpx
+requests
+
+# Optional developer tools
+python-dotenv

@@ -1,0 +1,27 @@
+import os
+import pytest
+import warnings
+
+# Suppress known deprecation warnings during tests (TestClient/httpx2 guidance)
+warnings.filterwarnings(
+    "ignore",
+    message=r"Using `httpx` with `starlette.testclient` is deprecated",
+)
+
+# Use an in-memory SQLite DB for tests to ensure schema matches models
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+
+from database.database import init_db
+from main import app
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture(scope="session")
+def client():
+    # Initialize tables for the in-memory database
+    # Filter expected deprecation warnings during tests
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+    init_db()
+    with TestClient(app) as c:
+        yield c
