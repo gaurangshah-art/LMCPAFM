@@ -16,6 +16,11 @@ env/
 build/
 dist/
 *.egg-info/
+*.tsbuildinfo
+frontend/node_modules/
+frontend/.vite/
+frontend/vite.config.js
+frontend/vite.config.d.ts
 
 # Installer logs
 pip-log.txt
