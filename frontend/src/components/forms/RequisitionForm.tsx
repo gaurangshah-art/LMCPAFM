@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { createRequisition } from "../../api/requisitionApi";
-import { getProtocolOptions, getSpeciesOptions, getStrainOptions } from "../../api/lookupApi";
+import {
+  getApprovedProtocolOptions,
+  getApprovedSpeciesOptions,
+  getApprovedStrainsOptions,
+  type LookupOption,
+} from "../../api/lookupApi";
 import { getFormBDetails, type FormBDetails } from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
 import type { AnimalRequisition } from "../../api/types";
@@ -51,12 +56,40 @@ export function RequisitionForm({ onCreated }: RequisitionFormProps) {
   const [protocolDetails, setProtocolDetails] = useState<FormBDetails | null>(null);
   const [protocolDetailsLoading, setProtocolDetailsLoading] = useState(false);
   const [protocolDetailsError, setProtocolDetailsError] = useState<string | null>(null);
-  const protocolLookup = useLookupOptions(getProtocolOptions);
-  const speciesLookup = useLookupOptions(getSpeciesOptions);
-  const strainLookup = useLookupOptions(getStrainOptions);
+  const [strainOptionsByIndex, setStrainOptionsByIndex] = useState<Record<number, LookupOption[]>>({});
+  const [strainLoadingByIndex, setStrainLoadingByIndex] = useState<Record<number, boolean>>({});
+  const [strainErrorByIndex, setStrainErrorByIndex] = useState<Record<number, string | null>>({});
+  const protocolLookup = useLookupOptions(getApprovedProtocolOptions);
+  const speciesLookup = useLookupOptions(getApprovedSpeciesOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
   const selectedProtocolId = watch("protocol_id");
+  const watchedItems = watch("items");
+
+  useEffect(() => {
+    fields.forEach((_, index) => {
+      const speciesId = watchedItems?.[index]?.species_id;
+      if (!speciesId || speciesId <= 0) {
+        setStrainOptionsByIndex((prev) => ({ ...prev, [index]: [] }));
+        setStrainErrorByIndex((prev) => ({ ...prev, [index]: null }));
+        return;
+      }
+
+      void (async () => {
+        try {
+          setStrainLoadingByIndex((prev) => ({ ...prev, [index]: true }));
+          setStrainErrorByIndex((prev) => ({ ...prev, [index]: null }));
+          const options = await getApprovedStrainsOptions(speciesId);
+          setStrainOptionsByIndex((prev) => ({ ...prev, [index]: options }));
+        } catch (error) {
+          setStrainErrorByIndex((prev) => ({ ...prev, [index]: getApiErrorMessage(error) }));
+          setStrainOptionsByIndex((prev) => ({ ...prev, [index]: [] }));
+        } finally {
+          setStrainLoadingByIndex((prev) => ({ ...prev, [index]: false }));
+        }
+      })();
+    });
+  }, [fields, watchedItems]);
 
   useEffect(() => {
     async function loadProtocolDetails() {
@@ -189,18 +222,18 @@ export function RequisitionForm({ onCreated }: RequisitionFormProps) {
               onChange={(event) => {
                 setValue(`items.${index}.strain_id`, Number(event.target.value), { shouldValidate: true });
               }}
-              disabled={strainLookup.isLoading || Boolean(strainLookup.error)}
+              disabled={Boolean(strainLoadingByIndex[index]) || Boolean(strainErrorByIndex[index])}
             >
               <option value="">
-                {strainLookup.isLoading ? "Loading strains..." : "Select strain"}
+                {strainLoadingByIndex[index] ? "Loading strains..." : "Select strain"}
               </option>
-              {strainLookup.options.map((option) => (
+              {(strainOptionsByIndex[index] ?? []).map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.name}
                 </option>
               ))}
             </select>
-            {strainLookup.error ? <small className="field-error">{strainLookup.error}</small> : null}
+            {strainErrorByIndex[index] ? <small className="field-error">{strainErrorByIndex[index]}</small> : null}
             {errors.items?.[index]?.strain_id ? (
               <small className="field-error">{errors.items[index]?.strain_id?.message}</small>
             ) : null}

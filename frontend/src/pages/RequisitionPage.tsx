@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { AppRole } from "../app/roles";
+import { getApprovedRequisitionOptions } from "../api/lookupApi";
 import { getRequisition } from "../api/requisitionApi";
 import { getApiErrorMessage } from "../api/errors";
 import type { AnimalRequisition } from "../api/types";
+import { useLookupOptions } from "../hooks/useLookupOptions";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
@@ -18,6 +20,7 @@ export function RequisitionPage({ role }: RequisitionPageProps) {
   const [lookupId, setLookupId] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const requisitionOptions = useLookupOptions(getApprovedRequisitionOptions);
 
   async function handleLookup() {
     if (!lookupId) {
@@ -51,19 +54,24 @@ export function RequisitionPage({ role }: RequisitionPageProps) {
 
           <PageSection title="Requisition Lookup" subtitle="GET /iaec/requisition/{req_id}">
             <div className="lookup-row">
-              <input
-                type="number"
-                min={1}
-                step={1}
-                onWheel={(event) => event.currentTarget.blur()}
+              <select
                 value={lookupId}
                 onChange={(event) => setLookupId(event.target.value)}
-                placeholder="Requisition ID"
-              />
+              >
+                <option value="">
+                  {requisitionOptions.isLoading ? "Loading requisitions..." : "Select requisition"}
+                </option>
+                {requisitionOptions.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
               <button type="button" className="btn" onClick={() => void handleLookup()}>
                 Fetch Requisition
               </button>
             </div>
+            {requisitionOptions.error ? <ErrorAlert message={requisitionOptions.error} /> : null}
             {isLoading ? <LoadingState label="Fetching requisition..." /> : null}
             {lookupError ? <ErrorAlert message={lookupError} /> : null}
             <RequisitionTable requisition={requisition} />

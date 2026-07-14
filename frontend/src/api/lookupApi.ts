@@ -10,38 +10,44 @@ async function fetchLookup(endpoint: string): Promise<LookupOption[]> {
   return data;
 }
 
-export function getSpeciesOptions() {
-  return fetchLookup("/species");
+export function getApprovedProtocolOptions() {
+  return fetchLookup("/lookup/approved-protocols");
 }
 
-export function getStrainOptions() {
-  return fetchLookup("/strain");
+export function getApprovedSpeciesOptions() {
+  return fetchLookup("/lookup/approved-species");
 }
 
-export function getProtocolOptions() {
-  return fetchLookup("/protocol");
+export async function getApprovedStrainsOptions(speciesId?: number) {
+  const query = speciesId && speciesId > 0 ? `?species_id=${speciesId}` : "";
+  return fetchLookup(`/lookup/approved-strains${query}`);
 }
 
-export function getExperimentGroupOptions() {
-  return fetchLookup("/experiment-group");
+export function getApprovedGenderOptions() {
+  return fetchLookup("/lookup/approved-genders");
 }
 
-export function getProjectOptions() {
-  return fetchLookup("/project");
+export function getApprovedExperimentGroupOptions() {
+  return fetchLookup("/lookup/approved-experiment-groups");
 }
 
-export function getRequisitionOptions() {
-  return fetchLookup("/requisition");
+export function getApprovedRequisitionOptions() {
+  return fetchLookup("/lookup/approved-requisitions");
 }
 
-export function getRequisitionItemOptions() {
-  return fetchLookup("/requisition-item");
+export async function getApprovedRequisitionItemOptions(requisitionId?: number) {
+  const query = requisitionId && requisitionId > 0 ? `?requisition_id=${requisitionId}` : "";
+  return fetchLookup(`/lookup/approved-requisition-items${query}`);
 }
 
-export function getAllocationOptions() {
-  return fetchLookup("/allocation");
+export function getApprovedAllocationOptions() {
+  return fetchLookup("/lookup/approved-allocations");
 }
 
-export function getAnimalOptions() {
-  return fetchLookup("/animal");
+export function getApprovedAnimalOptions() {
+  return fetchLookup("/lookup/approved-animals");
+}
+
+export function getApprovedExperimentOptions() {
+  return fetchLookup("/lookup/approved-experiments");
 }

@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { createExperiment } from "../../api/experimentApi";
-import { getAllocationOptions, getAnimalOptions, getProtocolOptions } from "../../api/lookupApi";
+import {
+  getApprovedAllocationOptions,
+  getApprovedAnimalOptions,
+  getApprovedProtocolOptions,
+} from "../../api/lookupApi";
 import { getFormBDetails, type FormBDetails } from "../../api/formbApi";
 import { getFormDDetails, type FormDDetails } from "../../api/formdApi";
 import { getApiErrorMessage } from "../../api/errors";
@@ -57,9 +61,9 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
   const [protocolUsage, setProtocolUsage] = useState<FormDDetails | null>(null);
   const [protocolDetailsLoading, setProtocolDetailsLoading] = useState(false);
   const [protocolDetailsError, setProtocolDetailsError] = useState<string | null>(null);
-  const protocolLookup = useLookupOptions(getProtocolOptions);
-  const allocationLookup = useLookupOptions(getAllocationOptions);
-  const animalLookup = useLookupOptions(getAnimalOptions);
+  const protocolLookup = useLookupOptions(getApprovedProtocolOptions);
+  const allocationLookup = useLookupOptions(getApprovedAllocationOptions);
+  const animalLookup = useLookupOptions(getApprovedAnimalOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
   const selectedProtocolId = watch("protocol_id");

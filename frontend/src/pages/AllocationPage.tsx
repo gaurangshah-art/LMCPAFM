@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { AppRole } from "../app/roles";
+import { getApprovedAllocationOptions } from "../api/lookupApi";
 import { getAllocation } from "../api/requisitionApi";
 import { getApiErrorMessage } from "../api/errors";
 import type { AnimalAllocation } from "../api/types";
+import { useLookupOptions } from "../hooks/useLookupOptions";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
@@ -18,6 +20,7 @@ export function AllocationPage({ role }: AllocationPageProps) {
   const [lookupId, setLookupId] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const allocationOptions = useLookupOptions(getApprovedAllocationOptions);
 
   async function handleLookup() {
     if (!lookupId) {
@@ -51,19 +54,24 @@ export function AllocationPage({ role }: AllocationPageProps) {
 
           <PageSection title="Allocation Lookup" subtitle="GET /iaec/allocation/{alloc_id}">
             <div className="lookup-row">
-              <input
-                type="number"
-                min={1}
-                step={1}
-                onWheel={(event) => event.currentTarget.blur()}
+              <select
                 value={lookupId}
                 onChange={(event) => setLookupId(event.target.value)}
-                placeholder="Allocation ID"
-              />
+              >
+                <option value="">
+                  {allocationOptions.isLoading ? "Loading allocations..." : "Select allocation"}
+                </option>
+                {allocationOptions.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
               <button type="button" className="btn" onClick={() => void handleLookup()}>
                 Fetch Allocation
               </button>
             </div>
+            {allocationOptions.error ? <ErrorAlert message={allocationOptions.error} /> : null}
             {isLoading ? <LoadingState label="Fetching allocation..." /> : null}
             {lookupError ? <ErrorAlert message={lookupError} /> : null}
             <AllocationTable allocation={allocation} />

@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { createIAECExperiment } from "../../api/iaecApi";
-import { getExperimentGroupOptions } from "../../api/lookupApi";
+import { getApprovedExperimentGroupOptions } from "../../api/lookupApi";
 import { getApiErrorMessage } from "../../api/errors";
 import type { AnimalExperiment } from "../../api/types";
 import { useLookupOptions } from "../../hooks/useLookupOptions";
@@ -28,7 +28,7 @@ export function IAECAnimalExperimentForm({ onCreated }: IAECAnimalExperimentForm
     defaultValues: { description: "", group_id: 0 },
   });
 
-  const groupLookup = useLookupOptions(getExperimentGroupOptions);
+  const groupLookup = useLookupOptions(getApprovedExperimentGroupOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
   const onSubmit = handleSubmit(async (values) => {

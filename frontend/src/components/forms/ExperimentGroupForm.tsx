@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { createGroup } from "../../api/iaecApi";
-import { getProjectOptions } from "../../api/lookupApi";
+import { getApprovedProtocolOptions } from "../../api/lookupApi";
 import { getApiErrorMessage } from "../../api/errors";
 import type { ExperimentGroup } from "../../api/types";
 import { useLookupOptions } from "../../hooks/useLookupOptions";
@@ -28,7 +28,7 @@ export function ExperimentGroupForm({ onCreated }: ExperimentGroupFormProps) {
     defaultValues: { name: "", project_id: 0 },
   });
 
-  const projectLookup = useLookupOptions(getProjectOptions);
+  const projectLookup = useLookupOptions(getApprovedProtocolOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
   const onSubmit = handleSubmit(async (values) => {

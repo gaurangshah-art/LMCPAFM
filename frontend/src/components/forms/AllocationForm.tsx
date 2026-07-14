@@ -1,8 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { createAllocation } from "../../api/requisitionApi";
-import { getRequisitionItemOptions, getRequisitionOptions } from "../../api/lookupApi";
+import {
+  getApprovedRequisitionItemOptions,
+  getApprovedRequisitionOptions,
+  type LookupOption,
+} from "../../api/lookupApi";
 import { getApiErrorMessage } from "../../api/errors";
 import type { AnimalAllocation } from "../../api/types";
 import { useLookupOptions } from "../../hooks/useLookupOptions";
@@ -44,9 +49,37 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
-  const requisitionLookup = useLookupOptions(getRequisitionOptions);
-  const requisitionItemLookup = useLookupOptions(getRequisitionItemOptions);
+  const [itemOptions, setItemOptions] = useState<LookupOption[]>([]);
+  const [itemLoading, setItemLoading] = useState(false);
+  const [itemError, setItemError] = useState<string | null>(null);
+  const requisitionLookup = useLookupOptions(getApprovedRequisitionOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
+
+  const selectedRequisitionId = watch("requisition_id");
+
+  useEffect(() => {
+    async function loadRequisitionItems() {
+      if (!selectedRequisitionId || selectedRequisitionId <= 0) {
+        setItemOptions([]);
+        setItemError(null);
+        return;
+      }
+
+      try {
+        setItemLoading(true);
+        setItemError(null);
+        const options = await getApprovedRequisitionItemOptions(selectedRequisitionId);
+        setItemOptions(options);
+      } catch (error) {
+        setItemError(getApiErrorMessage(error));
+        setItemOptions([]);
+      } finally {
+        setItemLoading(false);
+      }
+    }
+
+    void loadRequisitionItems();
+  }, [selectedRequisitionId]);
 
   const onSubmit = handleSubmit(async (values) => {
     start();
@@ -112,18 +145,18 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
               onChange={(event) => {
                 setValue(`items.${index}.requisition_item_id`, Number(event.target.value), { shouldValidate: true });
               }}
-              disabled={requisitionItemLookup.isLoading || Boolean(requisitionItemLookup.error)}
+              disabled={itemLoading || Boolean(itemError)}
             >
               <option value="">
-                {requisitionItemLookup.isLoading ? "Loading requisition items..." : "Select requisition item"}
+                {itemLoading ? "Loading requisition items..." : "Select requisition item"}
               </option>
-              {requisitionItemLookup.options.map((option) => (
+              {itemOptions.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.name}
                 </option>
               ))}
             </select>
-            {requisitionItemLookup.error ? <small className="field-error">{requisitionItemLookup.error}</small> : null}
+            {itemError ? <small className="field-error">{itemError}</small> : null}
             {errors.items?.[index]?.requisition_item_id ? (
               <small className="field-error">{errors.items[index]?.requisition_item_id?.message}</small>
             ) : null}

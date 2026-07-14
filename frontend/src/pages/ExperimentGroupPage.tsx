@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { getGroupsByProject, getIAECExperimentsByGroup } from "../api/iaecApi";
+import { getApprovedExperimentGroupOptions, getApprovedProtocolOptions } from "../api/lookupApi";
 import { getApiErrorMessage } from "../api/errors";
 import type { AnimalExperiment, ExperimentGroup } from "../api/types";
+import { useLookupOptions } from "../hooks/useLookupOptions";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
@@ -19,6 +21,8 @@ export function ExperimentGroupPage() {
   const [isLoadingExperiments, setIsLoadingExperiments] = useState(false);
   const [groupError, setGroupError] = useState<string | null>(null);
   const [experimentError, setExperimentError] = useState<string | null>(null);
+  const approvedProtocols = useLookupOptions(getApprovedProtocolOptions);
+  const approvedGroups = useLookupOptions(getApprovedExperimentGroupOptions);
 
   async function loadGroups() {
     if (!projectIdInput) {
@@ -64,16 +68,24 @@ export function ExperimentGroupPage() {
 
       <PageSection title="Groups By Project" subtitle="GET /iaec/group/{project_id}">
         <div className="lookup-row">
-          <input
-            type="number"
+          <select
             value={projectIdInput}
             onChange={(event) => setProjectIdInput(event.target.value)}
-            placeholder="Project ID"
-          />
+          >
+            <option value="">
+              {approvedProtocols.isLoading ? "Loading approved protocols..." : "Select approved protocol"}
+            </option>
+            {approvedProtocols.options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </select>
           <button className="btn" type="button" onClick={() => void loadGroups()}>
             Load Groups
           </button>
         </div>
+        {approvedProtocols.error ? <ErrorAlert message={approvedProtocols.error} /> : null}
         {isLoadingGroups ? <LoadingState label="Loading groups..." /> : null}
         {groupError ? <ErrorAlert message={groupError} /> : null}
         <ExperimentGroupTable groups={groups} />
@@ -85,16 +97,24 @@ export function ExperimentGroupPage() {
 
       <PageSection title="IAEC Experiments By Group" subtitle="GET /iaec/experiment/{group_id}">
         <div className="lookup-row">
-          <input
-            type="number"
+          <select
             value={groupIdInput}
             onChange={(event) => setGroupIdInput(event.target.value)}
-            placeholder="Group ID"
-          />
+          >
+            <option value="">
+              {approvedGroups.isLoading ? "Loading approved groups..." : "Select approved group"}
+            </option>
+            {approvedGroups.options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </select>
           <button className="btn" type="button" onClick={() => void loadExperiments()}>
             Load IAEC Experiments
           </button>
         </div>
+        {approvedGroups.error ? <ErrorAlert message={approvedGroups.error} /> : null}
         {isLoadingExperiments ? <LoadingState label="Loading IAEC experiments..." /> : null}
         {experimentError ? <ErrorAlert message={experimentError} /> : null}
         <IAECExperimentTable experiments={experiments} />
