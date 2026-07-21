@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { AppRole } from "../app/roles";
+import { hasAnyRole } from "../app/roles";
 import { getApprovedRequisitionOptions } from "../api/lookupApi";
 import { getRequisition } from "../api/requisitionApi";
 import { getApiErrorMessage } from "../api/errors";
-import type { AnimalRequisition } from "../api/types";
+import type { AnimalRequisition, User } from "../../api/types";
 import { useLookupOptions } from "../hooks/useLookupOptions";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
@@ -12,15 +12,16 @@ import { RequisitionForm } from "../components/forms/RequisitionForm";
 import { RequisitionTable } from "../components/tables/RequisitionTable";
 
 interface RequisitionPageProps {
-  role: AppRole;
+  currentUser: User | null;
 }
 
-export function RequisitionPage({ role }: RequisitionPageProps) {
+export function RequisitionPage({ currentUser }: RequisitionPageProps) {
   const [requisition, setRequisition] = useState<AnimalRequisition | null>(null);
   const [lookupId, setLookupId] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const requisitionOptions = useLookupOptions(getApprovedRequisitionOptions);
+  const canAccessRequisitions = hasAnyRole(currentUser, ["investigator", "iaec", "staff"]);
 
   async function handleLookup() {
     if (!lookupId) {
@@ -42,14 +43,18 @@ export function RequisitionPage({ role }: RequisitionPageProps) {
 
   return (
     <div className="page-grid">
-      {role !== "user" ? (
-        <PageSection title="Requisition Access" subtitle="User role required">
-          <ErrorAlert message="Requisition actions are available only for User role. Switch role to User from the top-right selector." />
+      {!currentUser ? (
+        <PageSection title="Requisition Access" subtitle="Authentication required">
+          <ErrorAlert message="Log in with an investigator, IAEC, or staff account to create and view requisitions." />
+        </PageSection>
+      ) : !canAccessRequisitions ? (
+        <PageSection title="Requisition Access" subtitle="Investigator, IAEC, or staff role required">
+          <ErrorAlert message="Your account does not have one of the roles required for requisition workflows." />
         </PageSection>
       ) : (
         <>
           <PageSection title="Create Requisition" subtitle="POST /iaec/requisition">
-            <RequisitionForm onCreated={setRequisition} />
+            <RequisitionForm currentUser={currentUser} onCreated={setRequisition} />
           </PageSection>
 
           <PageSection title="Requisition Lookup" subtitle="GET /iaec/requisition/{req_id}">

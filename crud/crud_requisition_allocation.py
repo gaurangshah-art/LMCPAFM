@@ -7,7 +7,7 @@ from database.lmcpafm_requisition_allocation import (
     AnimalAllocationItem,
 )
 from schemas.schemas_requisition_allocation import (
-    AnimalRequisitionCreate,
+    AnimalRequisitionCreateInternal,
     AnimalAllocationCreate,
 )
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
@@ -66,9 +66,10 @@ def get_total_allocated_for_requisition_item(
 # CREATE REQUISITION
 # =========================================================
 
-def create_requisition(db: Session, req: AnimalRequisitionCreate):
+def create_requisition(db: Session, req: AnimalRequisitionCreateInternal):
     db_req = AnimalRequisition(
         protocol_id=req.protocol_id,
+        requester_user_id=req.requester_user_id,
         requester_name=req.requester_name,
         requester_role=req.requester_role,
         date=req.date,

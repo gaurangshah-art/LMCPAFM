@@ -1,12 +1,18 @@
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+class FormBBase(BaseModel):
+    protocol_number: str = Field(..., max_length=100)
+    title: str = Field(..., max_length=500)
+    principal_investigator: str = Field(..., max_length=200)
+    purpose: str = Field(..., max_length=1000)
+    approval_date: date
 
-class FormBDetails(BaseModel):
-    protocol_id: int
-    protocol_number: str | None = None
-    title: str | None = None
-    principal_investigator: str | None = None
-    purpose: str | None = None
-    approval_date: date | None = None
-    source: str
+class FormBCreate(FormBBase):
+    pass
+
+class FormBRead(FormBBase):
+    id: int
+
+    class Config:
+        orm_mode = True

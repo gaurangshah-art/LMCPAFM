@@ -39,14 +39,11 @@ coverage.xml
 # Environment variables
 .env
 .env.*
+!.env.example
 
 # SQLite DBs and DBPro files
 database/*.db
 database/*.sqbpro
-
-# Alembic
-alembic.ini
-alembic/
 
 # Debug / local
 debug_e2e.py

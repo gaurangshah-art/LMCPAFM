@@ -1,8 +1,9 @@
 import { NavLink } from "react-router-dom";
-import type { AppRole } from "../../app/roles";
+import type { User } from "../../api/types";
 
 const navItems = [
   { to: "/", label: "Dashboard" },
+  { to: "/users", label: "Users" },
   { to: "/iaec-projects", label: "IAEC Project" },
   { to: "/requisitions", label: "Requisition" },
   { to: "/allocations", label: "Allocation" },
@@ -11,11 +12,12 @@ const navItems = [
 ];
 
 interface NavbarProps {
-  role: AppRole;
-  onRoleChange: (role: AppRole) => void;
+  currentUser: User | null;
+  isAuthLoading: boolean;
+  onLogout: () => void;
 }
 
-export function Navbar({ role, onRoleChange }: NavbarProps) {
+export function Navbar({ currentUser, isAuthLoading, onLogout }: NavbarProps) {
   return (
     <header className="top-nav">
       <div className="brand">
@@ -33,16 +35,24 @@ export function Navbar({ role, onRoleChange }: NavbarProps) {
           </NavLink>
         ))}
       </nav>
-      <div className="role-switch">
-        <label htmlFor="app-role">Role</label>
-        <select
-          id="app-role"
-          value={role}
-          onChange={(event) => onRoleChange(event.target.value as AppRole)}
-        >
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
+      <div className="session-panel">
+        <div className="session-meta">
+          <strong>{currentUser?.name ?? currentUser?.email ?? (isAuthLoading ? "Restoring session..." : "Guest")}</strong>
+          <div className="role-badges">
+            {currentUser?.roles.length ? currentUser.roles.map((role) => (
+              <span key={role} className="role-badge">{role}</span>
+            )) : <span className="role-badge muted">no role</span>}
+          </div>
+        </div>
+        {currentUser ? (
+          <button type="button" className="btn session-btn" onClick={onLogout}>
+            Log out
+          </button>
+        ) : (
+          <NavLink to="/login" className="nav-link nav-link-cta">
+            Log in
+          </NavLink>
+        )}
       </div>
     </header>
   );

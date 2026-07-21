@@ -1,13 +1,20 @@
-from typing import Literal
+from enum import Enum
+from typing import List
 
 from pydantic import BaseModel, ConfigDict, EmailStr
+
+
+class UserRole(str, Enum):
+    investigator = "investigator"
+    iaec = "iaec"
+    staff = "staff"
 
 
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
-    password_hash: str
-    role: Literal["investigator", "iaec", "staff"]
+    password: str
+    roles: List[UserRole]
     status: bool = True
 
 
@@ -15,7 +22,7 @@ class UserRead(BaseModel):
     id: int
     name: str
     email: EmailStr
-    role: Literal["investigator", "iaec", "staff"]
+    roles: List[str]
     status: bool
 
     model_config = ConfigDict(from_attributes=True)

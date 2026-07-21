@@ -19,12 +19,14 @@ class AnimalRequisition(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     protocol_id: Mapped[int] = mapped_column(ForeignKey("iaec_project.id"), nullable=False)
+    requester_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     requester_name: Mapped[str] = mapped_column(String, nullable=False)
     requester_role: Mapped[str] = mapped_column(String, nullable=False)
     date: Mapped[Date] = mapped_column(Date, nullable=False)
     purpose: Mapped[str] = mapped_column(String, nullable=False)
 
     protocol: Mapped["IAECProject"] = relationship(back_populates="requisitions")
+    requester = relationship("models.user.User")  # fixed
     items: Mapped[list["AnimalRequisitionItem"]] = relationship(back_populates="requisition")
     allocations: Mapped[list["AnimalAllocation"]] = relationship(back_populates="requisition")
 

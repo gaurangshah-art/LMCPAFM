@@ -60,9 +60,10 @@ def init_db() -> None:
 
     If the `DATABASE_URL` environment variable was changed after import,
     recreate the engine/session to match the new URL before creating tables.
-    For file-based SQLite databases this will remove the existing DB file
-    in development to keep schema in sync. Tests should set `DATABASE_URL`
-    before importing the app (so the in-memory DB is used).
+    Tables are created if missing, but existing databases are preserved.
+    Schema changes should be handled by migrations instead of destructive
+    recreation. Tests should set `DATABASE_URL` before importing the app
+    so the in-memory DB is used.
     """
     global engine, SessionLocal, DATABASE_URL
 
@@ -72,16 +73,5 @@ def init_db() -> None:
     if db_url != DATABASE_URL:
         engine, SessionLocal = _create_engine_and_session(db_url)
         DATABASE_URL = db_url
-
-    # If using a file SQLite DB, remove it so models and tables are recreated.
-    if db_url.startswith("sqlite") and ":memory:" not in db_url:
-        # convert sqlite:///path/to.db -> path/to.db
-        file_path = db_url.replace("sqlite:///", "")
-        db_path = Path(file_path)
-        try:
-            if db_path.exists():
-                os.remove(db_path)
-        except Exception:
-            pass
 
     Base.metadata.create_all(bind=engine)

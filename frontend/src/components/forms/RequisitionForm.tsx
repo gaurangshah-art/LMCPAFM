@@ -11,7 +11,7 @@ import {
 } from "../../api/lookupApi";
 import { getFormBDetails, type FormBDetails } from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
-import type { AnimalRequisition } from "../../api/types";
+import type { AnimalRequisition, User } from "../../api/types";
 import { useLookupOptions } from "../../hooks/useLookupOptions";
 import { useSubmitState } from "../../hooks/useSubmitState";
 import { ErrorAlert } from "../common/ErrorAlert";
@@ -26,8 +26,6 @@ const itemSchema = z.object({
 
 const schema = z.object({
   protocol_id: z.coerce.number().int().positive(),
-  requester_name: z.string().min(1),
-  requester_role: z.string().min(1),
   date: z.string().min(1),
   purpose: z.string().min(1),
   items: z.array(itemSchema).min(1),
@@ -36,16 +34,15 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface RequisitionFormProps {
+  currentUser: User;
   onCreated: (value: AnimalRequisition) => void;
 }
 
-export function RequisitionForm({ onCreated }: RequisitionFormProps) {
+export function RequisitionForm({ currentUser, onCreated }: RequisitionFormProps) {
   const { register, control, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       protocol_id: 0,
-      requester_name: "",
-      requester_role: "",
       date: "",
       purpose: "",
       items: [{ species_id: 0, strain_id: 0, requested_count: 1 }],
@@ -126,8 +123,6 @@ export function RequisitionForm({ onCreated }: RequisitionFormProps) {
       succeed(`Requisition created with id ${created.id}`);
       reset({
         protocol_id: 0,
-        requester_name: "",
-        requester_role: "",
         date: "",
         purpose: "",
         items: [{ species_id: 0, strain_id: 0, requested_count: 1 }],
@@ -151,14 +146,6 @@ export function RequisitionForm({ onCreated }: RequisitionFormProps) {
         fieldError={errors.protocol_id?.message}
       />
       <label>
-        Requester Name
-        <input {...register("requester_name")} />
-      </label>
-      <label>
-        Requester Role
-        <input {...register("requester_role")} />
-      </label>
-      <label>
         Date
         <input type="date" {...register("date")} />
       </label>
@@ -167,11 +154,17 @@ export function RequisitionForm({ onCreated }: RequisitionFormProps) {
         <textarea {...register("purpose")} rows={2} />
       </label>
 
+      <div className="full-width info-card compact-info-card">
+        <strong>Requester Bound From Session</strong>
+        <p>{currentUser.name ?? currentUser.email}</p>
+        <p>{currentUser.roles.join(", ")}</p>
+      </div>
+
       {protocolDetailsLoading ? <small className="full-width">Loading protocol details...</small> : null}
       {protocolDetailsError ? <small className="field-error full-width">{protocolDetailsError}</small> : null}
       {protocolDetails ? (
         <div className="full-width info-card">
-          <strong>Protocol Auto Details (Zoho Form B)</strong>
+          <strong>Protocol Details </strong>
           <p>Title: {protocolDetails.title ?? "-"}</p>
           <p>Protocol Number: {protocolDetails.protocol_number ?? "-"}</p>
           <p>Approval Date: {protocolDetails.approval_date ?? "-"}</p>

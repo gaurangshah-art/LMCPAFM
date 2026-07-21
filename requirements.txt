@@ -1,10 +1,16 @@
-fastapi
-uvicorn
-sqlalchemy
-pydantic
-pytest
-httpx
-requests
+fastapi==0.139.0
+uvicorn==0.51.0
+sqlalchemy==2.0.51
+alembic>=1.13,<2
+pydantic==2.13.4
+psycopg[binary]>=3.2,<4
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt==4.0.1
+requests>=2.32.0,<3
+python-dotenv==1.2.2
+pydantic[email]>=2.0
 
-# Optional developer tools
-python-dotenv
+# Test dependencies
+pytest==9.1.1
+httpx==0.28.1

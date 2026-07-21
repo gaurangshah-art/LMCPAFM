@@ -2,7 +2,7 @@ import { useState } from "react";
 import { getApprovedExperimentOptions } from "../api/lookupApi";
 import { getExperiment } from "../api/experimentApi";
 import { getApiErrorMessage } from "../api/errors";
-import type { Experiment } from "../api/types";
+import type { Experiment } from "../../api/types";
 import { useLookupOptions } from "../hooks/useLookupOptions";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";

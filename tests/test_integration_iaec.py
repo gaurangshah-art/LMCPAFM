@@ -1,8 +1,10 @@
+from uuid import uuid4
+
 from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain, Animal
 
 
-def test_integration_project_requisition_allocation_experiment(client):
+def test_integration_project_requisition_allocation_experiment(client, staff_auth_headers):
     # 1) Create IAEC project (protocol)
     proj_payload = {
         "title": "Integration Project",
@@ -18,13 +20,14 @@ def test_integration_project_requisition_allocation_experiment(client):
 
     # 2) Insert species, strain, and animals directly into DB
     db = SessionLocal()
+    suffix = uuid4().hex[:8]
     try:
-        sp = Species(name="TestSpecies")
+        sp = Species(name=f"TestSpecies-{suffix}")
         db.add(sp)
         db.commit()
         db.refresh(sp)
 
-        st = Strain(name="TestStrain", species_id=sp.id)
+        st = Strain(name=f"TestStrain-{suffix}", species_id=sp.id)
         db.add(st)
         db.commit()
         db.refresh(st)
@@ -44,13 +47,11 @@ def test_integration_project_requisition_allocation_experiment(client):
     # 3) Submit a requisition requesting 2 animals
     req_payload = {
         "protocol_id": project_id,
-        "requester_name": "Alice",
-        "requester_role": "Researcher",
         "date": "2026-02-10",
         "purpose": "Integration test requisition",
         "items": [{"species_id": sp.id, "strain_id": st.id, "requested_count": 2}],
     }
-    resp = client.post("/iaec/requisition", json=req_payload)
+    resp = client.post("/iaec/requisition", json=req_payload, headers=staff_auth_headers)
     assert resp.status_code == 200
     requisition = resp.json()
     req_id = requisition["id"]
@@ -65,7 +66,7 @@ def test_integration_project_requisition_allocation_experiment(client):
         "remarks": "Allocating two animals",
         "items": [{"requisition_item_id": req_item_id, "allocated_count": 2, "remaining_count": 0}],
     }
-    resp = client.post("/iaec/allocation", json=alloc_payload)
+    resp = client.post("/iaec/allocation", json=alloc_payload, headers=staff_auth_headers)
     assert resp.status_code == 200
     allocation = resp.json()
     alloc_id = allocation["id"]

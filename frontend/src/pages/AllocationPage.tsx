@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { AppRole } from "../app/roles";
+import { hasAnyRole } from "../app/roles";
 import { getApprovedAllocationOptions } from "../api/lookupApi";
 import { getAllocation } from "../api/requisitionApi";
 import { getApiErrorMessage } from "../api/errors";
-import type { AnimalAllocation } from "../api/types";
+import type { AnimalAllocation, User } from "../../api/types";
 import { useLookupOptions } from "../hooks/useLookupOptions";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
@@ -12,15 +12,17 @@ import { AllocationForm } from "../components/forms/AllocationForm";
 import { AllocationTable } from "../components/tables/AllocationTable";
 
 interface AllocationPageProps {
-  role: AppRole;
+  currentUser: User | null;
 }
 
-export function AllocationPage({ role }: AllocationPageProps) {
+export function AllocationPage({ currentUser }: AllocationPageProps) {
   const [allocation, setAllocation] = useState<AnimalAllocation | null>(null);
   const [lookupId, setLookupId] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const allocationOptions = useLookupOptions(getApprovedAllocationOptions);
+  const canViewAllocations = hasAnyRole(currentUser, ["investigator", "iaec", "staff"]);
+  const canCreateAllocations = hasAnyRole(currentUser, ["iaec", "staff"]);
 
   async function handleLookup() {
     if (!lookupId) {
@@ -42,15 +44,25 @@ export function AllocationPage({ role }: AllocationPageProps) {
 
   return (
     <div className="page-grid">
-      {role !== "admin" ? (
-        <PageSection title="Allocation Access" subtitle="Admin role required">
-          <ErrorAlert message="Allocation actions are available only for Admin role. Switch role to Admin from the top-right selector." />
+      {!currentUser ? (
+        <PageSection title="Allocation Access" subtitle="Authentication required">
+          <ErrorAlert message="Log in with an investigator, IAEC, or staff account to access allocation workflows." />
+        </PageSection>
+      ) : !canViewAllocations ? (
+        <PageSection title="Allocation Access" subtitle="Investigator, IAEC, or staff role required">
+          <ErrorAlert message="Your account does not have one of the roles required to view allocations." />
         </PageSection>
       ) : (
         <>
-          <PageSection title="Create Allocation" subtitle="POST /iaec/allocation">
-            <AllocationForm onCreated={setAllocation} />
-          </PageSection>
+          {canCreateAllocations ? (
+            <PageSection title="Create Allocation" subtitle="POST /iaec/allocation">
+              <AllocationForm onCreated={setAllocation} />
+            </PageSection>
+          ) : (
+            <PageSection title="Create Allocation" subtitle="IAEC or staff role required">
+              <ErrorAlert message="Only IAEC and staff users can create allocations. Lookup remains available with your current role." />
+            </PageSection>
+          )}
 
           <PageSection title="Allocation Lookup" subtitle="GET /iaec/allocation/{alloc_id}">
             <div className="lookup-row">

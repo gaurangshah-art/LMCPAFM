@@ -17,20 +17,6 @@ class Base(DeclarativeBase):
 BaseRA = Base
 
 
-class User(Base):
-    __tablename__ = "user"
-    __table_args__ = (
-        CheckConstraint("role IN ('investigator', 'iaec', 'staff')", name="ck_user_role"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[str] = mapped_column(String, nullable=False)
-    status: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
-
 # =========================================================
 # FACILITY / CAGE / PROCUREMENT TABLES (Base)
 # =========================================================

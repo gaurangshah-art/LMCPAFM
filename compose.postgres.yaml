@@ -1,0 +1,28 @@
+services:
+  backend:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-lmcpafm}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-lmcpafm}
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lmcpafm}
+      POSTGRES_USER: ${POSTGRES_USER:-lmcpafm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lmcpafm} -d ${POSTGRES_DB:-lmcpafm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - lmcpafm_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  lmcpafm_postgres_data:

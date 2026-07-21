@@ -1,3 +1,43 @@
+// ---------------- IAEC CERTIFICATE ----------------
+export interface IAECApprovalCertificate {
+  lmcp_iaec_id: string;
+  title: string;
+  investigator: string;
+  department: string;
+  meeting_year: number;
+  meeting_number: number;
+  meeting_date: string;
+  approval_date: string;
+  comments: string;
+  chairperson_name: string;
+}
+
+// ---------------- IAEC MEETING ----------------
+export interface IAECMeeting {
+  id: number;
+  meeting_year: number;
+  meeting_number: number;
+  meeting_date: string;
+  status: string;
+}
+
+// ---------------- IAEC PROJECT (VIEW) ----------------
+export interface IAECProject {
+  id: number;
+  lmcp_iaec_id: string;
+  form_b_id: number;
+  investigator: string;
+  title: string;
+  species: string;
+  animal_count: number;
+  summary: string;
+  comments: string[];
+  meeting_year: number;
+  meeting_number: number;
+  status: string;
+}
+
+// ---------------- IAEC PROJECT (CREATE) ----------------
 export interface IAECProjectCreate {
   title: string;
   investigator_name: string;
@@ -10,126 +50,80 @@ export interface IAECProjectCreate {
   start_date?: string | null;
 }
 
-export interface AnimalExperiment {
+// ---------------- FORM B ----------------
+export interface FormB {
   id: number;
-  description: string;
-  group_id: number;
+  step1: any;
+  step2: any;
+  step3: any;
+  step4: any;
+  step5: any;
+  step6: any;
+  step7: any;
 }
 
+// ---------------- EXPERIMENT GROUP ----------------
 export interface ExperimentGroup {
   id: number;
-  name: string;
   project_id: number;
-  experiments: AnimalExperiment[];
+  group_name: string;
+  purpose: string;
 }
 
-export interface IAECProject extends IAECProjectCreate {
+// ---------------- ANIMAL EXPERIMENT ----------------
+export interface AnimalExperiment {
   id: number;
-  experiment_groups: ExperimentGroup[];
-}
-
-export interface ExperimentGroupCreate {
-  name: string;
-  project_id: number;
-}
-
-export interface AnimalExperimentCreate {
-  description: string;
   group_id: number;
+  experiment_name: string;
+  description: string;
 }
 
-export interface AnimalRequisitionItemCreate {
-  species_id: number;
-  strain_id: number;
-  requested_count: number;
-}
-
-export interface AnimalAllocationAnimal {
+// ---------------- REQUISITION ----------------
+export interface Requisition {
   id: number;
-  species_id: number;
-  strain_id: number;
-  cage_id?: number | null;
-  status?: string | null;
-  protocol_id?: number | null;
+  lmcp_iaec_id: string;
+  investigator_name: string;
+  species: string;
+  strain: string;
+  sex: string;
+  age: string;
+  quantity_requested: number;
+  purpose: string;
+  status: string;
+  submitted_at?: string;
+  staff_review_at?: string;
+  iaec_review_at?: string;
+  approved_at?: string;
+  remarks?: string;
+  comments: { text: string; created_at: string }[];
 }
 
-export interface AnimalAllocationItem {
-  id: number;
-  allocation_id: number;
-  requisition_item_id: number;
-  allocated_count: number;
-  remaining_count: number;
-  timestamp: string;
-  animals: AnimalAllocationAnimal[];
-}
-
-export interface AnimalRequisitionItem extends AnimalRequisitionItemCreate {
+// ---------------- ALLOCATION ----------------
+export interface Allocation {
   id: number;
   requisition_id: number;
-  allocations: AnimalAllocationItem[];
+  species: string;
+  strain: string;
+  sex: string;
+  age: string;
+  quantity_allocated: number;
+  staff_name?: string;
+  date?: string;
 }
 
-export interface AnimalRequisitionCreate {
-  protocol_id: number;
-  requester_name: string;
-  requester_role: string;
-  date: string;
-  purpose: string;
-  items: AnimalRequisitionItemCreate[];
-}
-
-export interface AnimalRequisition extends AnimalRequisitionCreate {
+// ---------------- USER ----------------
+export interface User {
   id: number;
-  items: AnimalRequisitionItem[];
+  name: string;
+  email: string;
+  role: UserRole;
 }
 
-export interface AnimalAllocationItemCreate {
-  requisition_item_id: number;
-  allocated_count: number;
-  remaining_count: number;
+export interface UserCreate {
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
 }
 
-export interface AnimalAllocationCreate {
-  requisition_id: number;
-  date: string;
-  allocated_by: string;
-  remarks: string;
-  items: AnimalAllocationItemCreate[];
-}
-
-export interface AnimalAllocation extends AnimalAllocationCreate {
-  id: number;
-  items: AnimalAllocationItem[];
-}
-
-export interface ExperimentAnimalCreate {
-  animal_id: number;
-}
-
-export interface ExperimentAnimal extends ExperimentAnimalCreate {
-  id: number;
-  experiment_id: number;
-}
-
-export interface ExperimentCreate {
-  protocol_id: number;
-  allocation_id: number;
-  date: string;
-  performed_by: string;
-  purpose: string;
-  procedure: string;
-  dose: string;
-  observations: string;
-  start_time?: string | null;
-  end_time?: string | null;
-  animals: ExperimentAnimalCreate[];
-}
-
-export interface Experiment extends ExperimentCreate {
-  id: number;
-  animals: ExperimentAnimal[];
-}
-
-export interface ApiErrorResponse {
-  detail?: string;
-}
+export type UserRole = "investigator" | "staff" | "iaec" | "admin";

@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      context: .
+    image: lmcpafm-backend:latest
+    restart: unless-stopped
+    env_file:
+      - ${LMCPAFM_ENV_FILE:-.env}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/LMCPAFM.db}
+      PORT: ${PORT:-8000}
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - lmcpafm_data:/data
+
+volumes:
+  lmcpafm_data:

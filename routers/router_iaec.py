@@ -1,3 +1,11 @@
+from dependencies.auth import (
+    get_current_user,
+    require_iaec,
+    require_any_role,
+    require_investigator,
+    require_staff,
+)
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
