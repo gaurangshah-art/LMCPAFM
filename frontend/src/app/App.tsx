@@ -38,6 +38,10 @@ import { FormBStep5 } from "../pages/formB/FormBStep5";
 import { FormBStep6 } from "../pages/formB/FormBStep6";
 import { FormBStep7 } from "../pages/formB/FormBStep7";
 import { FormBReview } from "../pages/formB/FormBReview";
+import { IaecCreateMeeting } from "../pages/iaec/IaecCreateMeeting";
+import { IaecMeetingDetails } from "../pages/iaec/IaecMeetingDetails";
+import { IaecProjectReview } from "../pages/iaec/IaecProjectReview";
+import { IaecApprovalCertificate } from "../pages/iaec/IaecApprovalCertificate";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
 
 
@@ -200,7 +204,6 @@ export default function App() {
             }
           />
 
-          {/* IAEC WORKFLOW DASHBOARD */}
           <Route
             path="/iaec-dashboard"
             element={
@@ -210,6 +213,58 @@ export default function App() {
                 allowedRoles={["iaec"]}
               >
                 <IaecDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/meetings/new"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec"]}
+              >
+                <IaecCreateMeeting />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/meetings/:meetingId"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec"]}
+              >
+                <IaecMeetingDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/project/:projectId/review"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec"]}
+              >
+                <IaecProjectReview />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/project/:projectId/certificate"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec", "investigator"]}
+              >
+                <IaecApprovalCertificate />
               </ProtectedRoute>
             }
           />

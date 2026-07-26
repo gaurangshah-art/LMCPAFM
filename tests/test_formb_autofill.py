@@ -94,7 +94,7 @@ def test_form_b_start_and_save_step1(client, monkeypatch):
     )
     assert save_res.status_code == 200, save_res.text
 
-    investigators_res = client.get(f"/formb/{form_b_id}/investigators")
+    investigators_res = client.get(f"/formb/{form_b_id}/investigators", headers=headers)
     assert investigators_res.status_code == 200
     investigators = investigators_res.json()
     assert len(investigators) == 1

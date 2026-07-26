@@ -1,13 +1,17 @@
-import axios from "../utils/axios";
+import { apiClient } from "./client";
 
-export const getAllUsers = () =>
-  axios.get("/admin/users");
+export async function getAllUsers() {
+  return apiClient.get("/admin/users");
+}
 
-export const updateUserRoles = (userId: string, roles: string[]) =>
-  axios.put(`/admin/users/${userId}/roles`, { roles });
+export async function updateUserRoles(userId: string, roles: string[]) {
+  return apiClient.put(`/admin/users/${userId}/roles`, { roles });
+}
 
-export const getSystemActivityLogs = () =>
-  axios.get("/admin/logs");
+export async function getSystemActivityLogs() {
+  return apiClient.get("/admin/logs");
+}
 
-export const getSystemSummary = () =>
-  axios.get("/admin/summary");
+export async function getSystemSummary() {
+  return apiClient.get("/admin/summary");
+}

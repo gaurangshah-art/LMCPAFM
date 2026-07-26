@@ -22,6 +22,7 @@ from routers.router_login import router as auth_router
 from routers.router_inventory import router as inventory_router
 from routers.router_investigator_profile import router as investigator_profile_router
 from routers.formb_internal import router as formb_internal_router
+from routers.router_admin import router as admin_router
 
 def _cors_origins() -> list[str]:
     configured = os.getenv("CORS_ALLOW_ORIGINS")
@@ -81,6 +82,7 @@ app.include_router(iaec_router)
 app.include_router(req_alloc_router)
 app.include_router(formd_router)
 app.include_router(formb_internal_router)
+app.include_router(admin_router)
 app.include_router(disposal_router)
 app.include_router(experiments_router)
 app.include_router(lookups_router)

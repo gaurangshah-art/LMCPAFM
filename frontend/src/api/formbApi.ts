@@ -196,6 +196,45 @@ export function readStoredFormBId(): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+export interface FormBInvestigatorRecord {
+  id: number;
+  form_b_id: number;
+  name: string;
+  role: string;
+  user_id?: number | null;
+  investigator_type?: string | null;
+  can_view_status: boolean;
+  can_view_approval_letters: boolean;
+  can_edit_forms: boolean;
+  can_submit_form_b: boolean;
+}
+
+export interface FormBInvestigatorPayload {
+  form_b_id: number;
+  name: string;
+  role: string;
+  user_id?: number | null;
+  investigator_type?: string | null;
+  can_view_status?: boolean;
+  can_view_approval_letters?: boolean;
+  can_edit_forms?: boolean;
+  can_submit_form_b?: boolean;
+}
+
+export async function listFormBInvestigators(formBId: number): Promise<FormBInvestigatorRecord[]> {
+  const { data } = await apiClient.get<FormBInvestigatorRecord[]>(`/formb/${formBId}/investigators`);
+  return data;
+}
+
+export async function addFormBInvestigator(payload: FormBInvestigatorPayload): Promise<FormBInvestigatorRecord> {
+  const { data } = await apiClient.post<FormBInvestigatorRecord>("/formb/investigators", payload);
+  return data;
+}
+
+export async function removeFormBInvestigator(formBId: number, investigatorId: number): Promise<void> {
+  await apiClient.delete(`/formb/${formBId}/investigators/${investigatorId}`);
+}
+
 export function clearStoredFormBId(): void {
   localStorage.removeItem(FORM_B_ID_STORAGE_KEY);
 }

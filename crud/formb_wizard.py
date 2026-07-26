@@ -5,6 +5,12 @@ from datetime import date, datetime, timezone
 from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDValidationError
+from crud.formb_membership import (
+    assert_can_submit,
+    form_b_has_lmcp_faculty,
+    get_editable_form_b,
+    get_member_form_b,
+)
 from crud.investigator_profile import get_or_create_profile, is_profile_complete
 from database.lmcpafm_models import (
     FormB,
@@ -44,32 +50,6 @@ def build_form_b_step1_autofill(db: Session, user: User) -> dict:
         "experience": _format_experience(profile),
         "profile_complete": is_profile_complete(profile),
     }
-
-
-def _get_member_form_b(db: Session, user: User, form_b_id: int) -> FormB:
-    form_b = db.query(FormB).filter(FormB.id == form_b_id).first()
-    if form_b is None:
-        raise CRUDValidationError("Form B not found")
-
-    membership = (
-        db.query(FormBInvestigator)
-        .filter(
-            FormBInvestigator.form_b_id == form_b_id,
-            FormBInvestigator.user_id == user.id,
-        )
-        .first()
-    )
-    if membership is None:
-        raise CRUDValidationError("You are not allowed to view this Form B")
-
-    return form_b
-
-
-def _get_editable_form_b(db: Session, user: User, form_b_id: int) -> FormB:
-    form_b = _get_member_form_b(db, user, form_b_id)
-    if form_b.submitted_at is not None:
-        raise CRUDValidationError("Form B has already been submitted")
-    return form_b
 
 
 def _set_step_data(form_b: FormB, step_key: str, data: dict) -> None:
@@ -149,7 +129,7 @@ def start_form_b(db: Session, user: User) -> FormB:
 
 
 def save_form_b_step1(db: Session, user: User, form_b_id: int, payload: dict) -> FormB:
-    form_b = _get_editable_form_b(db, user, form_b_id)
+    form_b = get_editable_form_b(db, user, form_b_id)
     project = db.query(IAECProject).filter(IAECProject.id == form_b.project_id).first()
     if project is None:
         raise CRUDValidationError("Linked project not found")
@@ -191,7 +171,7 @@ def save_form_b_step(db: Session, user: User, form_b_id: int, step_key: str, dat
     if step_key not in STEP_KEYS:
         raise CRUDValidationError("Invalid Form B step")
 
-    form_b = _get_editable_form_b(db, user, form_b_id)
+    form_b = get_editable_form_b(db, user, form_b_id)
     _set_step_data(form_b, step_key, data)
 
     if step_key == "step2":
@@ -210,7 +190,7 @@ def save_form_b_step(db: Session, user: User, form_b_id: int, step_key: str, dat
 
 
 def get_form_b_review(db: Session, user: User, form_b_id: int) -> dict:
-    form_b = _get_member_form_b(db, user, form_b_id)
+    form_b = get_member_form_b(db, user, form_b_id)
     application_data = form_b.application_data or {}
     return {
         "form_b_id": form_b.id,
@@ -226,13 +206,18 @@ def get_form_b_review(db: Session, user: User, form_b_id: int) -> dict:
 
 
 def submit_form_b(db: Session, user: User, form_b_id: int) -> FormB:
-    form_b = _get_editable_form_b(db, user, form_b_id)
+    form_b = assert_can_submit(db, user, form_b_id)
     application_data = form_b.application_data or {}
 
     missing = [key for key in STEP_KEYS if key not in application_data]
     if missing:
         raise CRUDValidationError(
             f"Complete all Form B steps before submission (missing: {', '.join(missing)})"
+        )
+
+    if not form_b_has_lmcp_faculty(db, form_b):
+        raise CRUDValidationError(
+            "At least one LMCP faculty investigator is required before submission."
         )
 
     project = db.query(IAECProject).filter(IAECProject.id == form_b.project_id).first()

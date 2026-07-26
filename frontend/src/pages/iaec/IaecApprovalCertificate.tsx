@@ -1,36 +1,47 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api } from "../../api/client";
+import { apiClient } from "../../api/client";
 import { formatDisplayDate } from "../../utils/dateFormat";
+import { getApiErrorMessage } from "../../api/errors";
 
-import type { IAECApprovalCertificate } from "../../api/types";
+interface CertificateData {
+  lmcp_iaec_id: string;
+  title: string;
+  investigator: string;
+  department: string;
+  meeting_year?: number | null;
+  meeting_number?: string | null;
+  meeting_date?: string | null;
+  approval_date?: string | null;
+  comments: string;
+  chairperson_name: string;
+  decision?: string | null;
+}
 
 export function IaecApprovalCertificate() {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [certificate, setCertificate] = useState<IAECApprovalCertificate | null>(null);
-  const parsedProjectId = Number(projectId);
-  const [prevProjectId, setPrevProjectId] = useState(parsedProjectId);
-
-  if (prevProjectId !== parsedProjectId) {
-    setPrevProjectId(parsedProjectId);
-    setLoading(true);
-  }
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [certificate, setCertificate] = useState<CertificateData | null>(null);
 
   useEffect(() => {
+    if (!projectId) return;
+
     let cancelled = false;
 
     (async () => {
       try {
-        const res = await api.get(`/iaec/project/${projectId}/certificate`);
+        const { data } = await apiClient.get<CertificateData>(
+          `/iaec/project/${projectId}/certificate`,
+        );
         if (!cancelled) {
-          setCertificate(res.data);
+          setCertificate(data);
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
-          alert("Failed to load certificate.");
+          setErrorMessage(getApiErrorMessage(error));
         }
       } finally {
         if (!cancelled) {
@@ -45,28 +56,40 @@ export function IaecApprovalCertificate() {
   }, [projectId]);
 
   async function downloadCertificate() {
-    if (!certificate) return;
+    if (!projectId) return;
 
     try {
-      const res = await api.get(`/iaec/project/${projectId}/certificate/download`, {
+      const response = await apiClient.get(`/iaec/project/${projectId}/certificate/download`, {
         responseType: "blob",
       });
 
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `IAEC_Approval_${certificate.lmcp_iaec_id}.pdf`);
+      link.setAttribute(
+        "download",
+        `IAEC_Approval_${certificate?.lmcp_iaec_id || projectId}.pdf`,
+      );
       document.body.appendChild(link);
       link.click();
-    } catch {
-      alert("Failed to download certificate.");
+      link.remove();
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
     }
   }
 
-  if (loading || !certificate) {
+  if (loading) {
     return (
       <div className="page-card">
         <p>Loading certificate...</p>
+      </div>
+    );
+  }
+
+  if (!certificate) {
+    return (
+      <div className="page-card">
+        <p className="error-text">{errorMessage ?? "Failed to load certificate."}</p>
       </div>
     );
   }
@@ -78,26 +101,29 @@ export function IaecApprovalCertificate() {
         <p>Official approval document for the project.</p>
       </header>
 
+      {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
+
       <div className="certificate-box">
         <h3 className="certificate-title">L. M. College of Pharmacy</h3>
         <p className="certificate-subtitle">Institutional Animal Ethics Committee (IAEC)</p>
         <hr />
 
-        <p><strong>LMCP/IAEC ID:</strong> {certificate.lmcp_iaec_id}</p>
+        <p><strong>LMCP/IAEC ID:</strong> {certificate.lmcp_iaec_id || "Pending"}</p>
         <p><strong>Project Title:</strong> {certificate.title}</p>
         <p><strong>Principal Investigator:</strong> {certificate.investigator}</p>
-        <p><strong>Department:</strong> {certificate.department}</p>
+        <p><strong>Department:</strong> {certificate.department || "-"}</p>
 
         <hr />
 
-        <p><strong>Meeting:</strong> {certificate.meeting_year} / Meeting {certificate.meeting_number}</p>
-        <p><strong>Meeting Date:</strong> {formatDisplayDate(certificate.meeting_date)}</p>
-        <p><strong>Approval Date:</strong> {formatDisplayDate(certificate.approval_date)}</p>
+        <p><strong>Meeting:</strong> {certificate.meeting_year || "-"} / Meeting {certificate.meeting_number || "-"}</p>
+        <p><strong>Meeting Date:</strong> {certificate.meeting_date ? formatDisplayDate(certificate.meeting_date) : "-"}</p>
+        <p><strong>Approval Date:</strong> {certificate.approval_date ? formatDisplayDate(certificate.approval_date) : "-"}</p>
+        <p><strong>Decision:</strong> {certificate.decision || "Pending"}</p>
 
         <hr />
 
         <p><strong>IAEC Comments:</strong></p>
-        <p className="certificate-comments">{certificate.comments}</p>
+        <p className="certificate-comments">{certificate.comments || "None"}</p>
 
         <hr />
 
@@ -108,12 +134,16 @@ export function IaecApprovalCertificate() {
       </div>
 
       <div className="wizard-actions">
-        <button className="btn-secondary" onClick={() => navigate(`/iaec/project/${projectId}`)}>
-          ← Back to Project Review
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => navigate(`/iaec/project/${projectId}/review`)}
+        >
+          Back to Project Review
         </button>
 
-        <button className="btn" onClick={downloadCertificate}>
-          Download Certificate →
+        <button type="button" className="btn" onClick={() => void downloadCertificate()}>
+          Download Certificate
         </button>
       </div>
     </div>

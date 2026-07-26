@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { readStoredFormBId, saveFormBStep2 } from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
+import { FormBInvestigatorsSection } from "../../components/forms/FormBInvestigatorsSection";
 
 export function FormBStep2() {
   const navigate = useNavigate();
@@ -79,6 +80,8 @@ export function FormBStep2() {
       {formBId && (
         <>
           <p><strong>Form B internal ID:</strong> {formBId}</p>
+
+          <FormBInvestigatorsSection formBId={formBId} />
 
           <div className="form-grid">
 

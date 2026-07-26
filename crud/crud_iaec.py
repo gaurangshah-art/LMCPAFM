@@ -73,6 +73,56 @@ def get_project(db: Session, project_id: int):
     )
 
 
+def get_projects_by_investigator(db: Session, user_id: int):
+    from database.lmcpafm_models import FormB, FormBInvestigator
+
+    return (
+        db.query(IAECProject)
+        .join(FormB, FormB.project_id == IAECProject.id)
+        .join(FormBInvestigator, FormBInvestigator.form_b_id == FormB.id)
+        .filter(
+            FormBInvestigator.user_id == user_id,
+            FormBInvestigator.can_view_status.is_(True),
+        )
+        .distinct()
+        .options(
+            selectinload(IAECProject.experiment_groups).selectinload(
+                ExperimentGroup.experiments
+            )
+        )
+        .order_by(IAECProject.id.desc())
+        .all()
+    )
+
+
+def get_meeting_details(db: Session, meeting_id: int):
+    from database.lmcpafm_models import FormB, IAECMeeting
+
+    meeting = db.query(IAECMeeting).filter(IAECMeeting.id == meeting_id).first()
+    if not meeting:
+        raise CRUDNotFoundError(f"IAEC meeting {meeting_id} not found.")
+
+    assigned = (
+        db.query(FormB, IAECProject)
+        .join(IAECProject, IAECProject.id == FormB.project_id)
+        .filter(FormB.meeting_id == meeting_id)
+        .order_by(FormB.id.asc())
+        .all()
+    )
+    assigned_projects = [
+        {
+            "project_id": project.id,
+            "form_b_id": form_b.id,
+            "title": project.title,
+            "investigator_name": project.investigator_name,
+            "status": project.status,
+            "protocol_number": project.protocol_number,
+        }
+        for form_b, project in assigned
+    ]
+    return {"meeting": meeting, "assigned_projects": assigned_projects}
+
+
 def create_experiment(db: Session, experiment: AnimalExperimentCreate):
     group = db.query(ExperimentGroup).filter(ExperimentGroup.id == experiment.group_id).first()
     if not group:

@@ -95,3 +95,5 @@ def require_any_role(*allowed_roles: str):
 require_investigator = _require_role("investigator")
 require_iaec = _require_role("iaec")
 require_staff = _require_role("staff")
+require_admin = _require_role("admin")
+require_admin_or_staff = require_any_role("admin", "staff")

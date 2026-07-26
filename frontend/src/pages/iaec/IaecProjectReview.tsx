@@ -1,37 +1,45 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api } from "../../api/client";
+import { getProjectById } from "../../api/iaecApi";
+import { apiClient } from "../../api/client";
+import { getApiErrorMessage } from "../../api/errors";
+import type { IAECProject } from "../../api/types";
 
-import type { FormB, IAECReviewProject } from "../../api/types";
+interface FormBRecord {
+  id: number;
+  project_id: number;
+  date: string;
+  meeting_id?: number | null;
+  protocol_number?: string | null;
+}
 
 export function IaecProjectReview() {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [project, setProject] = useState<IAECReviewProject | null>(null);
-  const [formB, setFormB] = useState<FormB | null>(null);
-  const [comments, setComments] = useState("");
-  const parsedProjectId = Number(projectId);
-  const [prevProjectId, setPrevProjectId] = useState(parsedProjectId);
-
-  if (prevProjectId !== parsedProjectId) {
-    setPrevProjectId(parsedProjectId);
-    setLoading(true);
-  }
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [project, setProject] = useState<IAECProject | null>(null);
+  const [formB, setFormB] = useState<FormBRecord | null>(null);
 
   useEffect(() => {
+    if (!projectId) return;
+
     let cancelled = false;
 
     (async () => {
       try {
-        const res = await api.get(`/iaec/project/${projectId}`);
-        if (cancelled) return;
-        setProject(res.data.project);
-        setFormB(res.data.form_b);
-      } catch {
+        const [projectData, formBResponse] = await Promise.all([
+          getProjectById(Number(projectId)),
+          apiClient.get<FormBRecord>(`/iaec/project/${projectId}/form-b`),
+        ]);
         if (!cancelled) {
-          alert("Failed to load project.");
+          setProject(projectData);
+          setFormB(formBResponse.data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(getApiErrorMessage(error));
         }
       } finally {
         if (!cancelled) {
@@ -45,40 +53,18 @@ export function IaecProjectReview() {
     };
   }, [projectId]);
 
-  async function approveProject() {
-    if (!window.confirm("Approve this project?")) return;
-
-    try {
-      await api.post(`/iaec/project/${projectId}/approve`, {
-        comments,
-      });
-
-      alert("Project approved.");
-      navigate("/iaec/dashboard");
-    } catch {
-      alert("Failed to approve project.");
-    }
-  }
-
-  async function rejectProject() {
-    if (!window.confirm("Reject this project?")) return;
-
-    try {
-      await api.post(`/iaec/project/${projectId}/reject`, {
-        comments,
-      });
-
-      alert("Project rejected.");
-      navigate("/iaec/dashboard");
-    } catch {
-      alert("Failed to reject project.");
-    }
-  }
-
-  if (loading || !project || !formB) {
+  if (loading) {
     return (
       <div className="page-card">
-        <p>Loading project...</p>
+        <p>Loading project review...</p>
+      </div>
+    );
+  }
+
+  if (!project || !formB) {
+    return (
+      <div className="page-card">
+        <p className="error-text">{errorMessage ?? "Failed to load project review."}</p>
       </div>
     );
   }
@@ -87,84 +73,30 @@ export function IaecProjectReview() {
     <div className="page-card">
       <header className="section-header">
         <h2>IAEC Project Review</h2>
-        <p>Review full Form B and approve or reject.</p>
+        <p>{project.title}</p>
       </header>
 
-      <div className="meeting-info">
-        <p><strong>LMCP/IAEC ID:</strong> {project.lmcp_iaec_id || "Not generated yet"}</p>
-        <p><strong>Form B ID:</strong> {project.form_b_id}</p>
-        <p><strong>Meeting:</strong> {project.meeting_year}/{project.meeting_number}</p>
-        <p><strong>Status:</strong> {project.status}</p>
+      <p><strong>Investigator:</strong> {project.investigator_name}</p>
+      <p><strong>Status:</strong> {project.status || "draft"}</p>
+      <p><strong>Form B ID:</strong> {formB.id}</p>
+      <p><strong>Protocol:</strong> {formB.protocol_number || project.protocol_number || "Pending"}</p>
+
+      <div className="wizard-actions">
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => navigate("/iaec-dashboard")}
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => navigate(`/iaec/project/${projectId}/certificate`)}
+        >
+          View Certificate
+        </button>
       </div>
-
-      <hr />
-
-      {/* Full Form B Display */}
-      <section className="review-section">
-        <h3>Form B – Full Submission</h3>
-
-        <details>
-          <summary>Step 1 – Investigator & Establishment</summary>
-          <pre>{JSON.stringify(formB.step1, null, 2)}</pre>
-        </details>
-
-        <details>
-          <summary>Step 2 – Project Details</summary>
-          <pre>{JSON.stringify(formB.step2, null, 2)}</pre>
-        </details>
-
-        <details>
-          <summary>Step 3 – Animal Requirements</summary>
-          <pre>{JSON.stringify(formB.step3, null, 2)}</pre>
-        </details>
-
-        <details>
-          <summary>Step 4 – Experimental Design</summary>
-          <pre>{JSON.stringify(formB.step4, null, 2)}</pre>
-        </details>
-
-        <details>
-          <summary>Step 5 – Housing & Husbandry</summary>
-          <pre>{JSON.stringify(formB.step5, null, 2)}</pre>
-        </details>
-
-        <details>
-          <summary>Step 6 – Personnel & Training</summary>
-          <pre>{JSON.stringify(formB.step6, null, 2)}</pre>
-        </details>
-
-        <details>
-          <summary>Step 7 – Ethical Compliance</summary>
-          <pre>{JSON.stringify(formB.step7, null, 2)}</pre>
-        </details>
-      </section>
-
-      <hr />
-
-      {/* IAEC Review Section */}
-      <section className="review-section">
-        <h3>IAEC Review Comments</h3>
-
-        <textarea
-          value={comments}
-          onChange={(e) => setComments(e.target.value)}
-          placeholder="Enter IAEC comments..."
-        />
-
-        <div className="wizard-actions">
-          <button className="btn-secondary" onClick={() => navigate("/iaec/dashboard")}>
-            ← Back
-          </button>
-
-          <button className="btn" onClick={approveProject}>
-            Approve Project →
-          </button>
-
-          <button className="btn-danger" onClick={rejectProject}>
-            Reject Project →
-          </button>
-        </div>
-      </section>
     </div>
   );
 }

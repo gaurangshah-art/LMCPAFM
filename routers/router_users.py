@@ -10,10 +10,10 @@ from schemas.schemas_users import UserCreate, UserRead
 from utils.security import hash_password
 from dependencies.auth import (
     get_current_user,
+    require_admin_or_staff,
     require_iaec,
     require_staff,
     require_investigator,
-
     require_any_role,
 )
 
@@ -21,7 +21,11 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def create_user(payload: UserCreate, db: Session = Depends(get_db)):
+def create_user(
+    payload: UserCreate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin_or_staff),
+):
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
@@ -30,6 +34,12 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="At least one role is required")
 
     role_names = [r.value for r in payload.roles]
+    if "investigator" in role_names:
+        raise HTTPException(
+            status_code=400,
+            detail="Investigator accounts must be created via self-registration.",
+        )
+
     db_roles = db.query(Role).filter(Role.name.in_(role_names)).all()
     found_names = {r.name for r in db_roles}
 
@@ -62,7 +72,10 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[UserRead])
-def list_users(db: Session = Depends(get_db)):
+def list_users(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin_or_staff),
+):
     users = db.query(User).order_by(User.id.asc()).all()
     return [
         {
@@ -80,6 +93,7 @@ def list_users(db: Session = Depends(get_db)):
 def me(current_user: User = Depends(get_current_user)):
     return {
         "id": current_user.id,
+        "name": current_user.name,
         "email": current_user.email,
         "roles": [r.name for r in current_user.roles],
         "status": current_user.status,

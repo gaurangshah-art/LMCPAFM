@@ -136,10 +136,10 @@ class FormBInvestigatorCreate(BaseModel):
     role: str = Field(..., max_length=200)
     user_id: Optional[int] = None
     investigator_type: Optional[str] = Field(None, max_length=100)
-    can_view_status: bool = False
-    can_view_approval_letters: bool = False
-    can_edit_forms: bool = False
-    can_submit_form_b: bool = False
+    can_view_status: Optional[bool] = None
+    can_view_approval_letters: Optional[bool] = None
+    can_edit_forms: Optional[bool] = None
+    can_submit_form_b: Optional[bool] = None
 
 
 class FormBInvestigatorRead(BaseModel):

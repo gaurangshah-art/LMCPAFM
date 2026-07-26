@@ -12,7 +12,7 @@ from crud.formb_wizard import (
     submit_form_b,
 )
 from database.database import get_db
-from database.lmcpafm_models import FormB, FormBInvestigator
+from crud.formb_investigator import add_form_b_investigator, list_form_b_investigators, remove_form_b_investigator
 from dependencies.auth import require_investigator
 from models.user import User
 from schemas.schemas_formb import (
@@ -162,45 +162,61 @@ def submit_form_b_application(
 def create_formb_investigator(
     payload: FormBInvestigatorCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
 ):
-    form_b = db.query(FormB).filter(FormB.id == payload.form_b_id).first()
-    if form_b is None:
-        raise HTTPException(status_code=404, detail="Form B not found")
-
-    investigator = FormBInvestigator(
-        form_b_id=payload.form_b_id,
-        name=payload.name,
-        role=payload.role,
-        user_id=payload.user_id,
-        investigator_type=payload.investigator_type,
-        can_view_status=payload.can_view_status,
-        can_view_approval_letters=payload.can_view_approval_letters,
-        can_edit_forms=payload.can_edit_forms,
-        can_submit_form_b=payload.can_submit_form_b,
-    )
-
-    db.add(investigator)
-    db.commit()
-    db.refresh(investigator)
-    return investigator
+    try:
+        return add_form_b_investigator(db, current_user, payload.model_dump())
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/{form_b_id}/investigators", response_model=list[FormBInvestigatorRead])
 def list_formb_investigators(
     form_b_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
 ):
-    form_b = db.query(FormB).filter(FormB.id == form_b_id).first()
-    if form_b is None:
-        raise HTTPException(status_code=404, detail="Form B not found")
+    try:
+        return list_form_b_investigators(db, current_user, form_b_id)
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    investigators = (
-        db.query(FormBInvestigator)
-        .filter(FormBInvestigator.form_b_id == form_b_id)
-        .order_by(FormBInvestigator.id.asc())
-        .all()
-    )
-    return investigators
+
+@router.delete("/{form_b_id}/investigators/{investigator_id}")
+def delete_formb_investigator(
+    form_b_id: int,
+    investigator_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    try:
+        remove_form_b_investigator(db, current_user, form_b_id, investigator_id)
+        return {"ok": True}
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/{form_b_id}/application.pdf")
+def download_form_b_application_pdf(
+    form_b_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    from fastapi.responses import Response
+
+    from crud.formb_documents import render_form_b_application_pdf
+    from crud.formb_membership import get_member_form_b
+
+    try:
+        form_b = get_member_form_b(db, current_user, form_b_id)
+        pdf_bytes = render_form_b_application_pdf(db, form_b.project_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="form_b_{form_b_id}.pdf"'},
+        )
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/by-protocol/{protocol_number}", response_model=FormBRead)
