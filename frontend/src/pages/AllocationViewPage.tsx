@@ -3,12 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 
 import {
   getAllocation,
- 
-  
-  updateAllocationComment,
-  confirmAllocation,
-  adjustAllocation,
-} from "../api/allocationApi";
+  getRequisitionById,
+  getExperimentsByAllocation,
+} from "../api/requisitionApi";
 
 import type {
   Allocation,
@@ -21,6 +18,54 @@ import { LoadingState } from "../components/common/LoadingState";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { DataTable } from "../components/tables/DataTable";
 
+type LoadedRequisition = {
+  id: number;
+  protocol_id: number;
+  requester_name: string;
+  purpose: string;
+  items: Array<{ requested_count: number; species_id: number; strain_id: number }>;
+};
+
+function toRequisitionView(req: LoadedRequisition): Requisition {
+  const firstItem = req.items[0];
+  const totalRequested = req.items.reduce((sum, item) => sum + item.requested_count, 0);
+  return {
+    id: req.id,
+    lmcp_iaec_id: String(req.protocol_id),
+    investigator_name: req.requester_name,
+    species: firstItem ? `Species #${firstItem.species_id}` : "—",
+    strain: firstItem ? `Strain #${firstItem.strain_id}` : "—",
+    sex: "—",
+    age: "—",
+    quantity_requested: totalRequested,
+    purpose: req.purpose,
+    status: "linked",
+    comments: [],
+  };
+}
+
+function toAllocationView(alloc: {
+  id: number;
+  requisition_id: number;
+  date: string;
+  allocated_by: string;
+  remarks: string;
+  items: Array<{ allocated_count: number }>;
+}): Allocation {
+  const totalAllocated = alloc.items.reduce((sum, item) => sum + item.allocated_count, 0);
+  return {
+    id: alloc.id,
+    requisition_id: alloc.requisition_id,
+    species: "—",
+    strain: "—",
+    sex: "—",
+    age: "—",
+    quantity_allocated: totalAllocated,
+    staff_name: alloc.allocated_by,
+    date: alloc.date,
+  };
+}
+
 export function AllocationViewPage() {
   const { id } = useParams();
   const allocationId = Number(id);
@@ -31,18 +76,20 @@ export function AllocationViewPage() {
   const [experiments, setExperiments] = useState<AnimalExperiment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [commentText, setCommentText] = useState("");
-  const [adjustQty, setAdjustQty] = useState("");
 
   async function loadAll() {
     try {
       setLoading(true);
+      setError(null);
 
       const alloc = await getAllocation(allocationId);
-      setAllocation(alloc);
+      setAllocation(toAllocationView(alloc));
 
-      
+      const req = await getRequisitionById(alloc.requisition_id);
+      setRequisition(toRequisitionView(req as LoadedRequisition));
 
+      const exp = await getExperimentsByAllocation(allocationId);
+      setExperiments(exp);
     } catch {
       setError("Failed to load allocation.");
     } finally {
@@ -53,45 +100,6 @@ export function AllocationViewPage() {
   useEffect(() => {
     void loadAll();
   }, [allocationId]);
-
-  async function handleAddComment() {
-    if (!commentText.trim()) return;
-
-    try {
-      const updated = await updateAllocationComment(allocationId, commentText);
-      setAllocation(updated);
-      setCommentText("");
-    } catch {
-      alert("Failed to add comment.");
-    }
-  }
-
-  async function handleConfirm() {
-    try {
-      const updated = await confirmAllocation(allocationId);
-      setAllocation(updated);
-      alert("Allocation confirmed.");
-    } catch {
-      alert("Failed to confirm allocation.");
-    }
-  }
-
-  async function handleAdjust() {
-    const qty = Number(adjustQty);
-    if (!qty || qty <= 0) {
-      alert("Enter a valid quantity.");
-      return;
-    }
-
-    try {
-      const updated = await adjustAllocation(allocationId, qty);
-      setAllocation(updated);
-      setAdjustQty("");
-      alert("Allocation adjusted.");
-    } catch {
-      alert("Failed to adjust allocation.");
-    }
-  }
 
   if (loading) return <LoadingState label="Loading allocation..." />;
   if (error) return <ErrorAlert message={error} />;
@@ -112,19 +120,13 @@ export function AllocationViewPage() {
             <strong>Species:</strong> {allocation.species}
           </div>
           <div>
-            <strong>Allocated Quantity:</strong> {allocation.quantity}
+            <strong>Allocated Quantity:</strong> {allocation.quantity_allocated}
           </div>
           <div>
-            <strong>Staff:</strong> {allocation.staff_name}
+            <strong>Staff:</strong> {allocation.staff_name ?? "—"}
           </div>
           <div>
-            <strong>Status:</strong>{" "}
-            <span className={`status-tag status-${allocation.status}`}>
-              {allocation.status}
-            </span>
-          </div>
-          <div>
-            <strong>Date:</strong> {allocation.date}
+            <strong>Date:</strong> {allocation.date ?? "—"}
           </div>
         </div>
 
@@ -147,60 +149,16 @@ export function AllocationViewPage() {
               <strong>Species:</strong> {requisition.species}
             </div>
             <div>
-              <strong>Requested Quantity:</strong> {requisition.quantity}
+              <strong>Requested Quantity:</strong> {requisition.quantity_requested}
             </div>
             <div>
-              <strong>Status:</strong> {requisition.status}
+              <strong>Purpose:</strong> {requisition.purpose}
             </div>
           </div>
         ) : (
           <p>Requisition not found.</p>
         )}
       </PageSection>
-
-      {/* COMMENTS */}
-      <PageSection title="Comments" subtitle="Staff and investigator notes">
-        {allocation.comments?.length === 0 ? (
-          <p>No comments yet.</p>
-        ) : (
-          <ul>
-            {allocation.comments.map((c, idx) => (
-              <li key={idx}>{c}</li>
-            ))}
-          </ul>
-        )}
-
-        <textarea
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          placeholder="Add comment..."
-        />
-
-        <button className="btn-small" onClick={handleAddComment}>
-          Add Comment
-        </button>
-      </PageSection>
-
-      {/* STAFF ACTIONS */}
-      {allocation.status === "pending" && (
-        <PageSection title="Staff Actions" subtitle="Confirm or adjust allocation">
-          <button className="btn success" onClick={handleConfirm}>
-            Confirm Allocation
-          </button>
-
-          <div className="adjust-row">
-            <input
-              type="number"
-              value={adjustQty}
-              onChange={(e) => setAdjustQty(e.target.value)}
-              placeholder="Adjust quantity"
-            />
-            <button className="btn warning" onClick={handleAdjust}>
-              Adjust Allocation
-            </button>
-          </div>
-        </PageSection>
-      )}
 
       {/* LINKED EXPERIMENTS */}
       <PageSection

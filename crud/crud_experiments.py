@@ -109,3 +109,12 @@ def get_experiment(db: Session, exp_id: int):
         .filter(Experiment.id == exp_id)
         .first()
     )
+
+
+def list_experiments_by_allocation(db: Session, allocation_id: int) -> list[Experiment]:
+    return (
+        db.query(Experiment)
+        .filter(Experiment.allocation_id == allocation_id)
+        .order_by(Experiment.date.desc(), Experiment.id.asc())
+        .all()
+    )

@@ -43,6 +43,25 @@ export async function getExperimentsByRequisition(
   return data;
 }
 
+export async function getExperimentsByAllocation(
+  allocationId: number
+): Promise<AnimalExperiment[]> {
+  const { data } = await apiClient.get<
+    Array<{
+      id: number;
+      protocol_id: number;
+      procedure: string;
+      observations: string;
+    }>
+  >(`/experiment/allocation/${allocationId}`);
+  return data.map((row) => ({
+    id: row.id,
+    group_id: row.protocol_id,
+    experiment_name: row.procedure,
+    description: row.observations,
+  }));
+}
+
 export async function approveRequisitionStaff(
   requisitionId: number
 ): Promise<AnimalRequisition> {

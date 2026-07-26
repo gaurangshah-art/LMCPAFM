@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database.database import SessionLocal
-from crud.crud_experiments import create_experiment, get_experiment
+from crud.crud_experiments import create_experiment, get_experiment, list_experiments_by_allocation
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
 from schemas.schemas_experiments import ExperimentCreate, Experiment
 from database.lmcpafm_experiments import ExperimentAnimal
@@ -57,6 +57,39 @@ def submit_experiment(exp: ExperimentCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Database error")
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/allocation/{allocation_id}", response_model=list[Experiment])
+def read_experiments_by_allocation(allocation_id: int, db: Session = Depends(get_db)):
+    rows = list_experiments_by_allocation(db, allocation_id)
+    results: list[Experiment] = []
+    for db_exp in rows:
+        links = (
+            db.query(ExperimentAnimal)
+            .filter(ExperimentAnimal.experiment_id == db_exp.id)
+            .all()
+        )
+        animals = [
+            {"id": link.id, "animal_id": link.animal_id, "experiment_id": link.experiment_id}
+            for link in links
+        ]
+        results.append(
+            Experiment(
+                id=db_exp.id,
+                protocol_id=db_exp.protocol_id,
+                allocation_id=db_exp.allocation_id,
+                date=db_exp.date,
+                performed_by=db_exp.performed_by,
+                purpose=db_exp.purpose,
+                procedure=db_exp.procedure,
+                dose=db_exp.dose,
+                observations=db_exp.observations,
+                start_time=db_exp.start_time,
+                end_time=db_exp.end_time,
+                animals=animals,
+            )
+        )
+    return results
 
 
 @router.get("/{exp_id}", response_model=Experiment)
