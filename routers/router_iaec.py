@@ -1,4 +1,4 @@
-from dependencies.auth import get_current_user, require_any_role, require_iaec, require_investigator
+from dependencies.auth import get_current_user, require_any_role, require_iaec, require_investigator, user_role_names
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -86,18 +86,11 @@ def get_investigator_projects(
     current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
 ):
     if (
-        _user_role_names(current_user).isdisjoint({"iaec", "admin", "staff"})
+        set(user_role_names(current_user)).isdisjoint({"iaec", "admin", "staff"})
         and current_user.id != investigator_id
     ):
         raise HTTPException(status_code=403, detail="Forbidden")
     return crud_iaec.get_projects_by_investigator(db, investigator_id)
-
-
-def _user_role_names(user: User) -> set[str]:
-    names = {role.name for role in user.roles}
-    if user.role:
-        names.add(user.role)
-    return names
 
 
 @router.get("/project/{project_id}", response_model=IAECProject)
@@ -110,7 +103,7 @@ def get_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
 
-    roles = _user_role_names(current_user)
+    roles = set(user_role_names(current_user))
     if roles.isdisjoint({"iaec", "admin", "staff"}):
         if not user_can_view_project(db, current_user.id, project_id):
             raise HTTPException(status_code=403, detail="Forbidden")
@@ -376,7 +369,7 @@ def read_project_certificate(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    roles = _user_role_names(current_user)
+    roles = set(user_role_names(current_user))
     if roles.isdisjoint({"iaec", "admin", "staff"}):
         if not user_can_view_approval_letter(db, current_user.id, project_id):
             raise HTTPException(status_code=403, detail="Forbidden")
@@ -394,7 +387,7 @@ def download_project_certificate(
 ):
     from fastapi.responses import Response
 
-    roles = _user_role_names(current_user)
+    roles = set(user_role_names(current_user))
     if roles.isdisjoint({"iaec", "admin", "staff"}):
         if not user_can_view_approval_letter(db, current_user.id, project_id):
             raise HTTPException(status_code=403, detail="Forbidden")

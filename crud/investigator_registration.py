@@ -46,7 +46,6 @@ def register_investigator(db: Session, name: str, email: str, password: str) -> 
         email=normalized_email,
         password_hash=hash_password(password),
         status=True,
-        role=INVESTIGATOR_ROLE,
     )
     user.roles = [investigator_role]
 

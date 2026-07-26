@@ -46,7 +46,6 @@ def client():
                 email="bootstrap-staff@example.com",
                 password_hash=hash_password("StrongPass@123"),
                 status=True,
-                role="staff",
             )
             bootstrap.roles = [staff_role, admin_role]
             db.add(bootstrap)

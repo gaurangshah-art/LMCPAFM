@@ -78,8 +78,6 @@ def update_user_roles(
         db_roles.append(role)
 
     user.roles = db_roles
-    if role_names:
-        user.role = role_names[0]
     db.commit()
     db.refresh(user)
     return {

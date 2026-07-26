@@ -79,7 +79,6 @@ def main() -> int:
             existing.name = args.name
             existing.password_hash = hash_password(args.password)
             existing.status = status
-            existing.role = role_names[0]
             existing.roles = db_roles
             db.commit()
             print(f"Updated existing user {args.email}.")
@@ -90,7 +89,6 @@ def main() -> int:
             email=args.email,
             password_hash=hash_password(args.password),
             status=status,
-            role=role_names[0],
         )
         user.roles = db_roles
         db.add(user)

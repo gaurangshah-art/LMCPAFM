@@ -79,7 +79,6 @@ export function UsersPage({ currentUser }: UsersPageProps) {
         name: values.name,
         email: values.email,
         password: values.password,
-        role: values.roles[0],
         roles: [...values.roles],
       };
       const created = await createUser(payload);

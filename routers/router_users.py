@@ -49,13 +49,11 @@ def create_user(
             db.add(new_role)
             db.flush()
             db_roles.append(new_role)
-    primary_role = role_names[0]
     user = User(
         name=payload.name,
         email=payload.email,
         password_hash=hash_password(payload.password),
         status=payload.status,
-        role=primary_role,
     )
     user.roles = db_roles
 

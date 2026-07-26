@@ -51,7 +51,6 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role?: UserRole;
   roles: UserRole[];
   status?: boolean;
 }
@@ -60,8 +59,7 @@ export interface UserCreate {
   name: string;
   email: string;
   password: string;
-  role: UserRole;
-  roles?: UserRole[];
+  roles: UserRole[];
 }
 
 // ---------------- IAEC CERTIFICATE ----------------

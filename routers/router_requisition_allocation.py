@@ -16,17 +16,14 @@ from schemas.schemas_requisition_allocation import (
     AnimalAllocationCreate,
     AnimalAllocation,
 )
-from dependencies.auth import require_any_role
+from dependencies.auth import require_any_role, user_role_names
 from models.user import User
 
 router = APIRouter(prefix="/iaec", tags=["IAEC Workflow"])
 
 
 def _current_user_roles(current_user: User) -> list[str]:
-    roles = [r.name for r in getattr(current_user, "roles", []) or []]
-    if not roles and getattr(current_user, "role", None):
-        roles = [str(current_user.role)]
-    return roles
+    return user_role_names(current_user)
 
 
 # =========================================================

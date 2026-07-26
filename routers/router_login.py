@@ -60,7 +60,5 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             detail="User inactive",
         )
 
-    token = create_access_token(
-        {"sub": str(user.id), "email": user.email, "role": str(user.role)}
-    )
+    token = create_access_token({"sub": str(user.id), "email": user.email})
     return TokenResponse(access_token=token)
