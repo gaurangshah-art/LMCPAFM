@@ -33,24 +33,56 @@ const roleHome: Record<string, string> = {
   admin: "/users",
 };
 
+function hasStoredTokens(): boolean {
+  return Boolean(
+    window.localStorage.getItem(accessTokenKey) &&
+      window.localStorage.getItem(refreshTokenKey),
+  );
+}
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(hasStoredTokens);
 
   useEffect(() => {
     const storedAccessToken = window.localStorage.getItem(accessTokenKey);
     const storedRefreshToken = window.localStorage.getItem(refreshTokenKey);
 
     if (!storedAccessToken || !storedRefreshToken) {
-      setIsAuthLoading(false);
       return;
     }
 
     setAccessToken(storedAccessToken);
-    void hydrateCurrentUser();
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!cancelled) {
+          setCurrentUser(user);
+        }
+      } catch {
+        if (!cancelled) {
+          window.localStorage.removeItem(accessTokenKey);
+          window.localStorage.removeItem(refreshTokenKey);
+          setAccessToken(null);
+          setCurrentUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAuthLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function hydrateCurrentUser() {
+    setIsAuthLoading(true);
     try {
       const user = await getCurrentUser();
       setCurrentUser(user);

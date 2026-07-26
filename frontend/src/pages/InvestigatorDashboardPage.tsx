@@ -25,46 +25,59 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
   const [groups, setGroups] = useState<ExperimentGroup[]>([]);
   const [experiments, setExperiments] = useState<AnimalExperiment[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(currentUser?.id));
   const [error, setError] = useState<string | null>(null);
+  const investigatorId = currentUser?.id;
+  const [prevInvestigatorId, setPrevInvestigatorId] = useState(investigatorId);
 
-  async function loadAll() {
-    if (!currentUser) return;
-
-    try {
-      setLoading(true);
-
-      // 1️⃣ Load investigator's projects
-      const proj = await getProjectsByInvestigator(currentUser.id);
-      setProjects(proj);
-
-      // 2️⃣ Load all groups for all projects
-      const allGroups: ExperimentGroup[] = [];
-      for (const p of proj) {
-        const g = await getGroupsByProject(p.id);
-        allGroups.push(...g);
-      }
-      setGroups(allGroups);
-
-      // 3️⃣ Load all experiments for all groups
-      const allExperiments: AnimalExperiment[] = [];
-      for (const g of allGroups) {
-        const e = await getIAECExperimentsByGroup(g.id);
-        allExperiments.push(...e);
-      }
-      setExperiments(allExperiments);
-
-    } catch {
-      setError("Failed to load investigator dashboard.");
-    } finally {
-      setLoading(false);
-    }
+  if (prevInvestigatorId !== investigatorId) {
+    setPrevInvestigatorId(investigatorId);
+    setLoading(Boolean(investigatorId));
   }
 
   useEffect(() => {
-    if (!currentUser) return;
-    void loadAll();
-  }, [currentUser?.id]);
+    if (!investigatorId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const proj = await getProjectsByInvestigator(investigatorId);
+        if (cancelled) return;
+        setProjects(proj);
+
+        const allGroups: ExperimentGroup[] = [];
+        for (const p of proj) {
+          const g = await getGroupsByProject(p.id);
+          if (cancelled) return;
+          allGroups.push(...g);
+        }
+        setGroups(allGroups);
+
+        const allExperiments: AnimalExperiment[] = [];
+        for (const g of allGroups) {
+          const e = await getIAECExperimentsByGroup(g.id);
+          if (cancelled) return;
+          allExperiments.push(...e);
+        }
+        setExperiments(allExperiments);
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load investigator dashboard.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [investigatorId]);
 
   if (!currentUser) return <ErrorAlert message="User session required." />;
   if (loading) return <LoadingState label="Loading your IAEC workflow..." />;

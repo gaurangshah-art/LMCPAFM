@@ -8,26 +8,41 @@ export function IaecProjectReview() {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<IAECReviewProject | null>(null);
   const [formB, setFormB] = useState<FormB | null>(null);
   const [comments, setComments] = useState("");
+  const parsedProjectId = Number(projectId);
+  const [prevProjectId, setPrevProjectId] = useState(parsedProjectId);
 
-  async function loadProject() {
+  if (prevProjectId !== parsedProjectId) {
+    setPrevProjectId(parsedProjectId);
     setLoading(true);
-    try {
-      const res = await api.get(`/iaec/project/${projectId}`);
-      setProject(res.data.project);
-      setFormB(res.data.form_b);
-    } catch {
-      alert("Failed to load project.");
-    } finally {
-      setLoading(false);
-    }
   }
 
   useEffect(() => {
-    loadProject();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await api.get(`/iaec/project/${projectId}`);
+        if (cancelled) return;
+        setProject(res.data.project);
+        setFormB(res.data.form_b);
+      } catch {
+        if (!cancelled) {
+          alert("Failed to load project.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   async function approveProject() {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import { formatDisplayDate } from "../../utils/dateFormat";
@@ -9,11 +9,18 @@ export function IaecMeetingDetails() {
   const { meetingId } = useParams();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [meeting, setMeeting] = useState<IAECMeeting | null>(null);
   const [assignedProjects, setAssignedProjects] = useState<IAECReviewProject[]>([]);
+  const parsedMeetingId = Number(meetingId);
+  const [prevMeetingId, setPrevMeetingId] = useState(parsedMeetingId);
 
-  async function loadMeeting() {
+  if (prevMeetingId !== parsedMeetingId) {
+    setPrevMeetingId(parsedMeetingId);
+    setLoading(true);
+  }
+
+  const loadMeeting = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/iaec/meetings/${meetingId}`);
@@ -24,10 +31,31 @@ export function IaecMeetingDetails() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [meetingId]);
 
   useEffect(() => {
-    loadMeeting();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await api.get(`/iaec/meetings/${meetingId}`);
+        if (cancelled) return;
+        setMeeting(res.data.meeting);
+        setAssignedProjects(res.data.assigned_projects);
+      } catch {
+        if (!cancelled) {
+          alert("Failed to load meeting details.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [meetingId]);
 
   async function generateProjectId(formBId: number) {

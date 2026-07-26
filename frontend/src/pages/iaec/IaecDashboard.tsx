@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import { formatDisplayDate } from "../../utils/dateFormat";
@@ -11,13 +11,13 @@ import type {
 export function IaecDashboard() {
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [submittedForms, setSubmittedForms] = useState<IAECSubmittedForm[]>([]);
   const [meetings, setMeetings] = useState<IAECMeeting[]>([]);
   const [projectsUnderReview, setProjectsUnderReview] = useState<IAECReviewProject[]>([]);
   const [approvedProjects, setApprovedProjects] = useState<IAECReviewProject[]>([]);
 
-  async function loadDashboard() {
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get("/iaec/dashboard");
@@ -30,10 +30,33 @@ export function IaecDashboard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadDashboard();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await api.get("/iaec/dashboard");
+        if (cancelled) return;
+        setSubmittedForms(res.data.submitted_forms);
+        setMeetings(res.data.meetings);
+        setProjectsUnderReview(res.data.projects_under_review);
+        setApprovedProjects(res.data.approved_projects);
+      } catch {
+        if (!cancelled) {
+          alert("Failed to load IAEC dashboard.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function assignToMeeting(formBId: number, meetingId: string) {

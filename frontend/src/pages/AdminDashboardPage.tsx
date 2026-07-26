@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -25,7 +25,7 @@ export function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -43,10 +43,38 @@ export function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    void loadAll();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const sys = await getSystemSummary();
+        if (cancelled) return;
+        setSummary(sys.data);
+
+        const usr = await getAllUsers();
+        if (cancelled) return;
+        setUsers(usr.data);
+
+        const lg = await getSystemActivityLogs();
+        if (cancelled) return;
+        setLogs(lg.data);
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load admin dashboard.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleRoleUpdate(userId: number) {

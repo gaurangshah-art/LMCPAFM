@@ -9,23 +9,39 @@ export function IaecApprovalCertificate() {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [certificate, setCertificate] = useState<IAECApprovalCertificate | null>(null);
+  const parsedProjectId = Number(projectId);
+  const [prevProjectId, setPrevProjectId] = useState(parsedProjectId);
 
-  async function loadCertificate() {
+  if (prevProjectId !== parsedProjectId) {
+    setPrevProjectId(parsedProjectId);
     setLoading(true);
-    try {
-      const res = await api.get(`/iaec/project/${projectId}/certificate`);
-      setCertificate(res.data);
-    } catch {
-      alert("Failed to load certificate.");
-    } finally {
-      setLoading(false);
-    }
   }
 
   useEffect(() => {
-    loadCertificate();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await api.get(`/iaec/project/${projectId}/certificate`);
+        if (!cancelled) {
+          setCertificate(res.data);
+        }
+      } catch {
+        if (!cancelled) {
+          alert("Failed to load certificate.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   async function downloadCertificate() {

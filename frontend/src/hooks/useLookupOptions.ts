@@ -23,8 +23,30 @@ export function useLookupOptions(loader: Loader) {
   }, [loader]);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setError(null);
+        const data = await loader();
+        if (!cancelled) {
+          setOptions(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(getApiErrorMessage(err));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loader]);
 
   return { options, isLoading, error, reload };
 }
