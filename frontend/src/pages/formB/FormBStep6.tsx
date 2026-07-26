@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../api/client";
+import { getApiErrorMessage } from "../../api/errors";
+import { readStoredFormBId, saveFormBStep6 } from "../../api/formbApi";
 
 export function FormBStep6() {
   const navigate = useNavigate();
 
-  const [formBId] = useState<number | null>(
-    Number(localStorage.getItem("form_b_id")) || null
-  );
-
+  const [formBId] = useState<number | null>(readStoredFormBId());
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [personnelNames, setPersonnelNames] = useState("");
   const [trainingLevel, setTrainingLevel] = useState("");
@@ -37,18 +36,19 @@ export function FormBStep6() {
     }
 
     setLoading(true);
+    setErrorMessage(null);
     try {
-      await api.post("/form-b/step-6", {
+      await saveFormBStep6({
         form_b_id: formBId,
-        personnel_names: personnelNames.split(",").map((p) => p.trim()),
+        personnel_names: personnelNames.split(",").map((p) => p.trim()).filter(Boolean),
         training_level: trainingLevel,
         training_details: trainingDetails,
         competency_certification: competencyCertification,
       });
 
       navigate("/form-b/step-7");
-    } catch {
-      alert("Failed to save Step 6.");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -69,6 +69,7 @@ export function FormBStep6() {
 
       {formBId && (
         <>
+          {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
           <p><strong>Form B internal ID:</strong> {formBId}</p>
 
           <div className="form-grid">

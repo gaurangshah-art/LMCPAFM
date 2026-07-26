@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../api/client";
-import { readStoredFormBId } from "../../api/formbApi";
+import { readStoredFormBId, saveFormBStep2 } from "../../api/formbApi";
+import { getApiErrorMessage } from "../../api/errors";
 
 export function FormBStep2() {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ export function FormBStep2() {
   const [formBId] = useState<number | null>(readStoredFormBId());
 
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [durationMonths, setDurationMonths] = useState("");
@@ -40,20 +41,21 @@ export function FormBStep2() {
     }
 
     setLoading(true);
+    setErrorMessage(null);
     try {
-      await api.post("/form-b/step-2", {
+      await saveFormBStep2({
         form_b_id: formBId,
-        title,
+        title: title.trim(),
         duration_months: Number(durationMonths),
         funding_agency: fundingAgency,
-        summary,
-        objectives,
-        expected_outcomes: expectedOutcomes,
+        summary: summary.trim(),
+        objectives: objectives.trim(),
+        expected_outcomes: expectedOutcomes.trim(),
       });
 
       navigate("/form-b/step-3");
-    } catch {
-      alert("Failed to save Step 2.");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -71,6 +73,8 @@ export function FormBStep2() {
           Form B ID not found. Please complete Step 1 first.
         </p>
       )}
+
+      {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
 
       {formBId && (
         <>

@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../api/client";
+import { getApiErrorMessage } from "../../api/errors";
+import { readStoredFormBId, saveFormBStep3 } from "../../api/formbApi";
 
 export function FormBStep3() {
   const navigate = useNavigate();
 
-  const [formBId] = useState<number | null>(
-    Number(localStorage.getItem("form_b_id")) || null
-  );
+  const [formBId] = useState<number | null>(readStoredFormBId());
 
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [species, setSpecies] = useState("");
   const [strain, setStrain] = useState("");
@@ -46,8 +46,9 @@ export function FormBStep3() {
     }
 
     setLoading(true);
+    setErrorMessage(null);
     try {
-      await api.post("/form-b/step-3", {
+      await saveFormBStep3({
         form_b_id: formBId,
         species,
         strain,
@@ -60,8 +61,8 @@ export function FormBStep3() {
       });
 
       navigate("/form-b/step-4");
-    } catch {
-      alert("Failed to save Step 3.");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -82,6 +83,7 @@ export function FormBStep3() {
 
       {formBId && (
         <>
+          {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
           <p><strong>Form B internal ID:</strong> {formBId}</p>
 
           <div className="form-grid">

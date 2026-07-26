@@ -32,6 +32,12 @@ import { InvestigatorProfileGate } from "../components/common/InvestigatorProfil
 import { getMyInvestigatorProfile } from "../api/investigatorProfileApi";
 import { FormBStep1 } from "../pages/formB/FormBStep1";
 import { FormBStep2 } from "../pages/formB/FormBStep2";
+import { FormBStep3 } from "../pages/formB/FormBStep3";
+import { FormBStep4 } from "../pages/formB/FormBStep4";
+import { FormBStep5 } from "../pages/formB/FormBStep5";
+import { FormBStep6 } from "../pages/formB/FormBStep6";
+import { FormBStep7 } from "../pages/formB/FormBStep7";
+import { FormBReview } from "../pages/formB/FormBReview";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
 
 
@@ -243,6 +249,84 @@ export default function App() {
                   allowedRoles={["investigator"]}
                 >
                   <FormBStep2 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-3"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep3 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-4"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep4 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-5"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep5 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-6"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep6 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-7"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep7 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/review"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBReview />
                 </ProtectedRoute>
               }
             />

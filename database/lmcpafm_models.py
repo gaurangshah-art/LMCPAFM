@@ -1,7 +1,7 @@
 # database/lmcpafm_models.py
 from datetime import date, datetime, timezone
 from sqlalchemy import (
-    Integer, String, Date, DateTime, ForeignKey, Table, Column, Text, Boolean, CheckConstraint, UniqueConstraint
+    Integer, String, Date, DateTime, ForeignKey, Table, Column, Text, Boolean, CheckConstraint, UniqueConstraint, JSON
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -237,6 +237,8 @@ class FormB(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("iaec_project.id"))
     meeting_id: Mapped[int | None] = mapped_column(ForeignKey("iaec_meeting.id"), nullable=True)
     date: Mapped[Date] = mapped_column(Date)
+    application_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     project: Mapped["IAECProject"] = relationship()
     meeting: Mapped["IAECMeeting | None"] = relationship()
