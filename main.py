@@ -20,6 +20,7 @@ from routers.router_lookups import router as lookups_router, lookup_router as ap
 from routers.router_users import router as users_router
 from routers.router_login import router as auth_router
 from routers.router_inventory import router as inventory_router
+from routers.router_investigator_profile import router as investigator_profile_router
 from routers.formb_internal import router as formb_internal_router
 
 def _cors_origins() -> list[str]:
@@ -86,3 +87,4 @@ app.include_router(lookups_router)
 app.include_router(approved_lookups_router)
 app.include_router(users_router)
 app.include_router(inventory_router)
+app.include_router(investigator_profile_router)

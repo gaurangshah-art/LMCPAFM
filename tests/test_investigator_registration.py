@@ -45,6 +45,14 @@ def test_register_investigator_success_and_login(client, monkeypatch):
     assert me_res.status_code == 200, me_res.text
     assert me_res.json()["roles"] == ["investigator"]
 
+    profile_res = client.get(
+        "/investigator-profile/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert profile_res.status_code == 200, profile_res.text
+    assert profile_res.json()["institutional_email"] == payload["email"].lower()
+    assert profile_res.json()["is_complete"] is False
+
 
 def test_register_investigator_rejects_non_institutional_email(client, monkeypatch):
     monkeypatch.setenv("LMCP_INSTITUTIONAL_EMAIL_DOMAINS", "lmcp.ac.in")

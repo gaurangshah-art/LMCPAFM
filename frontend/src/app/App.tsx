@@ -27,6 +27,9 @@ import { IaecDashboard } from "../pages/iaec/IaecDashboard";
 import { InvestigatorDashboardPage } from "../pages/InvestigatorDashboardPage";
 import { RequisitionViewPage } from "../pages/RequisitionViewPage";
 import { AllocationViewPage } from "../pages/AllocationViewPage";
+import { InvestigatorProfilePage } from "../pages/InvestigatorProfilePage";
+import { InvestigatorProfileGate } from "../components/common/InvestigatorProfileGate";
+import { getMyInvestigatorProfile } from "../api/investigatorProfileApi";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
 
 
@@ -87,7 +90,19 @@ export default function App() {
       setCurrentUser(user);
 
       const primaryRole = user.roles[0];
-      const redirectPath = primaryRole ? (roleHome[primaryRole] ?? "/") : "/";
+      let redirectPath = primaryRole ? (roleHome[primaryRole] ?? "/") : "/";
+
+      if (user.roles.includes("investigator")) {
+        try {
+          const profile = await getMyInvestigatorProfile();
+          if (!profile.is_complete) {
+            redirectPath = "/investigator-profile?complete=1";
+          }
+        } catch {
+          redirectPath = "/investigator-profile?complete=1";
+        }
+      }
+
       window.location.replace(redirectPath);
     } catch {
       clearStoredSession();
@@ -114,6 +129,7 @@ export default function App() {
       />
 
       <main className="page-container">
+        <InvestigatorProfileGate currentUser={currentUser}>
         <Routes>
           {/* LOGIN */}
           <Route
@@ -203,6 +219,19 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+            <Route
+              path="/investigator-profile"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <InvestigatorProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
   path="/investigator-dashboard"
   element={
@@ -314,6 +343,7 @@ export default function App() {
           {/* FALLBACK */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </InvestigatorProfileGate>
       </main>
     </div>
   );

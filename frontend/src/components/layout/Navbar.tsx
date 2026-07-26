@@ -14,6 +14,7 @@ const navItems: NavItem[] = [
   { to: "/admin-dashboard", label: "Admin", roles: ["admin"] },
   { to: "/iaec-dashboard", label: "IAEC Dashboard", roles: ["iaec"] },
   { to: "/iaec-projects", label: "IAEC Projects", roles: ["iaec"] },
+  { to: "/investigator-profile", label: "My Profile", roles: ["investigator"] },
   { to: "/investigator-dashboard", label: "My Dashboard", roles: ["investigator"] },
   { to: "/requisitions", label: "Requisitions", roles: ["investigator", "staff", "iaec"] },
   { to: "/allocations", label: "Allocations", roles: ["staff", "investigator", "iaec"] },

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDValidationError
+from crud.investigator_profile import create_profile_shell
 from models.role import Role
 from models.user import User
 from utils.institutional_email import is_lmcp_institutional_email, normalize_email
@@ -50,6 +51,8 @@ def register_investigator(db: Session, name: str, email: str, password: str) -> 
     user.roles = [investigator_role]
 
     db.add(user)
+    db.flush()
+    create_profile_shell(db, user)
     db.commit()
     db.refresh(user)
     return user
