@@ -20,6 +20,7 @@ import { AllocationPage } from "../pages/AllocationPage";
 import { ExperimentGroupPage } from "../pages/ExperimentGroupPage";
 import { ExperimentPage } from "../pages/ExperimentPage";
 import { LoginPage } from "../pages/LoginPage";
+import { RegisterInvestigatorPage } from "../pages/RegisterInvestigatorPage";
 import { UsersPage } from "../pages/UsersPage";
 import { NotAuthorizedPage } from "../pages/NotAuthorizedPage";
 import { IAECWorkflowDashboardPage } from "../pages/IAECWorkflowDashboardPage";
@@ -137,6 +138,17 @@ export default function App() {
                 <Navigate to="/" replace />
               ) : (
                 <LoginPage onAuthenticated={handleAuthenticated} />
+              )
+            }
+          />
+
+          <Route
+            path="/register-investigator"
+            element={
+              getAccessToken() && currentUser ? (
+                <Navigate to="/" replace />
+              ) : (
+                <RegisterInvestigatorPage />
               )
             }
           />

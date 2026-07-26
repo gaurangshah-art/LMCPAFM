@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { login } from "../api/authApi";
 import { getApiErrorMessage } from "../api/errors";
@@ -23,6 +23,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
   const location = useLocation();
 
   const expired = new URLSearchParams(location.search).get("expired") === "1";
+  const registered = new URLSearchParams(location.search).get("registered") === "1";
 
   const {
     register,
@@ -72,6 +73,10 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
         <ErrorAlert message="Your session has expired. Please log in again." />
       )}
 
+      {registered && (
+        <SuccessNote message="Registration successful. Please sign in with your institutional email." />
+      )}
+
       <form className="form-grid" onSubmit={onSubmit}>
         <label>
           Email
@@ -96,6 +101,11 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
         {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
         {successMessage ? <SuccessNote message={successMessage} /> : null}
       </form>
+
+      <p className="auth-footer">
+        LMCP faculty?{" "}
+        <Link to="/register-investigator">Register as Investigator</Link>
+      </p>
     </section>
   );
 }

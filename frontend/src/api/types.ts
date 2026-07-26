@@ -10,6 +10,20 @@ export interface TokenResponse {
   refresh_token?: string;
 }
 
+export interface InvestigatorRegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface InvestigatorRegisterResponse {
+  id: number;
+  name: string;
+  email: string;
+  roles: string[];
+  status: boolean;
+}
+
 export interface ApiErrorResponse {
   detail?: string;
 }
