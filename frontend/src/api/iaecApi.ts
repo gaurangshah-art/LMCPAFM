@@ -6,6 +6,10 @@ import type {
   ExperimentGroupCreate,
   AnimalExperiment,
   AnimalExperimentCreate,
+  IAECMeetingRecord,
+  IAECMeetingCreate,
+  FormBWithMeeting,
+  FormBMeetingDecisionUpsert,
 } from "./types";
 
 export async function createProject(payload: IAECProjectCreate): Promise<IAECProject> {
@@ -130,4 +134,48 @@ export async function updateIAECExperiment(
 
 export async function deleteIAECExperiment(experimentId: number): Promise<void> {
   await apiClient.delete(`/iaec/experiment/${experimentId}`);
+}
+
+// -----------------------------
+// IAEC MEETINGS
+// -----------------------------
+
+export async function getMeetings(): Promise<IAECMeetingRecord[]> {
+  const { data } = await apiClient.get<IAECMeetingRecord[]>("/iaec/meeting");
+  return data;
+}
+
+export async function createMeeting(payload: IAECMeetingCreate): Promise<IAECMeetingRecord> {
+  const { data } = await apiClient.post<IAECMeetingRecord>("/iaec/meeting", payload);
+  return data;
+}
+
+// -----------------------------
+// FORM B — IAEC MEETING WORKFLOW
+// -----------------------------
+
+export async function getFormBWithMeeting(): Promise<FormBWithMeeting[]> {
+  const { data } = await apiClient.get<FormBWithMeeting[]>("/iaec/form-b-with-meeting");
+  return data;
+}
+
+export async function assignFormBMeeting(
+  formBId: number,
+  meetingId: number | null
+): Promise<void> {
+  await apiClient.patch(`/iaec/form-b/${formBId}/meeting`, { meeting_id: meetingId });
+}
+
+export async function generateFormBProtocolNumber(formBId: number): Promise<{ protocol_number: string }> {
+  const { data } = await apiClient.post<{ protocol_number: string }>(
+    `/iaec/form-b/${formBId}/protocol-number`
+  );
+  return data;
+}
+
+export async function upsertFormBMeetingDecision(
+  formBId: number,
+  payload: FormBMeetingDecisionUpsert
+): Promise<void> {
+  await apiClient.put(`/iaec/form-b/${formBId}/decision`, payload);
 }

@@ -1,7 +1,7 @@
 # database/lmcpafm_models.py
 from datetime import date, datetime, timezone
 from sqlalchemy import (
-    Integer, String, Date, DateTime, ForeignKey, Table, Column, Text, Boolean, CheckConstraint
+    Integer, String, Date, DateTime, ForeignKey, Table, Column, Text, Boolean, CheckConstraint, UniqueConstraint
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -189,6 +189,7 @@ class IAECMeeting(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     date: Mapped[Date] = mapped_column(Date)
+    meeting_number: Mapped[str | None] = mapped_column(String, nullable=True)
     minutes: Mapped[str] = mapped_column(Text)
 
 
@@ -234,12 +235,32 @@ class FormB(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("iaec_project.id"))
+    meeting_id: Mapped[int | None] = mapped_column(ForeignKey("iaec_meeting.id"), nullable=True)
     date: Mapped[Date] = mapped_column(Date)
 
     project: Mapped["IAECProject"] = relationship()
+    meeting: Mapped["IAECMeeting | None"] = relationship()
     animal_requirements: Mapped[list["FormBAnimalRequirement"]] = relationship(back_populates="form_b")
     drug_injections: Mapped[list["FormBDrugInjection"]] = relationship(back_populates="form_b")
     investigators: Mapped[list["FormBInvestigator"]] = relationship(back_populates="form_b")
+    meeting_decisions: Mapped[list["FormBMeetingDecision"]] = relationship(back_populates="form_b")
+
+
+class FormBMeetingDecision(Base):
+    __tablename__ = "form_b_meeting_decision"
+    __table_args__ = (
+        UniqueConstraint("form_b_id", "meeting_id", name="uq_form_b_meeting_decision"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    form_b_id: Mapped[int] = mapped_column(ForeignKey("form_b.id"))
+    meeting_id: Mapped[int] = mapped_column(ForeignKey("iaec_meeting.id"))
+    decision: Mapped[str] = mapped_column(String, nullable=False)
+    approved_animal_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    remarks: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    form_b: Mapped["FormB"] = relationship(back_populates="meeting_decisions")
+    meeting: Mapped["IAECMeeting"] = relationship()
 
 
 class FormBAnimalRequirement(Base):

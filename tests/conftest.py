@@ -29,6 +29,32 @@ def client():
 
 
 @pytest.fixture
+def iaec_auth_headers(client):
+    email = f"iaec_{uuid4().hex[:8]}@example.com"
+    password = "StrongPass@123"
+    create_res = client.post(
+        "/users/",
+        json={
+            "name": "IAEC Test User",
+            "email": email,
+            "password": password,
+            "roles": ["iaec"],
+            "status": True,
+        },
+    )
+    assert create_res.status_code == 201, create_res.text
+
+    login_res = client.post(
+        "/auth/login",
+        json={"email": email, "password": password},
+    )
+    assert login_res.status_code == 200, login_res.text
+
+    token = login_res.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
 def staff_auth_headers(client):
     email = f"staff_{uuid4().hex[:8]}@example.com"
     password = "StrongPass@123"

@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, NavLink } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getCurrentUser } from "../api/authApi";
 import { getAccessToken, setAccessToken } from "../api/client";
@@ -23,7 +23,7 @@ import { LoginPage } from "../pages/LoginPage";
 import { RegisterInvestigatorPage } from "../pages/RegisterInvestigatorPage";
 import { UsersPage } from "../pages/UsersPage";
 import { NotAuthorizedPage } from "../pages/NotAuthorizedPage";
-import { IAECWorkflowDashboardPage } from "../pages/IAECWorkflowDashboardPage";
+import { IaecDashboard } from "../pages/iaec/IaecDashboard";
 import { InvestigatorDashboardPage } from "../pages/InvestigatorDashboardPage";
 import { RequisitionViewPage } from "../pages/RequisitionViewPage";
 import { AllocationViewPage } from "../pages/AllocationViewPage";
@@ -111,22 +111,7 @@ export default function App() {
         currentUser={currentUser}
         isAuthLoading={isAuthLoading}
         onLogout={handleLogout}
-      >
-        {currentUser?.roles.includes("iaec") && (
-          <>
-            <NavLink to="/iaec-dashboard">IAEC Dashboard</NavLink>
-            <NavLink to="/iaec-projects">IAEC Projects</NavLink>
-          </>
-        )}
-            {currentUser?.roles.includes("investigator") && (
-  <>
-            <NavLink to="/investigator-dashboard">My Dashboard</NavLink>
-            <NavLink to="/requisitions">Requisitions</NavLink>
-            <NavLink to="/experiment-groups">Experiment Groups</NavLink>
-            <NavLink to="/experiments">Experiments</NavLink>
-        </>
-    )}
-      </Navbar>
+      />
 
       <main className="page-container">
         <Routes>
@@ -200,7 +185,7 @@ export default function App() {
                 isAuthLoading={isAuthLoading}
                 allowedRoles={["iaec"]}
               >
-                <IAECWorkflowDashboardPage />
+                <IaecDashboard />
               </ProtectedRoute>
             }
           />

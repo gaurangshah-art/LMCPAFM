@@ -48,3 +48,17 @@ class AnimalExperiment(AnimalExperimentBase):
     id: int
     group_id: int
     model_config = ConfigDict(from_attributes=True)
+
+
+class IAECMeetingCreate(BaseModel):
+    date: date
+    meeting_number: str | None = None
+    minutes: str = ""
+
+
+class IAECMeetingRead(BaseModel):
+    id: int
+    date: date
+    meeting_number: str | None = None
+    minutes: str
+    model_config = ConfigDict(from_attributes=True)

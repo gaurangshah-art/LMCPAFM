@@ -114,6 +114,12 @@ body {
   white-space: nowrap;
 }
 
+.session-loading {
+  color: #d2e9ff;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
 .nav-link {
   color: #d2e9ff;
   text-decoration: none;

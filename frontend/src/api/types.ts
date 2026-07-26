@@ -87,6 +87,47 @@ export interface IAECMeeting {
   status: string;
 }
 
+export interface IAECMeetingRecord {
+  id: number;
+  date: string;
+  meeting_number: string | null;
+  minutes: string;
+}
+
+export interface IAECMeetingCreate {
+  date: string;
+  meeting_number?: string | null;
+  minutes?: string;
+}
+
+// ---------------- FORM B WITH MEETING (IAEC LIST) ----------------
+export interface FormBWithMeeting {
+  form_b_id: number;
+  project_id: number;
+  project_title: string;
+  form_b_date: string;
+  meeting_id: number | null;
+  meeting_date: string | null;
+  meeting_number: string | null;
+  protocol_number: string | null;
+  decision: string | null;
+  approved_animal_count: number | null;
+  decision_remarks: string | null;
+}
+
+export type FormBMeetingDecisionValue =
+  | "approved"
+  | "approved_with_revisions"
+  | "rejected"
+  | "animal_count_amended";
+
+export interface FormBMeetingDecisionUpsert {
+  meeting_id: number;
+  decision: FormBMeetingDecisionValue;
+  approved_animal_count?: number | null;
+  remarks?: string | null;
+}
+
 export interface IAECSubmittedForm {
   id: number;
   principal_investigator: string;
