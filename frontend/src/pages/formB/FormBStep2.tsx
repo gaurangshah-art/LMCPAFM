@@ -5,7 +5,7 @@ import { api } from "../../api/client";
 export function FormBStep2() {
   const navigate = useNavigate();
 
-  const [formBId, setFormBId] = useState<number | null>(
+  const [formBId] = useState<number | null>(
     Number(localStorage.getItem("form_b_id")) || null
   );
 

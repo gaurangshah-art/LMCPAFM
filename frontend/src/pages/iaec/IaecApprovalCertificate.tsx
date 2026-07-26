@@ -3,12 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import { formatDisplayDate } from "../../utils/dateFormat";
 
+import type { IAECApprovalCertificate } from "../../api/types";
+
 export function IaecApprovalCertificate() {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [certificate, setCertificate] = useState(null);
+  const [certificate, setCertificate] = useState<IAECApprovalCertificate | null>(null);
 
   async function loadCertificate() {
     setLoading(true);
@@ -27,6 +29,8 @@ export function IaecApprovalCertificate() {
   }, [projectId]);
 
   async function downloadCertificate() {
+    if (!certificate) return;
+
     try {
       const res = await api.get(`/iaec/project/${projectId}/certificate/download`, {
         responseType: "blob",

@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 
+import type { FinalReportGroup } from "../../api/types";
+
 export function FinalReportEntryPage() {
   const { allocationId } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [groups, setGroups] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const [groups, setGroups] = useState<FinalReportGroup[]>([]);
+  const [logs, setLogs] = useState<Record<string, unknown>[]>([]);
 
   const [summary, setSummary] = useState("");
   const [groupResults, setGroupResults] = useState({});

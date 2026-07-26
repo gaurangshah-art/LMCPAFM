@@ -8,7 +8,7 @@ import {
   getSystemSummary,
 } from "../api/adminApi";
 
-import type { User, SystemSummary, ActivityLog } from "../../api/types";
+import type { User, SystemSummary, ActivityLog } from "../api/types";
 
 import { PageSection } from "../components/common/PageSection";
 import { LoadingState } from "../components/common/LoadingState";
@@ -30,13 +30,13 @@ export function AdminDashboardPage() {
       setLoading(true);
 
       const sys = await getSystemSummary();
-      setSummary(sys);
+      setSummary(sys.data);
 
       const usr = await getAllUsers();
-      setUsers(usr);
+      setUsers(usr.data);
 
       const lg = await getSystemActivityLogs();
-      setLogs(lg);
+      setLogs(lg.data);
 
     } catch {
       setError("Failed to load admin dashboard.");
@@ -54,7 +54,7 @@ export function AdminDashboardPage() {
     if (!newRole) return;
 
     try {
-      await updateUserRoles(userId, [newRole]);
+      await updateUserRoles(String(userId), [newRole]);
       void loadAll();
       alert("Role updated.");
     } catch {

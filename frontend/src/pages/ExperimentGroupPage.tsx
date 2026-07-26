@@ -17,7 +17,7 @@ import {
 
 import { getApiErrorMessage } from "../api/errors";
 
-import type { AnimalExperiment, ExperimentGroup } from "../../api/types";
+import type { AnimalExperiment, ExperimentGroup } from "../api/types";
 
 import { useLookupOptions } from "../hooks/useLookupOptions";
 
@@ -162,7 +162,7 @@ export function ExperimentGroupPage() {
     <div className="page-grid">
       {/* CREATE GROUP */}
       <PageSection title="Create Experiment Group" subtitle="POST /iaec/group">
-        <ExperimentGroupForm onSubmit={handleGroupCreate} />
+        <ExperimentGroupForm onCreated={handleGroupCreate} />
       </PageSection>
 
       {/* LIST GROUPS */}
@@ -194,16 +194,12 @@ export function ExperimentGroupPage() {
         {isLoadingGroups && <LoadingState label="Loading groups..." />}
         {groupError && <ErrorAlert message={groupError} />}
 
-        <ExperimentGroupTable
-          groups={groups}
-          onEdit={handleGroupUpdate}
-          onDelete={handleGroupDelete}
-        />
+        <ExperimentGroupTable groups={groups} />
       </PageSection>
 
       {/* CREATE EXPERIMENT */}
       <PageSection title="Create IAEC Experiment" subtitle="POST /iaec/experiment">
-        <IAECAnimalExperimentForm onSubmit={handleExperimentCreate} />
+        <IAECAnimalExperimentForm onCreated={handleExperimentCreate} />
       </PageSection>
 
       {/* LIST EXPERIMENTS */}

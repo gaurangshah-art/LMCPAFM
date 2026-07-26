@@ -62,8 +62,8 @@ export function ProjectTable({ projects }: ProjectTableProps) {
           <tr key={project.id}>
             <td>{project.id}</td>
             <td>{project.title}</td>
-            <td>{project.investigator_name}</td>
-            <td>{project.status}</td>
+            <td>{project.investigator_name ?? project.investigator ?? "—"}</td>
+            <td>{project.status ?? "—"}</td>
 
             <td className="actions">
               <button

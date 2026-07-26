@@ -4,7 +4,7 @@ import { z } from "zod";
 import { createIAECExperiment } from "../../api/iaecApi";
 import { getApprovedExperimentGroupOptions } from "../../api/lookupApi";
 import { getApiErrorMessage } from "../../api/errors";
-import type { AnimalExperiment } from "../../api/types";
+import type { AnimalExperiment, AnimalExperimentCreate } from "../../api/types";
 import { useLookupOptions } from "../../hooks/useLookupOptions";
 import { useSubmitState } from "../../hooks/useSubmitState";
 import { ErrorAlert } from "../common/ErrorAlert";
@@ -19,13 +19,23 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface IAECAnimalExperimentFormProps {
-  onCreated: (experiment: AnimalExperiment) => void;
+  onCreated?: (experiment: AnimalExperiment) => void;
+  onSubmit?: (values: AnimalExperimentCreate) => void;
+  initialValues?: AnimalExperiment;
+  submitLabel?: string;
 }
 
-export function IAECAnimalExperimentForm({ onCreated }: IAECAnimalExperimentFormProps) {
+export function IAECAnimalExperimentForm({
+  onCreated,
+  onSubmit: onSubmitProp,
+  initialValues,
+  submitLabel = "Create IAEC Experiment",
+}: IAECAnimalExperimentFormProps) {
   const { register, watch, setValue, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { description: "", group_id: 0 },
+    defaultValues: initialValues
+      ? { description: initialValues.description, group_id: initialValues.group_id }
+      : { description: "", group_id: 0 },
   });
 
   const groupLookup = useLookupOptions(getApprovedExperimentGroupOptions);
@@ -34,8 +44,14 @@ export function IAECAnimalExperimentForm({ onCreated }: IAECAnimalExperimentForm
   const onSubmit = handleSubmit(async (values) => {
     start();
     try {
+      if (onSubmitProp) {
+        onSubmitProp(values);
+        succeed("IAEC experiment updated.");
+        return;
+      }
+
       const created = await createIAECExperiment(values);
-      onCreated(created);
+      onCreated?.(created);
       succeed(`IAEC experiment created with id ${created.id}`);
       reset({ description: "", group_id: 0 });
     } catch (error) {
@@ -61,7 +77,7 @@ export function IAECAnimalExperimentForm({ onCreated }: IAECAnimalExperimentForm
         fieldError={errors.group_id?.message}
       />
       <button className="btn" type="submit" disabled={isSubmitting}>
-        Create IAEC Experiment
+        {submitLabel}
       </button>
       {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
       {successMessage ? <SuccessNote message={successMessage} /> : null}

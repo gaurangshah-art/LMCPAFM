@@ -3,13 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import { formatDisplayDate } from "../../utils/dateFormat";
 
+import type { IAECMeeting, IAECReviewProject } from "../../api/types";
+
 export function IaecMeetingDetails() {
   const { meetingId } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [meeting, setMeeting] = useState(null);
-  const [assignedProjects, setAssignedProjects] = useState([]);
+  const [meeting, setMeeting] = useState<IAECMeeting | null>(null);
+  const [assignedProjects, setAssignedProjects] = useState<IAECReviewProject[]>([]);
 
   async function loadMeeting() {
     setLoading(true);
@@ -28,7 +30,7 @@ export function IaecMeetingDetails() {
     loadMeeting();
   }, [meetingId]);
 
-  async function generateProjectId(formBId) {
+  async function generateProjectId(formBId: number) {
     if (!window.confirm("Generate LMCP/IAEC ID for this project?")) return;
 
     try {

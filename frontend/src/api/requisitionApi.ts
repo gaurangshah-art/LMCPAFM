@@ -80,6 +80,28 @@ export async function approveRequisitionIAEC(
   return data;
 }
 
+export async function rejectRequisitionStaff(
+  requisitionId: number,
+  reason: string
+): Promise<AnimalRequisition> {
+  const { data } = await apiClient.post<AnimalRequisition>(
+    `/iaec/requisition/${requisitionId}/staff-reject`,
+    { reason }
+  );
+  return data;
+}
+
+export async function rejectRequisitionIAEC(
+  requisitionId: number,
+  reason: string
+): Promise<AnimalRequisition> {
+  const { data } = await apiClient.post<AnimalRequisition>(
+    `/iaec/requisition/${requisitionId}/reject`,
+    { reason }
+  );
+  return data;
+}
+
 export async function addRequisitionComment(
   requisitionId: number,
   comment: string

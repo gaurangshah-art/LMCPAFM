@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
-import { api } from "../../api/client";
 import { useNavigate } from "react-router-dom";
+import { api } from "../../api/client";
 import { formatDisplayDate } from "../../utils/dateFormat";
+import type {
+  IAECMeeting,
+  IAECReviewProject,
+  IAECSubmittedForm,
+} from "../../api/types";
 
 export function IaecDashboard() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [submittedForms, setSubmittedForms] = useState([]);
-  const [meetings, setMeetings] = useState([]);
-  const [projectsUnderReview, setProjectsUnderReview] = useState([]);
-  const [approvedProjects, setApprovedProjects] = useState([]);
+  const [submittedForms, setSubmittedForms] = useState<IAECSubmittedForm[]>([]);
+  const [meetings, setMeetings] = useState<IAECMeeting[]>([]);
+  const [projectsUnderReview, setProjectsUnderReview] = useState<IAECReviewProject[]>([]);
+  const [approvedProjects, setApprovedProjects] = useState<IAECReviewProject[]>([]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -31,7 +36,7 @@ export function IaecDashboard() {
     loadDashboard();
   }, []);
 
-  async function assignToMeeting(formBId, meetingId) {
+  async function assignToMeeting(formBId: number, meetingId: string) {
     if (!window.confirm("Assign this Form B to the selected meeting?")) return;
 
     try {
@@ -43,7 +48,7 @@ export function IaecDashboard() {
     }
   }
 
-  async function generateProjectId(formBId, meetingId) {
+  async function generateProjectId(formBId: number, meetingId: number) {
     if (!window.confirm("Generate LMCP/IAEC ID for this project?")) return;
 
     try {
@@ -133,7 +138,11 @@ export function IaecDashboard() {
             {!p.lmcp_iaec_id && (
               <button
                 className="btn"
-                onClick={() => generateProjectId(p.form_b_id, p.meeting_id)}
+                onClick={() => {
+                  if (p.meeting_id != null) {
+                    generateProjectId(p.form_b_id, p.meeting_id);
+                  }
+                }}
               >
                 Generate LMCP/IAEC ID
               </button>

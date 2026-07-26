@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 
+import type { FormB, IAECReviewProject } from "../../api/types";
+
 export function IaecProjectReview() {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [project, setProject] = useState(null);
-  const [formB, setFormB] = useState(null);
+  const [project, setProject] = useState<IAECReviewProject | null>(null);
+  const [formB, setFormB] = useState<FormB | null>(null);
   const [comments, setComments] = useState("");
 
   async function loadProject() {

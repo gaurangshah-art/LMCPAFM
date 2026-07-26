@@ -47,7 +47,7 @@ export function IAECProjectForm({
     defaultValues: initialValues
       ? {
           title: initialValues.title,
-          investigator_name: initialValues.investigator_name,
+          investigator_name: initialValues.investigator_name ?? initialValues.investigator ?? "",
           protocol_number: initialValues.protocol_number ?? "",
           approval_date: initialValues.approval_date ?? "",
           principal_investigator: initialValues.principal_investigator ?? "",

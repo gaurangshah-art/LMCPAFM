@@ -8,7 +8,8 @@ import {
   addRequisitionComment,
   approveRequisitionStaff,
   approveRequisitionIAEC,
-  
+  rejectRequisitionStaff,
+  rejectRequisitionIAEC,
 } from "../api/requisitionApi";
 
 import type {
@@ -40,7 +41,7 @@ export function RequisitionViewPage() {
       setLoading(true);
 
       const r = await getRequisitionById(requisitionId);
-      setReq(r);
+      setReq(r as unknown as Requisition);
 
       const alloc = await getAllocationsByRequisition(requisitionId);
       setAllocations(alloc);
@@ -64,7 +65,7 @@ export function RequisitionViewPage() {
 
     try {
       const updated = await addRequisitionComment(requisitionId, commentText);
-      setReq(updated);
+      setReq(updated as unknown as Requisition);
       setCommentText("");
     } catch {
       alert("Failed to add comment.");
@@ -74,7 +75,7 @@ export function RequisitionViewPage() {
   async function handleStaffApprove() {
     try {
       const updated = await approveRequisitionStaff(requisitionId);
-      setReq(updated);
+      setReq(updated as unknown as Requisition);
     } catch {
       alert("Failed to approve requisition.");
     }
@@ -86,7 +87,7 @@ export function RequisitionViewPage() {
 
     try {
       const updated = await rejectRequisitionStaff(requisitionId, reason);
-      setReq(updated);
+      setReq(updated as unknown as Requisition);
     } catch {
       alert("Failed to reject requisition.");
     }
@@ -95,7 +96,7 @@ export function RequisitionViewPage() {
   async function handleIAECApprove() {
     try {
       const updated = await approveRequisitionIAEC(requisitionId);
-      setReq(updated);
+      setReq(updated as unknown as Requisition);
     } catch {
       alert("Failed to approve requisition.");
     }
@@ -107,7 +108,7 @@ export function RequisitionViewPage() {
 
     try {
       const updated = await rejectRequisitionIAEC(requisitionId, reason);
-      setReq(updated);
+      setReq(updated as unknown as Requisition);
     } catch {
       alert("Failed to reject requisition.");
     }
@@ -132,7 +133,7 @@ export function RequisitionViewPage() {
             <strong>Species:</strong> {req.species}
           </div>
           <div>
-            <strong>Quantity:</strong> {req.quantity}
+            <strong>Quantity:</strong> {req.quantity_requested}
           </div>
           <div>
             <strong>Purpose:</strong> {req.purpose}
@@ -167,7 +168,9 @@ export function RequisitionViewPage() {
         ) : (
           <ul>
             {req.comments.map((c, idx) => (
-              <li key={idx}>{c}</li>
+              <li key={idx}>
+                {formatDisplayDate(c.created_at)}: {c.text}
+              </li>
             ))}
           </ul>
         )}
@@ -214,7 +217,7 @@ export function RequisitionViewPage() {
           emptyText="No allocations yet."
           columns={[
             { header: "ID", cell: (row) => row.id },
-            { header: "Quantity", cell: (row) => row.quantity },
+            { header: "Quantity", cell: (row) => row.quantity_allocated },
             { header: "Date", cell: (row) => formatDisplayDate(row.date) },
             { header: "Staff", cell: (row) => row.staff_name },
           ]}

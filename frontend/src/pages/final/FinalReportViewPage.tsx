@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../api/client";
 
+import type { FinalReport, FinalReportGroup } from "../../api/types";
+
 export function FinalReportViewPage() {
   const { allocationId } = useParams();
 
   const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState(null);
-  const [groups, setGroups] = useState([]);
+  const [report, setReport] = useState<FinalReport | null>(null);
+  const [groups, setGroups] = useState<FinalReportGroup[]>([]);
 
   useEffect(() => {
     async function loadData() {

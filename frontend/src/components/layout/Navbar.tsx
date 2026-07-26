@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import type { User } from "../../api/types";
 
@@ -15,9 +16,10 @@ interface NavbarProps {
   currentUser: User | null;
   isAuthLoading: boolean;
   onLogout: () => void;
+  children?: ReactNode;
 }
 
-export function Navbar({ currentUser, isAuthLoading, onLogout }: NavbarProps) {
+export function Navbar({ currentUser, isAuthLoading, onLogout, children }: NavbarProps) {
   return (
     <header className="top-nav">
       <div className="brand">
@@ -34,6 +36,7 @@ export function Navbar({ currentUser, isAuthLoading, onLogout }: NavbarProps) {
             {item.label}
           </NavLink>
         ))}
+        {children}
       </nav>
       <div className="session-panel">
         <div className="session-meta">

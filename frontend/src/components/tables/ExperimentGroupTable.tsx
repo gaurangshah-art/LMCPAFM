@@ -14,7 +14,7 @@ export function ExperimentGroupTable({ groups }: ExperimentGroupTableProps) {
         { header: "ID", cell: (row) => row.id },
         { header: "Name", cell: (row) => row.name },
         { header: "Project ID", cell: (row) => row.project_id },
-        { header: "Experiments", cell: (row) => row.experiments.length },
+        { header: "Experiments", cell: (row) => row.experiments?.length ?? 0 },
       ]}
     />
   );

@@ -2,13 +2,18 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 
+import type { FinalReportGroup } from "../../api/types";
+
+type EntryAllocation = Record<string, unknown> & { id: number };
+type EntryProcedure = { id: number; name: string; description?: string };
+
 export function ExperimentEntryPage() {
   const { allocationId } = useParams();
   const navigate = useNavigate();
 
-  const [allocation, setAllocation] = useState(null);
-  const [groups, setGroups] = useState([]);
-  const [procedures, setProcedures] = useState([]);
+  const [allocation, setAllocation] = useState<EntryAllocation | null>(null);
+  const [groups, setGroups] = useState<FinalReportGroup[]>([]);
+  const [procedures, setProcedures] = useState<EntryProcedure[]>([]);
 
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupSize, setNewGroupSize] = useState("");

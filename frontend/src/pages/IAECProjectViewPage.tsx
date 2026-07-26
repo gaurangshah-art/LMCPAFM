@@ -14,7 +14,7 @@ import type {
   IAECProject,
   ExperimentGroup,
   AnimalExperiment,
-} from "../../api/types";
+} from "../api/types";
 
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
@@ -159,7 +159,7 @@ export function IAECProjectViewPage() {
             <p>No comments yet.</p>
           ) : (
             <ul>
-              {project.comments.map((c, idx) => (
+              {project.comments?.map((c: string, idx: number) => (
                 <li key={idx}>{c}</li>
               ))}
             </ul>

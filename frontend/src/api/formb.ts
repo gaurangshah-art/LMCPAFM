@@ -1,6 +1,6 @@
-import api from "./api"; // your axios instance
+import { apiClient } from "./client";
 
 export async function fetchFormB(protocolNumber: string) {
-  const res = await api.get(`/formb/${protocolNumber}`);
-  return res.data;
+  const { data } = await apiClient.get(`/formb/${protocolNumber}`);
+  return data;
 }
