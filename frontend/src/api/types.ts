@@ -346,6 +346,57 @@ export interface Allocation {
   date?: string;
 }
 
+// ---------------- FORM C (INVENTORY REGISTER) ----------------
+export interface FormCStockRow {
+  date: string;
+  number_in_stock: number;
+  species_id: number;
+  species_name: string;
+  strain_id: number;
+  strain_name: string;
+  sex?: string | null;
+  age?: string | null;
+  voucher_or_bill_number?: string | null;
+}
+
+export interface FormCAcquisitionRow {
+  date: string;
+  number_acquired: number;
+  supplier_name?: string | null;
+  supplier_address?: string | null;
+  acquired_from?: string | null;
+  species_id: number;
+  species_name: string;
+  strain_id: number;
+  strain_name: string;
+  sex?: string | null;
+  age?: string | null;
+  voucher_or_bill_number?: string | null;
+  procurement_id: number;
+}
+
+export interface FormCSuppliedRow {
+  date: string;
+  number_supplied: number;
+  destination_name?: string | null;
+  destination_address?: string | null;
+  destination_registration_number?: string | null;
+  species_id: number;
+  species_name: string;
+  strain_id: number;
+  strain_name: string;
+  sex?: string | null;
+  age?: string | null;
+  allocation_id: number;
+}
+
+export interface FormCData {
+  as_of_date: string;
+  stock_rows: FormCStockRow[];
+  acquisition_rows: FormCAcquisitionRow[];
+  supplied_rows: FormCSuppliedRow[];
+}
+
 // ---------------- FINAL REPORT ----------------
 export interface FinalReportGroup {
   id: number;

@@ -19,6 +19,7 @@ const navItems: NavItem[] = [
   { to: "/investigator-dashboard", label: "My Dashboard", roles: ["investigator"] },
   { to: "/requisitions", label: "Requisitions", roles: ["investigator", "staff", "iaec"] },
   { to: "/allocations", label: "Allocations", roles: ["staff", "investigator", "iaec"] },
+  { to: "/form-c", label: "Form C", roles: ["staff", "iaec", "admin"] },
   { to: "/experiment-groups", label: "Experiment Groups", roles: ["investigator"] },
   { to: "/experiments", label: "Experiments", roles: ["investigator"] },
 ];

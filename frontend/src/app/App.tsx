@@ -43,6 +43,7 @@ import { IaecMeetingDetails } from "../pages/iaec/IaecMeetingDetails";
 import { IaecProjectReview } from "../pages/iaec/IaecProjectReview";
 import { IaecApprovalCertificate } from "../pages/iaec/IaecApprovalCertificate";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
+import { FormCPage } from "../pages/FormCPage";
 
 
 const roleHome: Record<string, string> = {
@@ -412,6 +413,19 @@ export default function App() {
   }
 />
   
+          <Route
+            path="/form-c"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["staff", "iaec", "admin"]}
+              >
+                <FormCPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* ALLOCATIONS — staff */}
           <Route
             path="/allocations"

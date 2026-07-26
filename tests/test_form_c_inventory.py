@@ -1,14 +1,11 @@
 from datetime import date
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
-
 from database.database import SessionLocal, init_db
 from database.lmcpafm_models import Animal, Cage, Procurement, Species, Strain
-from main import app
 
 
-def test_form_c_data_endpoint():
+def test_form_c_data_endpoint(client, staff_auth_headers):
     init_db()
     db = SessionLocal()
 
@@ -46,8 +43,10 @@ def test_form_c_data_endpoint():
     db.commit()
     db.close()
 
-    client = TestClient(app)
-    response = client.get("/inventory/form-c-data")
+    unauth = client.get("/inventory/form-c-data")
+    assert unauth.status_code == 401
+
+    response = client.get("/inventory/form-c-data", headers=staff_auth_headers)
     assert response.status_code == 200
     payload = response.json()
     assert "stock_rows" in payload
