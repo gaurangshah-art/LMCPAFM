@@ -1,4 +1,4 @@
-import type { User } from "../../api/types";
+import type { User } from "../api/types";
 
 export type WorkflowRole = "investigator" | "iaec" | "staff";
 export function hasRole(user: User | null, role: WorkflowRole) {

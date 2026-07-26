@@ -27,7 +27,7 @@ export function ProtectedRoute({
   }
 
   // Role restriction exists → enforce it
-  if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
+  if (allowedRoles && !currentUser.roles.some((role) => allowedRoles.includes(role))) {
     return <Navigate to="/not-authorized" replace />;
   }
 

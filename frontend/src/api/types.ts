@@ -7,6 +7,7 @@ export interface LoginRequest {
 export interface TokenResponse {
   access_token: string;
   token_type: string;
+  refresh_token?: string;
 }
 
 export interface ApiErrorResponse {
@@ -38,6 +39,7 @@ export interface User {
   email: string;
   role?: UserRole;
   roles: UserRole[];
+  status?: boolean;
 }
 
 export interface UserCreate {
@@ -293,6 +295,7 @@ export interface Allocation {
 export interface FinalReportGroup {
   id: number;
   name: string;
+  size?: number;
 }
 
 export interface FinalReport {

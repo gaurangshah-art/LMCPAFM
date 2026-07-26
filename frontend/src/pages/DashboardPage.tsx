@@ -1,4 +1,4 @@
-import type { User } from "../../api/types";
+import type { User } from "../api/types";
 
 interface DashboardPageProps {
   currentUser: User | null;

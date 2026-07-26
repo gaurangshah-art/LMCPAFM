@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { getProjectById, updateProject } from "../api/iaecApi";
-import type { IAECProject, IAECProjectCreate } from "../../api/types";
+import type { IAECProject, IAECProjectCreate } from "../api/types";
 
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getProjects } from "../api/iaecApi";
 import { getApiErrorMessage } from "../api/errors";
-import type { IAECProject } from "../../api/types";
+import type { IAECProject } from "../api/types";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";

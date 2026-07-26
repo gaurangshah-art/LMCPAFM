@@ -51,7 +51,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
       const token = await login(values);
 
       // ⭐ Pass both tokens to App.tsx
-      await onAuthenticated(token.access_token, token.refresh_token);
+      await onAuthenticated(token.access_token, token.refresh_token ?? "");
 
       succeed("Authenticated successfully.");
 

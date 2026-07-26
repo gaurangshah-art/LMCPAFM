@@ -188,7 +188,7 @@ export function IAECProjectViewPage() {
         groups.map((g) => (
           <div key={g.id} className="group-card">
             <h4 onClick={() => setExpandedGroup(expandedGroup === g.id ? null : g.id)}>
-              Group #{g.id}: {g.group_name}
+              Group #{g.id}: {g.name}
             </h4>
 
             {expandedGroup === g.id && (

@@ -3,7 +3,7 @@ import { hasAnyRole } from "../app/roles";
 import { getApprovedAllocationOptions } from "../api/lookupApi";
 import { getAllocation } from "../api/requisitionApi";
 import { getApiErrorMessage } from "../api/errors";
-import type { AnimalAllocation, User } from "../../api/types";
+import type { AnimalAllocation, User } from "../api/types";
 import { useLookupOptions } from "../hooks/useLookupOptions";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";

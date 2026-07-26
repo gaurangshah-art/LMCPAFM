@@ -3,8 +3,6 @@ import {
   getGroupsByProject,
   getIAECExperimentsByGroup,
   createGroup,
-  updateGroup,
-  deleteGroup,
   createIAECExperiment,
   updateIAECExperiment,
   deleteIAECExperiment,
@@ -100,26 +98,6 @@ export function ExperimentGroupPage() {
       setGroups((prev) => [created, ...prev]);
     } catch (err) {
       alert("Failed to create group.");
-    }
-  }
-
-  async function handleGroupUpdate(id: number, values: any) {
-    try {
-      const updated = await updateGroup(id, values);
-      setGroups((prev) => prev.map((g) => (g.id === id ? updated : g)));
-    } catch {
-      alert("Failed to update group.");
-    }
-  }
-
-  async function handleGroupDelete(id: number) {
-    if (!confirm("Delete this experiment group?")) return;
-
-    try {
-      await deleteGroup(id);
-      setGroups((prev) => prev.filter((g) => g.id !== id));
-    } catch {
-      alert("Failed to delete group.");
     }
   }
 

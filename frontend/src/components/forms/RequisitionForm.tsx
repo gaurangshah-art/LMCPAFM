@@ -119,7 +119,11 @@ export function RequisitionForm({ currentUser, onCreated }: RequisitionFormProps
   const onSubmit = handleSubmit(async (values) => {
     start();
     try {
-      const created = await createRequisition(values);
+      const created = await createRequisition({
+        ...values,
+        requester_name: currentUser.name ?? currentUser.email,
+        requester_role: currentUser.roles[0] ?? "investigator",
+      });
       onCreated(created);
       succeed(`Requisition created with id ${created.id}`);
       reset({

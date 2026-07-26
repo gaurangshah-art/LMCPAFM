@@ -14,8 +14,8 @@ import {
 
 import type {
   Requisition,
-  Allocation,
   AnimalExperiment,
+  AnimalAllocation,
 } from "../api/types";
 
 import { PageSection } from "../components/common/PageSection";
@@ -30,7 +30,7 @@ export function RequisitionViewPage() {
   const navigate = useNavigate();
 
   const [req, setReq] = useState<Requisition | null>(null);
-  const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [allocations, setAllocations] = useState<AnimalAllocation[]>([]);
   const [experiments, setExperiments] = useState<AnimalExperiment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -217,9 +217,9 @@ export function RequisitionViewPage() {
           emptyText="No allocations yet."
           columns={[
             { header: "ID", cell: (row) => row.id },
-            { header: "Quantity", cell: (row) => row.quantity_allocated },
+            { header: "Quantity", cell: (row) => row.items.reduce((sum, item) => sum + item.allocated_count, 0) },
             { header: "Date", cell: (row) => formatDisplayDate(row.date) },
-            { header: "Staff", cell: (row) => row.staff_name },
+            { header: "Staff", cell: (row) => row.allocated_by },
           ]}
         />
       </PageSection>

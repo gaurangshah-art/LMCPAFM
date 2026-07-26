@@ -4,7 +4,17 @@ import { api } from "../../api/client";
 
 import type { FinalReportGroup } from "../../api/types";
 
-type EntryAllocation = Record<string, unknown> & { id: number };
+type EntryAllocation = {
+  id: number;
+  lmcp_iaec_id?: string;
+  project_title?: string;
+  species?: string;
+  strain?: string;
+  sex?: string;
+  age?: string;
+  quantity_allocated?: number;
+};
+
 type EntryProcedure = { id: number; name: string; description?: string };
 
 export function ExperimentEntryPage() {

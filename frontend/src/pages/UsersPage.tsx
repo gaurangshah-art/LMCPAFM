@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { createUser, listUsers } from "../api/userApi";
 import { getApiErrorMessage } from "../api/errors";
-import type { User, UserCreate, UserRole } from "../../api/types";
+import type { User, UserCreate, UserRole } from "../api/types";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
@@ -12,14 +12,15 @@ import { SuccessNote } from "../components/common/SuccessNote";
 import { UserTable } from "../components/tables/UserTable";
 import { useSubmitState } from "../hooks/useSubmitState";
 
-const availableRoles: UserRole[] = ["investigator", "iaec", "staff"];
+const availableRoles = ["investigator", "iaec", "staff"] as const;
+type AssignableRole = (typeof availableRoles)[number];
 
 const schema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6),
   status: z.boolean(),
-  roles: z.array(z.enum(["investigator", "iaec", "staff"])).min(1, "Select at least one role."),
+  roles: z.array(z.enum(availableRoles)).min(1, "Select at least one role."),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -62,7 +63,7 @@ export function UsersPage({ currentUser }: UsersPageProps) {
     }
   }
 
-  function toggleRole(role: UserRole, checked: boolean) {
+  function toggleRole(role: AssignableRole, checked: boolean) {
     const nextRoles = checked
       ? Array.from(new Set([...selectedRoles, role]))
       : selectedRoles.filter((value) => value !== role);
@@ -75,8 +76,11 @@ export function UsersPage({ currentUser }: UsersPageProps) {
 
     try {
       const payload: UserCreate = {
-        ...values,
-        roles: values.roles,
+        name: values.name,
+        email: values.email,
+        password: values.password,
+        role: values.roles[0],
+        roles: [...values.roles],
       };
       const created = await createUser(payload);
       setUsers((prev) => [created, ...prev]);

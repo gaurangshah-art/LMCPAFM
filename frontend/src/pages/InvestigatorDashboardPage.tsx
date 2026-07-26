@@ -7,7 +7,7 @@ import {
   getIAECExperimentsByGroup,
 } from "../api/iaecApi";
 
-import type { IAECProject, ExperimentGroup, AnimalExperiment } from "../../api/types";
+import type { IAECProject, ExperimentGroup, AnimalExperiment, User } from "../api/types";
 
 import { PageSection } from "../components/common/PageSection";
 import { LoadingState } from "../components/common/LoadingState";
@@ -15,7 +15,7 @@ import { ErrorAlert } from "../components/common/ErrorAlert";
 import { DataTable } from "../components/tables/DataTable";
 
 interface InvestigatorDashboardProps {
-  currentUser: { id: number; name: string };
+  currentUser: User | null;
 }
 
 export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboardProps) {
@@ -29,6 +29,8 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
   const [error, setError] = useState<string | null>(null);
 
   async function loadAll() {
+    if (!currentUser) return;
+
     try {
       setLoading(true);
 
@@ -60,9 +62,11 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
   }
 
   useEffect(() => {
+    if (!currentUser) return;
     void loadAll();
-  }, [currentUser.id]);
+  }, [currentUser?.id]);
 
+  if (!currentUser) return <ErrorAlert message="User session required." />;
   if (loading) return <LoadingState label="Loading your IAEC workflow..." />;
   if (error) return <ErrorAlert message={error} />;
 
@@ -106,7 +110,7 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
           columns={[
             { header: "ID", cell: (row) => row.id },
             { header: "Project ID", cell: (row) => row.project_id },
-            { header: "Group Name", cell: (row) => row.group_name },
+            { header: "Group Name", cell: (row) => row.name },
             {
               header: "Actions",
               cell: (row) => (

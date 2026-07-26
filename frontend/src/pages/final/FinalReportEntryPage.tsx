@@ -10,10 +10,10 @@ export function FinalReportEntryPage() {
 
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<FinalReportGroup[]>([]);
-  const [logs, setLogs] = useState<Record<string, unknown>[]>([]);
+  const [, setLogs] = useState<Record<string, unknown>[]>([]);
 
   const [summary, setSummary] = useState("");
-  const [groupResults, setGroupResults] = useState({});
+  const [groupResults, setGroupResults] = useState<Record<number, string>>({});
   const [mortalitySummary, setMortalitySummary] = useState("");
   const [endpointSummary, setEndpointSummary] = useState("");
   const [adverseEvents, setAdverseEvents] = useState("");
@@ -38,7 +38,7 @@ export function FinalReportEntryPage() {
     loadData();
   }, [allocationId]);
 
-  function updateGroupResult(groupId, value) {
+  function updateGroupResult(groupId: number, value: string) {
     setGroupResults((prev) => ({
       ...prev,
       [groupId]: value,

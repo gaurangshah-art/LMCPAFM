@@ -2,7 +2,7 @@ import { Navigate, Route, Routes, NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getCurrentUser } from "../api/authApi";
 import { getAccessToken, setAccessToken } from "../api/client";
-import type { User } from "../../api/types";
+import type { User } from "../api/types";
 
 import { Navbar } from "../components/layout/Navbar";
 import { ProtectedRoute } from "../components/common/ProtectedRoute";

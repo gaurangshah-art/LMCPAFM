@@ -7,7 +7,7 @@ import {
   rejectProject,
 } from "../api/iaecApi";
 
-import type { IAECProject } from "../../api/types";
+import type { IAECProject } from "../api/types";
 
 import { PageSection } from "../components/common/PageSection";
 import { LoadingState } from "../components/common/LoadingState";
