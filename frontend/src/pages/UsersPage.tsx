@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { createUser, listUsers } from "../api/userApi";
 import { getApiErrorMessage } from "../api/errors";
-import type { User, UserCreate, UserRole } from "../api/types";
+import type { User, UserCreate } from "../api/types";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
