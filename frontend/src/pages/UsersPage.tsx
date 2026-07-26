@@ -12,7 +12,7 @@ import { SuccessNote } from "../components/common/SuccessNote";
 import { UserTable } from "../components/tables/UserTable";
 import { useSubmitState } from "../hooks/useSubmitState";
 
-const availableRoles = ["investigator", "iaec", "staff"] as const;
+const availableRoles = ["admin", "iaec", "staff"] as const;
 type AssignableRole = (typeof availableRoles)[number];
 
 const schema = z.object({
@@ -40,7 +40,7 @@ export function UsersPage({ currentUser }: UsersPageProps) {
       email: "",
       password: "",
       status: true,
-      roles: ["investigator"],
+      roles: ["staff"],
     },
   });
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
@@ -90,7 +90,7 @@ export function UsersPage({ currentUser }: UsersPageProps) {
         email: "",
         password: "",
         status: true,
-        roles: ["investigator"],
+        roles: ["staff"],
       });
     } catch (error) {
       fail(getApiErrorMessage(error));
@@ -99,7 +99,10 @@ export function UsersPage({ currentUser }: UsersPageProps) {
 
   return (
     <div className="page-grid">
-      <PageSection title="Create User" subtitle="POST /users/">
+      <PageSection
+        title="Create User"
+        subtitle="Admin/staff accounts only — investigators must self-register."
+      >
         <form className="form-grid" onSubmit={onSubmit}>
           <label>
             Name

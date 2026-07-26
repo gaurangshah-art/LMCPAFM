@@ -179,3 +179,14 @@ export async function upsertFormBMeetingDecision(
 ): Promise<void> {
   await apiClient.put(`/iaec/form-b/${formBId}/decision`, payload);
 }
+
+export async function sendFormBMeetingInvitation(formBId: number): Promise<void> {
+  await apiClient.post(`/iaec/form-b/${formBId}/send-meeting-invitation`);
+}
+
+export async function downloadMeetingSummaryPdf(meetingId: number): Promise<Blob> {
+  const { data } = await apiClient.get(`/iaec/meeting/${meetingId}/summary/download`, {
+    responseType: "blob",
+  });
+  return data;
+}

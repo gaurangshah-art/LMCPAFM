@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import os
 import smtplib
-import tempfile
-from email.message import EmailMessage
+from types import SimpleNamespace
 
+from email.message import EmailMessage
 from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError
 from crud.formb_documents import render_form_b_application_pdf
 from crud.formb_internal import get_form_b_by_id
+from database.database import SessionLocal
+from database.lmcpafm_models import IAECMeeting, IAECProject
 from utils.date_format import format_display_date
 
 
@@ -15,31 +19,26 @@ def _build_meeting_invitation_email_subject(protocol_number: str) -> str:
     return f"IAEC Meeting Invitation – Protocol {protocol_number}"
 
 
-def _build_meeting_invitation_email_body(form_b) -> str:
+def _build_meeting_invitation_email_body(context) -> str:
     google_form_url = os.getenv("IAEC_PPT_GOOGLE_FORM_URL", "").strip()
     support_contact = os.getenv("IAEC_SUPPORT_CONTACT", "").strip()
 
-    meeting_date = getattr(form_b, "meeting_date", None)
-    meeting_time = getattr(form_b, "meeting_time", None)
-    meeting_venue = getattr(form_b, "meeting_venue", None)
-
     lines = [
-        f"Dear {getattr(form_b, 'principal_investigator', 'Principal Investigator')},",
+        f"Dear {context.principal_investigator},",
         "",
-        f"Your Form B submission for project '{getattr(form_b, 'title', '')}' has been assigned protocol number '{getattr(form_b, 'protocol_number', '')}'.",
+        f"Your Form B submission for project '{context.title}' has been assigned protocol number '{context.protocol_number}'.",
         "Please find attached the final Form B PDF with protocol number.",
         "You are invited to participate in the IAEC meeting and present the protocol.",
     ]
 
-    if meeting_date or meeting_time or meeting_venue:
-        lines.append("")
-        lines.append("Meeting details:")
-        if meeting_date:
-            lines.append(f"- Date: {format_display_date(meeting_date)}")
-        if meeting_time:
-            lines.append(f"- Time: {meeting_time}")
-        if meeting_venue:
-            lines.append(f"- Venue: {meeting_venue}")
+    if context.meeting_date:
+        lines.extend([
+            "",
+            "Meeting details:",
+            f"- Date: {format_display_date(context.meeting_date)}",
+        ])
+        if context.meeting_number:
+            lines.append(f"- Meeting number: {context.meeting_number}")
 
     if google_form_url:
         lines.extend([
@@ -101,34 +100,71 @@ def _send_email_with_attachment(
         server.send_message(msg)
 
 
-def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> None:
+def build_form_b_meeting_invitation_context(db: Session, form_b_id: int):
     form_b = get_form_b_by_id(db, form_b_id)
-    if not form_b:
-        raise CRUDNotFoundError("Form B not found.")
+    project = db.query(IAECProject).filter(IAECProject.id == form_b.project_id).first()
+    if project is None:
+        raise CRUDNotFoundError("Linked project not found")
 
-    pi_email = getattr(form_b, "principal_investigator_email", None)
-    protocol_number = getattr(form_b, "protocol_number", None)
-    meeting_id = getattr(form_b, "meeting_id", None)
+    step1 = (form_b.application_data or {}).get("step1") or {}
+    pi_email = (step1.get("contact_email") or "").strip() or None
+    protocol_number = (project.protocol_number or "").strip() or None
 
-    if not pi_email:
-        raise CRUDValidationError("Principal investigator email is missing.")
-    if not meeting_id:
-        raise CRUDValidationError("Form B is not assigned to a meeting.")
-    if not protocol_number:
-        raise CRUDValidationError("Protocol number is not assigned.")
+    meeting = None
+    if form_b.meeting_id:
+        meeting = db.query(IAECMeeting).filter(IAECMeeting.id == form_b.meeting_id).first()
 
-    pdf_bytes = render_form_b_application_pdf(db, form_b.project_id)
-    subject = _build_meeting_invitation_email_subject(protocol_number)
-    body = _build_meeting_invitation_email_body(form_b)
-
-    _send_email_with_attachment(
-        to_email=pi_email,
-        subject=subject,
-        body=body,
-        attachment_bytes=pdf_bytes,
-        attachment_filename=f"form_b_{protocol_number}.pdf",
+    return SimpleNamespace(
+        form_b_id=form_b.id,
+        project_id=project.id,
+        principal_investigator=step1.get("principal_investigator")
+        or project.principal_investigator
+        or project.investigator_name,
+        title=project.title,
+        protocol_number=protocol_number,
+        principal_investigator_email=pi_email,
+        meeting_id=form_b.meeting_id,
+        meeting_date=meeting.date if meeting else None,
+        meeting_number=meeting.meeting_number if meeting else None,
     )
 
 
-def queue_form_b_meeting_invitation_email(background_tasks, db: Session, form_b_id: int) -> None:
-    background_tasks.add_task(send_form_b_meeting_invitation_email, db, form_b_id)
+def validate_form_b_meeting_invitation_ready(db: Session, form_b_id: int):
+    context = build_form_b_meeting_invitation_context(db, form_b_id)
+
+    if not context.principal_investigator_email:
+        raise CRUDValidationError("Principal investigator email is missing from Form B Step 1.")
+    if not context.meeting_id:
+        raise CRUDValidationError("Form B is not assigned to a meeting.")
+    if not context.protocol_number:
+        raise CRUDValidationError("Protocol number is not assigned.")
+
+    return context
+
+
+def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> None:
+    context = validate_form_b_meeting_invitation_ready(db, form_b_id)
+
+    pdf_bytes = render_form_b_application_pdf(db, context.project_id)
+    subject = _build_meeting_invitation_email_subject(context.protocol_number)
+    body = _build_meeting_invitation_email_body(context)
+
+    _send_email_with_attachment(
+        to_email=context.principal_investigator_email,
+        subject=subject,
+        body=body,
+        attachment_bytes=pdf_bytes,
+        attachment_filename=f"form_b_{context.protocol_number.replace('/', '_')}.pdf",
+    )
+
+
+def _send_invitation_background(form_b_id: int) -> None:
+    db = SessionLocal()
+    try:
+        send_form_b_meeting_invitation_email(db, form_b_id)
+    finally:
+        db.close()
+
+
+def queue_form_b_meeting_invitation_email(background_tasks, form_b_id: int) -> None:
+    background_tasks.add_task(_send_invitation_background, form_b_id)

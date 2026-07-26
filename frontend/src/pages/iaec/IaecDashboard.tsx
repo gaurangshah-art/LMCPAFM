@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   assignFormBMeeting,
+  downloadMeetingSummaryPdf,
   generateFormBProtocolNumber,
   getFormBWithMeeting,
   getMeetings,
+  sendFormBMeetingInvitation,
   upsertFormBMeetingDecision,
 } from "../../api/iaecApi";
 import type {
@@ -14,6 +16,8 @@ import type {
 } from "../../api/types";
 import { DataTable, type TableColumn } from "../../components/tables/DataTable";
 import { formatDisplayDate } from "../../utils/dateFormat";
+
+const APPROVED_DECISIONS = ["approved", "approved_with_revisions", "animal_count_amended"];
 
 export function IaecDashboard() {
   const navigate = useNavigate();
@@ -25,6 +29,8 @@ export function IaecDashboard() {
   const [decisionValue, setDecisionValue] = useState<FormBMeetingDecisionValue>("approved");
   const [approvedAnimalCount, setApprovedAnimalCount] = useState("");
   const [decisionRemarks, setDecisionRemarks] = useState("");
+  const [sendingInvitationId, setSendingInvitationId] = useState<number | null>(null);
+  const [downloadingMeetingId, setDownloadingMeetingId] = useState<number | null>(null);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -41,7 +47,7 @@ export function IaecDashboard() {
   }, []);
 
   useEffect(() => {
-    loadDashboard();
+    void loadDashboard();
   }, [loadDashboard]);
 
   async function handleAssignMeeting(row: FormBWithMeeting, meetingId: string) {
@@ -62,6 +68,39 @@ export function IaecDashboard() {
       await loadDashboard();
     } catch {
       alert("Failed to generate protocol number. Ensure meeting, decision, and meeting number are set.");
+    }
+  }
+
+  async function handleSendInvitation(formBId: number) {
+    if (!window.confirm("Send meeting invitation email to the principal investigator?")) return;
+
+    setSendingInvitationId(formBId);
+    try {
+      await sendFormBMeetingInvitation(formBId);
+      alert("Meeting invitation queued for delivery.");
+    } catch {
+      alert("Failed to queue meeting invitation. Ensure Step 1 email, meeting, and protocol number are set.");
+    } finally {
+      setSendingInvitationId(null);
+    }
+  }
+
+  async function handleDownloadMeetingSummary(meetingId: number, meetingLabel: string) {
+    setDownloadingMeetingId(meetingId);
+    try {
+      const blob = await downloadMeetingSummaryPdf(meetingId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `IAEC_Meeting_Summary_${meetingLabel.replace(/\s+/g, "_")}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to download meeting summary PDF.");
+    } finally {
+      setDownloadingMeetingId(null);
     }
   }
 
@@ -126,20 +165,30 @@ export function IaecDashboard() {
             {row.meeting_id &&
             !row.protocol_number &&
             row.decision &&
-            ["approved", "approved_with_revisions", "animal_count_amended"].includes(row.decision) ? (
+            APPROVED_DECISIONS.includes(row.decision) ? (
               <button
                 type="button"
                 className="btn btn-sm"
-                onClick={() => handleGenerateProtocol(row.form_b_id)}
+                onClick={() => void handleGenerateProtocol(row.form_b_id)}
               >
                 Generate protocol
+              </button>
+            ) : null}
+            {row.meeting_id && row.protocol_number && row.decision && APPROVED_DECISIONS.includes(row.decision) ? (
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={sendingInvitationId === row.form_b_id}
+                onClick={() => void handleSendInvitation(row.form_b_id)}
+              >
+                {sendingInvitationId === row.form_b_id ? "Sending…" : "Send invitation"}
               </button>
             ) : null}
           </div>
         ),
       },
     ],
-    [meetings]
+    [meetings, sendingInvitationId],
   );
 
   const decisionRow = formBRows.find((row) => row.form_b_id === decisionFormBId) ?? null;
@@ -148,7 +197,7 @@ export function IaecDashboard() {
     <div className="page-card">
       <header className="section-header">
         <h2>IAEC Dashboard</h2>
-        <p>Assign Form B submissions to meetings, record decisions, and generate LMCP/IAEC protocol numbers.</p>
+        <p>Assign Form B submissions to meetings, record decisions, generate protocol numbers, and send invitations.</p>
       </header>
 
       {loading && <p>Loading…</p>}
@@ -159,8 +208,8 @@ export function IaecDashboard() {
           <section className="dashboard-section">
             <div className="section-toolbar">
               <h3>Form B records</h3>
-              <button type="button" className="btn" onClick={() => navigate("/iaec/create-meeting")}>
-                + Create meeting
+              <button type="button" className="btn" onClick={() => navigate("/iaec/meetings/new")}>
+                + New meeting
               </button>
             </div>
             <DataTable columns={columns} rows={formBRows} emptyText="No Form B records found." />
@@ -203,7 +252,7 @@ export function IaecDashboard() {
                 </label>
               </div>
               <div className="form-actions">
-                <button type="button" className="btn" onClick={() => handleSaveDecision(decisionRow)}>
+                <button type="button" className="btn" onClick={() => void handleSaveDecision(decisionRow)}>
                   Save decision
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => setDecisionFormBId(null)}>
@@ -223,9 +272,24 @@ export function IaecDashboard() {
                   <p>
                     <strong>Meeting #{m.meeting_number ?? m.id}</strong> — {formatDisplayDate(m.date)}
                   </p>
-                  <button type="button" className="btn" onClick={() => navigate(`/iaec/meetings/${m.id}`)}>
-                    View meeting
-                  </button>
+                  <div className="table-actions">
+                    <button type="button" className="btn btn-sm" onClick={() => navigate(`/iaec/meetings/${m.id}`)}>
+                      View meeting
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      disabled={downloadingMeetingId === m.id}
+                      onClick={() =>
+                        void handleDownloadMeetingSummary(
+                          m.id,
+                          String(m.meeting_number ?? m.id),
+                        )
+                      }
+                    >
+                      {downloadingMeetingId === m.id ? "Downloading…" : "Download summary PDF"}
+                    </button>
+                  </div>
                 </div>
               ))
             )}

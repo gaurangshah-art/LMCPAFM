@@ -1,6 +1,6 @@
 from dependencies.auth import get_current_user, require_any_role, require_iaec, require_investigator
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database.database import SessionLocal
@@ -22,6 +22,11 @@ from crud.formb_documents import (
     build_project_certificate_data,
     render_meeting_summary_pdf,
     render_project_certificate_pdf,
+)
+from crud.formb_email import (
+    queue_form_b_meeting_invitation_email,
+    send_form_b_meeting_invitation_email,
+    validate_form_b_meeting_invitation_ready,
 )
 from crud.formb_membership import user_can_view_approval_letter, user_can_view_project
 from models.user import User
@@ -231,6 +236,38 @@ def generate_form_b_protocol_number(
         raise HTTPException(status_code=400, detail=str(exc))
     except CRUDDatabaseError:
         raise HTTPException(status_code=500, detail="Database error")
+
+
+@router.post("/form-b/{form_b_id}/send-meeting-invitation")
+def send_form_b_meeting_invitation(
+    form_b_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    try:
+        validate_form_b_meeting_invitation_ready(db, form_b_id)
+        queue_form_b_meeting_invitation_email(background_tasks, form_b_id)
+        return {"ok": True, "queued": True}
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/form-b/{form_b_id}/send-meeting-invitation/sync")
+def send_form_b_meeting_invitation_sync(
+    form_b_id: int,
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    try:
+        send_form_b_meeting_invitation_email(db, form_b_id)
+        return {"ok": True}
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.put("/form-b/{form_b_id}/decision", response_model=FormBMeetingDecisionRead)
