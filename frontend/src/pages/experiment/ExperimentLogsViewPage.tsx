@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../api/client";
+import { formatDisplayDate } from "../../utils/dateFormat";
 
 export function ExperimentLogsViewPage() {
   const { allocationId } = useParams();
@@ -69,7 +70,7 @@ export function ExperimentLogsViewPage() {
 
         {logs.map((log) => (
           <div key={log.id} className="dashboard-card">
-            <p><strong>Date:</strong> {log.date}</p>
+            <p><strong>Date:</strong> {formatDisplayDate(log.date)}</p>
             <p><strong>Group:</strong> {log.group_name}</p>
             {log.procedure_name && (
               <p><strong>Procedure:</strong> {log.procedure_name}</p>

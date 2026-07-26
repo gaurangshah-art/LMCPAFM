@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
+import { formatDisplayDate } from "../../utils/dateFormat";
 
 export function IaecMeetingDetails() {
   const { meetingId } = useParams();
@@ -71,7 +72,7 @@ export function IaecMeetingDetails() {
       <div className="meeting-info">
         <p><strong>Meeting Year:</strong> {meeting.meeting_year}</p>
         <p><strong>Meeting Number:</strong> {meeting.meeting_number}</p>
-        <p><strong>Date:</strong> {meeting.meeting_date}</p>
+        <p><strong>Date:</strong> {formatDisplayDate(meeting.meeting_date)}</p>
         <p><strong>Status:</strong> {meeting.status}</p>
       </div>
 

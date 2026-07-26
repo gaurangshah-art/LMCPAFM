@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
+import { formatDisplayDate } from "../../utils/dateFormat";
 
 export function IaecApprovalCertificate() {
   const { projectId } = useParams();
@@ -70,8 +71,8 @@ export function IaecApprovalCertificate() {
         <hr />
 
         <p><strong>Meeting:</strong> {certificate.meeting_year} / Meeting {certificate.meeting_number}</p>
-        <p><strong>Meeting Date:</strong> {certificate.meeting_date}</p>
-        <p><strong>Approval Date:</strong> {certificate.approval_date}</p>
+        <p><strong>Meeting Date:</strong> {formatDisplayDate(certificate.meeting_date)}</p>
+        <p><strong>Approval Date:</strong> {formatDisplayDate(certificate.approval_date)}</p>
 
         <hr />
 

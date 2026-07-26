@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
 import { useNavigate } from "react-router-dom";
+import { formatDisplayDate } from "../../utils/dateFormat";
 
 export function IaecDashboard() {
   const navigate = useNavigate();
@@ -101,7 +102,7 @@ export function IaecDashboard() {
         {meetings.map((m) => (
           <div key={m.id} className="dashboard-card">
             <p><strong>Meeting:</strong> {m.meeting_year} / {m.meeting_number}</p>
-            <p><strong>Date:</strong> {m.meeting_date}</p>
+            <p><strong>Date:</strong> {formatDisplayDate(m.meeting_date)}</p>
             <p><strong>Status:</strong> {m.status}</p>
 
             <button

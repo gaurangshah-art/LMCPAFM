@@ -21,6 +21,7 @@ import { PageSection } from "../components/common/PageSection";
 import { LoadingState } from "../components/common/LoadingState";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { DataTable } from "../components/tables/DataTable";
+import { formatDisplayDate } from "../utils/dateFormat";
 
 export function RequisitionViewPage() {
   const { id } = useParams();
@@ -152,7 +153,7 @@ export function RequisitionViewPage() {
       {/* STATUS TIMELINE */}
       <PageSection title="Status Timeline" subtitle="Workflow history">
         <ul className="timeline">
-          <li>Submitted: {req.submitted_at}</li>
+          <li>Submitted: {formatDisplayDate(req.submitted_at)}</li>
           <li>Staff Review: {req.staff_review_at ?? "Pending"}</li>
           <li>IAEC Review: {req.iaec_review_at ?? "Pending"}</li>
           <li>Final Status: {req.status}</li>
@@ -214,7 +215,7 @@ export function RequisitionViewPage() {
           columns={[
             { header: "ID", cell: (row) => row.id },
             { header: "Quantity", cell: (row) => row.quantity },
-            { header: "Date", cell: (row) => row.date },
+            { header: "Date", cell: (row) => formatDisplayDate(row.date) },
             { header: "Staff", cell: (row) => row.staff_name },
           ]}
         />

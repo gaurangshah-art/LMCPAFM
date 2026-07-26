@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError
 from crud.formb_documents import render_form_b_application_pdf
 from crud.formb_internal import get_form_b_by_id
+from utils.date_format import format_display_date
 
 
 def _build_meeting_invitation_email_subject(protocol_number: str) -> str:
@@ -34,7 +35,7 @@ def _build_meeting_invitation_email_body(form_b) -> str:
         lines.append("")
         lines.append("Meeting details:")
         if meeting_date:
-            lines.append(f"- Date: {meeting_date}")
+            lines.append(f"- Date: {format_display_date(meeting_date)}")
         if meeting_time:
             lines.append(f"- Time: {meeting_time}")
         if meeting_venue:

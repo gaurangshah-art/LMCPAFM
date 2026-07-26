@@ -17,6 +17,7 @@ import { useSubmitState } from "../../hooks/useSubmitState";
 import { ErrorAlert } from "../common/ErrorAlert";
 import { LookupSelectField } from "../common/LookupSelectField";
 import { SuccessNote } from "../common/SuccessNote";
+import { formatDisplayDate } from "../../utils/dateFormat";
 
 const itemSchema = z.object({
   species_id: z.coerce.number().int().positive(),
@@ -167,7 +168,7 @@ export function RequisitionForm({ currentUser, onCreated }: RequisitionFormProps
           <strong>Protocol Details </strong>
           <p>Title: {protocolDetails.title ?? "-"}</p>
           <p>Protocol Number: {protocolDetails.protocol_number ?? "-"}</p>
-          <p>Approval Date: {protocolDetails.approval_date ?? "-"}</p>
+          <p>Approval Date: {formatDisplayDate(protocolDetails.approval_date, "-")}</p>
           <p>Principal Investigator: {protocolDetails.principal_investigator ?? "-"}</p>
         </div>
       ) : null}

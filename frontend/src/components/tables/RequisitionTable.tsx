@@ -1,4 +1,5 @@
 import type { AnimalRequisition } from "../../api/types";
+import { formatDisplayDate } from "../../utils/dateFormat";
 
 interface RequisitionTableProps {
   requisition: AnimalRequisition | null;
@@ -27,7 +28,7 @@ export function RequisitionTable({ requisition }: RequisitionTableProps) {
             <td>{requisition.id}</td>
             <td>{requisition.protocol_id}</td>
             <td>{requisition.requester_name}</td>
-            <td>{requisition.date}</td>
+            <td>{formatDisplayDate(requisition.date)}</td>
             <td>{requisition.purpose}</td>
             <td>
               {requisition.items.map((item) => (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../api/client";
+import { formatDisplayDate } from "../../utils/dateFormat";
 
 type Group = {
   id: number;
@@ -200,7 +201,7 @@ export function ExperimentLogsEntryPage() {
         {logs.map((log) => (
           <div key={log.id} className="dashboard-card">
             <p>
-              <strong>Date:</strong> {log.date}
+              <strong>Date:</strong> {formatDisplayDate(log.date)}
             </p>
             <p>
               <strong>Group:</strong> {log.group_name}

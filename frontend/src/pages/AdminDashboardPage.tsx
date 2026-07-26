@@ -14,6 +14,7 @@ import { PageSection } from "../components/common/PageSection";
 import { LoadingState } from "../components/common/LoadingState";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { DataTable } from "../components/tables/DataTable";
+import { formatDisplayDate } from "../utils/dateFormat";
 
 export function AdminDashboardPage() {
   const navigate = useNavigate();
@@ -127,7 +128,7 @@ export function AdminDashboardPage() {
           rows={logs}
           emptyText="No activity logs."
           columns={[
-            { header: "Timestamp", cell: (row) => row.timestamp },
+            { header: "Timestamp", cell: (row) => formatDisplayDate(row.timestamp) },
             { header: "User", cell: (row) => row.user_name },
             { header: "Action", cell: (row) => row.action },
             { header: "Details", cell: (row) => row.details },

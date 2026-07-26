@@ -13,6 +13,7 @@ import type {
   AnimalExperiment,
 } from "../api/types";
 
+import { formatDisplayDate } from "../utils/dateFormat";
 import { PageSection } from "../components/common/PageSection";
 import { LoadingState } from "../components/common/LoadingState";
 import { ErrorAlert } from "../components/common/ErrorAlert";
@@ -62,7 +63,7 @@ function toAllocationView(alloc: {
     age: "—",
     quantity_allocated: totalAllocated,
     staff_name: alloc.allocated_by,
-    date: alloc.date,
+    date: formatDisplayDate(alloc.date),
   };
 }
 
@@ -126,7 +127,7 @@ export function AllocationViewPage() {
             <strong>Staff:</strong> {allocation.staff_name ?? "—"}
           </div>
           <div>
-            <strong>Date:</strong> {allocation.date ?? "—"}
+            <strong>Date:</strong> {formatDisplayDate(allocation.date)}
           </div>
         </div>
 

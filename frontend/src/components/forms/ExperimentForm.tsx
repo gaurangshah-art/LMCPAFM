@@ -18,6 +18,7 @@ import type { Experiment } from "../../api/types";
 
 import { useLookupOptions } from "../../hooks/useLookupOptions";
 import { useSubmitState } from "../../hooks/useSubmitState";
+import { formatDisplayDate } from "../../utils/dateFormat";
 
 import { ErrorAlert } from "../common/ErrorAlert";
 import { LookupSelectField } from "../common/LookupSelectField";
@@ -262,7 +263,7 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
           <strong>Auto-Populated from LMCPAFM Form B</strong>
           <p>Title: {protocolDetails.title ?? "-"}</p>
           <p>Protocol Number: {protocolDetails.protocol_number ?? "-"}</p>
-          <p>Approval Date: {protocolDetails.approval_date ?? "-"}</p>
+          <p>Approval Date: {formatDisplayDate(protocolDetails.approval_date, "-")}</p>
           <p>
             Principal Investigator:{" "}
             {protocolDetails.principal_investigator ?? "-"}

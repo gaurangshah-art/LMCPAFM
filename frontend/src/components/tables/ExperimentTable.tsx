@@ -1,4 +1,5 @@
 import type { Experiment } from "../../api/types";
+import { formatDisplayDate } from "../../utils/dateFormat";
 
 interface ExperimentTableProps {
   experiment: Experiment | null;
@@ -28,7 +29,7 @@ export function ExperimentTable({ experiment }: ExperimentTableProps) {
             <td>{experiment.protocol_id}</td>
             <td>{experiment.allocation_id}</td>
             <td>{experiment.performed_by}</td>
-            <td>{experiment.date}</td>
+            <td>{formatDisplayDate(experiment.date)}</td>
             <td>{experiment.animals.map((a) => a.animal_id).join(", ")}</td>
           </tr>
         </tbody>
