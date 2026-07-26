@@ -1,17 +1,61 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from crud.exceptions import CRUDValidationError
+from crud.formb_wizard import (
+    build_form_b_step1_autofill,
+    save_form_b_step1,
+    start_form_b,
+)
 from database.database import get_db
 from database.lmcpafm_models import FormB, FormBInvestigator
 from crud.formb_internal import get_formb_by_protocol, update_formb
+from dependencies.auth import get_current_user, require_investigator
+from models.user import User
 from schemas.schemas_formb import (
     FormBBase,
     FormBRead,
     FormBInvestigatorCreate,
     FormBInvestigatorRead,
+    FormBStep1AutofillRead,
+    FormBStartRead,
+    FormBStep1Save,
 )
 
 router = APIRouter(prefix="/formb", tags=["Form-B Internal"])
+
+
+@router.get("/autofill/step-1", response_model=FormBStep1AutofillRead)
+def read_form_b_step1_autofill(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    return build_form_b_step1_autofill(db, current_user)
+
+
+@router.post("/start", response_model=FormBStartRead)
+def create_form_b_draft(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    try:
+        form_b = start_form_b(db, current_user)
+        return {"id": form_b.id, "project_id": form_b.project_id}
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/step-1")
+def save_form_b_step1_details(
+    payload: FormBStep1Save,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    try:
+        save_form_b_step1(db, current_user, payload.form_b_id, payload.model_dump())
+        return {"ok": True}
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/investigators", response_model=FormBInvestigatorRead)

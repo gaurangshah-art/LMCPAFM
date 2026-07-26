@@ -156,3 +156,34 @@ class FormBInvestigatorRead(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class FormBStep1AutofillRead(BaseModel):
+    establishment_name: Optional[str] = None
+    registration_number: Optional[str] = None
+    principal_investigator: str
+    designation: Optional[str] = None
+    department: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    qualifications: Optional[str] = None
+    experience: Optional[str] = None
+    profile_complete: bool
+
+
+class FormBStartRead(BaseModel):
+    id: int
+    project_id: int
+
+
+class FormBStep1Save(BaseModel):
+    form_b_id: int
+    establishment_name: str = Field(..., max_length=500)
+    registration_number: str = Field(..., max_length=200)
+    principal_investigator: str = Field(..., max_length=200)
+    designation: str = Field(..., max_length=200)
+    department: str = Field(..., max_length=200)
+    contact_email: str = Field(..., max_length=255)
+    contact_phone: str = Field(..., max_length=50)
+    qualifications: str = Field(..., max_length=255)
+    experience: str = Field("", max_length=5000)

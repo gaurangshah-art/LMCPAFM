@@ -30,6 +30,8 @@ import { AllocationViewPage } from "../pages/AllocationViewPage";
 import { InvestigatorProfilePage } from "../pages/InvestigatorProfilePage";
 import { InvestigatorProfileGate } from "../components/common/InvestigatorProfileGate";
 import { getMyInvestigatorProfile } from "../api/investigatorProfileApi";
+import { FormBStep1 } from "../pages/formB/FormBStep1";
+import { FormBStep2 } from "../pages/formB/FormBStep2";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
 
 
@@ -219,6 +221,32 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+            <Route
+              path="/form-b/step-1"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep1 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-2"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep2 />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/investigator-profile"
               element={

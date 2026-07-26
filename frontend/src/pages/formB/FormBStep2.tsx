@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
+import { readStoredFormBId } from "../../api/formbApi";
 
 export function FormBStep2() {
   const navigate = useNavigate();
 
-  const [formBId] = useState<number | null>(
-    Number(localStorage.getItem("form_b_id")) || null
-  );
+  const [formBId] = useState<number | null>(readStoredFormBId());
 
   const [loading, setLoading] = useState(false);
 

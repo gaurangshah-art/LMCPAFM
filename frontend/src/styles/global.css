@@ -252,6 +252,13 @@ body {
   background: #335d8f;
 }
 
+.wizard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
 .btn-danger {
   background: #b42318;
 }
