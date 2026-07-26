@@ -13,6 +13,7 @@ from database import lmcpafm_requisition_allocation  # noqa: F401
 from database import lmcpafm_experiments  # noqa: F401
 import models.role  # noqa: F401
 import models.user  # noqa: F401
+import models.investigator_profile  # noqa: F401
 
 config = context.config
 

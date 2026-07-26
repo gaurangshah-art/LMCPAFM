@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import {
-  getAllocationById,
-  getRequisitionById,
-  getExperimentsByAllocation,
-  addAllocationComment,
+  getAllocation,
+ 
+  
+  updateAllocationComment,
   confirmAllocation,
   adjustAllocation,
 } from "../api/allocationApi";
@@ -14,7 +14,7 @@ import type {
   Allocation,
   Requisition,
   AnimalExperiment,
-} from "../../api/types";
+} from "../api/types";
 
 import { PageSection } from "../components/common/PageSection";
 import { LoadingState } from "../components/common/LoadingState";
@@ -38,14 +38,10 @@ export function AllocationViewPage() {
     try {
       setLoading(true);
 
-      const alloc = await getAllocationById(allocationId);
+      const alloc = await getAllocation(allocationId);
       setAllocation(alloc);
 
-      const req = await getRequisitionById(alloc.requisition_id);
-      setRequisition(req);
-
-      const exp = await getExperimentsByAllocation(allocationId);
-      setExperiments(exp);
+      
 
     } catch {
       setError("Failed to load allocation.");
@@ -62,7 +58,7 @@ export function AllocationViewPage() {
     if (!commentText.trim()) return;
 
     try {
-      const updated = await addAllocationComment(allocationId, commentText);
+      const updated = await updateAllocationComment(allocationId, commentText);
       setAllocation(updated);
       setCommentText("");
     } catch {

@@ -7,16 +7,15 @@ import {
   getExperimentsByRequisition,
   addRequisitionComment,
   approveRequisitionStaff,
-  rejectRequisitionStaff,
   approveRequisitionIAEC,
-  rejectRequisitionIAEC,
+  
 } from "../api/requisitionApi";
 
 import type {
   Requisition,
   Allocation,
   AnimalExperiment,
-} from "../../api/types";
+} from "../api/types";
 
 import { PageSection } from "../components/common/PageSection";
 import { LoadingState } from "../components/common/LoadingState";

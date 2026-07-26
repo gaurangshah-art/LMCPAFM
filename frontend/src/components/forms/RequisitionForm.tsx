@@ -250,7 +250,9 @@ export function RequisitionForm({ currentUser, onCreated }: RequisitionFormProps
             Remove
           </button>
         </div>
-      ))}
+    
+  
+ ))}
 
       {errors.items ? <small className="field-error full-width">Please add valid requisition items.</small> : null}
 

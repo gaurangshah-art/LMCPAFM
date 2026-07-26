@@ -274,6 +274,23 @@ class FormBInvestigator(Base):
     form_b_id: Mapped[int] = mapped_column(ForeignKey("form_b.id"))
     name: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    investigator_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    can_view_status: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    can_view_approval_letters: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    can_edit_forms: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    can_submit_form_b: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     form_b: Mapped["FormB"] = relationship(back_populates="investigators")
 

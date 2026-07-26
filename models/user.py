@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, Integer, String
+from datetime import datetime, timezone
+
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.database import Base
@@ -14,5 +16,23 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False, default="investigator")
     status: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     roles = relationship("Role", secondary=user_roles, back_populates="users")
+    investigator_profile = relationship(
+        "InvestigatorProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
