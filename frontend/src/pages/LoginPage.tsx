@@ -16,7 +16,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface LoginPageProps {
-  onAuthenticated: (accessToken: string, refreshToken: string) => Promise<void>;
+  onAuthenticated: (accessToken: string) => Promise<void>;
 }
 
 export function LoginPage({ onAuthenticated }: LoginPageProps) {
@@ -50,8 +50,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
     try {
       const token = await login(values);
 
-      // ⭐ Pass both tokens to App.tsx
-      await onAuthenticated(token.access_token, token.refresh_token ?? "");
+      await onAuthenticated(token.access_token);
 
       succeed("Authenticated successfully.");
 

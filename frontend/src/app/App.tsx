@@ -2,6 +2,12 @@ import { Navigate, Route, Routes, NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getCurrentUser } from "../api/authApi";
 import { getAccessToken, setAccessToken } from "../api/client";
+import {
+  clearStoredSession,
+  getStoredAccessToken,
+  hasStoredAccessToken,
+  setStoredAccessToken,
+} from "../auth/session";
 import type { User } from "../api/types";
 
 import { Navbar } from "../components/layout/Navbar";
@@ -23,9 +29,6 @@ import { AllocationViewPage } from "../pages/AllocationViewPage";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
 
 
-const accessTokenKey = "lmcpafm.access-token";
-const refreshTokenKey = "lmcpafm.refresh-token";
-
 const roleHome: Record<string, string> = {
   iaec: "/iaec-projects",
   staff: "/allocations",
@@ -33,22 +36,15 @@ const roleHome: Record<string, string> = {
   admin: "/users",
 };
 
-function hasStoredTokens(): boolean {
-  return Boolean(
-    window.localStorage.getItem(accessTokenKey) &&
-      window.localStorage.getItem(refreshTokenKey),
-  );
-}
-
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(hasStoredTokens);
+  const [isAuthLoading, setIsAuthLoading] = useState(hasStoredAccessToken);
 
   useEffect(() => {
-    const storedAccessToken = window.localStorage.getItem(accessTokenKey);
-    const storedRefreshToken = window.localStorage.getItem(refreshTokenKey);
+    const storedAccessToken = getStoredAccessToken();
 
-    if (!storedAccessToken || !storedRefreshToken) {
+    if (!storedAccessToken) {
+      setIsAuthLoading(false);
       return;
     }
 
@@ -64,8 +60,7 @@ export default function App() {
         }
       } catch {
         if (!cancelled) {
-          window.localStorage.removeItem(accessTokenKey);
-          window.localStorage.removeItem(refreshTokenKey);
+          clearStoredSession();
           setAccessToken(null);
           setCurrentUser(null);
         }
@@ -81,14 +76,20 @@ export default function App() {
     };
   }, []);
 
-  async function hydrateCurrentUser() {
+  async function handleAuthenticated(accessToken: string) {
+    setStoredAccessToken(accessToken);
+    setAccessToken(accessToken);
     setIsAuthLoading(true);
+
     try {
       const user = await getCurrentUser();
       setCurrentUser(user);
+
+      const primaryRole = user.roles[0];
+      const redirectPath = primaryRole ? (roleHome[primaryRole] ?? "/") : "/";
+      window.location.replace(redirectPath);
     } catch {
-      window.localStorage.removeItem(accessTokenKey);
-      window.localStorage.removeItem(refreshTokenKey);
+      clearStoredSession();
       setAccessToken(null);
       setCurrentUser(null);
     } finally {
@@ -96,25 +97,8 @@ export default function App() {
     }
   }
 
-  async function handleAuthenticated(accessToken: string, refreshToken: string) {
-    window.localStorage.setItem(accessTokenKey, accessToken);
-    window.localStorage.setItem(refreshTokenKey, refreshToken);
-
-    setAccessToken(accessToken);
-    await hydrateCurrentUser();
-
-    if (currentUser && currentUser.roles.length > 0) {
-      const primaryRole = currentUser.roles[0];
-      const redirectPath = roleHome[primaryRole] ?? "/";
-      window.location.replace(redirectPath);
-    } else {
-      window.location.replace("/");
-    }
-  }
-
   function handleLogout() {
-    window.localStorage.removeItem(accessTokenKey);
-    window.localStorage.removeItem(refreshTokenKey);
+    clearStoredSession();
     setAccessToken(null);
     setCurrentUser(null);
     setIsAuthLoading(false);
