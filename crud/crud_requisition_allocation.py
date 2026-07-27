@@ -11,6 +11,8 @@ from schemas.schemas_requisition_allocation import (
     AnimalAllocationCreate,
 )
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
+from crud.experiment_group_planning import assert_requisition_allowed
+from utils.business_validation import assert_allocation_date_valid, assert_requisition_date_valid
 
 
 # =========================================================
@@ -67,6 +69,10 @@ def get_total_allocated_for_requisition_item(
 # =========================================================
 
 def create_requisition(db: Session, req: AnimalRequisitionCreateInternal):
+    requested_total = sum(item.requested_count for item in req.items)
+    assert_requisition_allowed(db, req.protocol_id, requested_total)
+    assert_requisition_date_valid(db, req.protocol_id, req.date)
+
     db_req = AnimalRequisition(
         protocol_id=req.protocol_id,
         requester_user_id=req.requester_user_id,
@@ -102,6 +108,21 @@ def create_requisition(db: Session, req: AnimalRequisitionCreateInternal):
 # =========================================================
 
 def create_allocation(db: Session, alloc: AnimalAllocationCreate):
+    requisition = (
+        db.query(AnimalRequisition)
+        .filter(AnimalRequisition.id == alloc.requisition_id)
+        .first()
+    )
+    if not requisition:
+        raise CRUDNotFoundError(f"Requisition {alloc.requisition_id} not found.")
+
+    assert_allocation_date_valid(
+        db,
+        protocol_id=requisition.protocol_id,
+        requisition_date=requisition.date,
+        allocation_date=alloc.date,
+    )
+
     db_alloc = AnimalAllocation(
         requisition_id=alloc.requisition_id,
         date=alloc.date,
@@ -230,6 +251,16 @@ def get_requisition(db: Session, req_id: int):
             )
         )
         .first()
+    )
+
+
+def list_requisitions_by_protocol(db: Session, protocol_id: int) -> list[AnimalRequisition]:
+    return (
+        db.query(AnimalRequisition)
+        .filter(AnimalRequisition.protocol_id == protocol_id)
+        .options(selectinload(AnimalRequisition.items))
+        .order_by(AnimalRequisition.date.desc(), AnimalRequisition.id.asc())
+        .all()
     )
 
 

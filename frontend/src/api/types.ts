@@ -65,16 +65,61 @@ export interface UserCreate {
 
 // ---------------- IAEC CERTIFICATE ----------------
 export interface IAECApprovalCertificate {
+  certificate_type: "provisional" | "final";
+  is_final: boolean;
+  publication_ready: boolean;
+  publication_note?: string | null;
+  signed_certificate?: ProjectSignedCertificate | null;
+  work_state: "not_initiated" | "in_progress" | "completed";
+  disclaimer?: string | null;
+  final_attestation?: string | null;
+  completion_date?: string | null;
   lmcp_iaec_id: string;
   title: string;
   investigator: string;
   department: string;
-  meeting_year: number;
-  meeting_number: number;
-  meeting_date: string;
-  approval_date: string;
+  establishment_name?: string;
+  cpcsea_registration_number?: string;
+  cpcsea_registration_date?: string;
+  meeting_year?: number | null;
+  meeting_number?: string | null;
+  meeting_date?: string | null;
+  approval_date?: string | null;
+  approved_animal_count?: number | null;
   comments: string;
   chairperson_name: string;
+  decision?: string | null;
+  usage_summary?: {
+    planned_animals: number;
+    allocated_animals: number;
+    logged_animals: number;
+    pending_allocated_animals: number;
+  };
+  completion_status?: {
+    planning_complete: boolean;
+    work_initiated: boolean;
+    groups_logged: boolean;
+    all_allocated_logged: boolean;
+    blocking_reasons: string[];
+    groups: Array<{
+      group_id: number;
+      group_name: string;
+      planned_animal_count: number;
+      logged_animal_count: number;
+      is_complete: boolean;
+    }>;
+  };
+}
+
+export interface ProjectSignedCertificate {
+  id: number;
+  project_id: number;
+  original_filename: string;
+  content_type?: string | null;
+  file_size: number;
+  uploaded_by_user_id?: number | null;
+  uploaded_by_name?: string | null;
+  uploaded_at?: string | null;
 }
 
 // ---------------- IAEC MEETING ----------------
@@ -206,14 +251,28 @@ export interface FormB {
 export interface ExperimentGroupCreate {
   name: string;
   project_id: number;
+  planned_animal_count: number;
 }
 
 export interface ExperimentGroup {
   id: number;
   project_id: number;
   name: string;
+  planned_animal_count: number;
   purpose?: string;
   experiments: AnimalExperiment[];
+}
+
+export interface ExperimentPlanningStatus {
+  project_id: number;
+  project_status?: string | null;
+  approved_animal_count?: number | null;
+  planned_animal_total: number;
+  remaining_animals?: number | null;
+  group_count: number;
+  is_complete: boolean;
+  can_create_requisition: boolean;
+  message?: string | null;
 }
 
 // ---------------- ANIMAL EXPERIMENT (IAEC) ----------------
@@ -313,6 +372,7 @@ export interface ExperimentAnimal extends ExperimentAnimalCreate {
 export interface ExperimentCreate {
   protocol_id: number;
   allocation_id: number;
+  experiment_group_id: number;
   date: string;
   performed_by: string;
   purpose: string;
@@ -327,6 +387,68 @@ export interface ExperimentCreate {
 export interface Experiment extends ExperimentCreate {
   id: number;
   animals: ExperimentAnimal[];
+}
+
+export interface ProjectWorkflowStatus {
+  planning_complete: boolean;
+  has_requisition: boolean;
+  has_allocation: boolean;
+  has_experiment_log: boolean;
+  can_create_requisition: boolean;
+}
+
+export interface ProjectWorkspaceInvestigator {
+  id: number;
+  form_b_id: number;
+  name: string;
+  project_role: string;
+  user_id?: number | null;
+  investigator_type?: string | null;
+  is_linked: boolean;
+  can_edit_forms: boolean;
+  can_submit_form_b: boolean;
+}
+
+export interface ProjectWorkspaceRequisition {
+  id: number;
+  protocol_id: number;
+  date: string;
+  purpose: string;
+  requester_name: string;
+  item_count: number;
+  requested_total: number;
+}
+
+export interface ProjectWorkspaceAllocation {
+  id: number;
+  requisition_id: number;
+  date: string;
+  allocated_by: string;
+  item_count: number;
+}
+
+export interface ProjectWorkspaceExperiment {
+  id: number;
+  protocol_id: number;
+  allocation_id: number;
+  experiment_group_id: number;
+  date: string;
+  performed_by: string;
+  purpose: string;
+  procedure: string;
+  animal_count: number;
+}
+
+export interface ProjectWorkspace {
+  project: IAECProject;
+  form_b_id?: number | null;
+  investigators: ProjectWorkspaceInvestigator[];
+  planning: ExperimentPlanningStatus;
+  groups: ExperimentGroup[];
+  requisitions: ProjectWorkspaceRequisition[];
+  allocations: ProjectWorkspaceAllocation[];
+  experiments: ProjectWorkspaceExperiment[];
+  workflow: ProjectWorkflowStatus;
 }
 
 // ---------------- REQUISITION (VIEW) ----------------

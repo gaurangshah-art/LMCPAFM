@@ -19,7 +19,13 @@ from crud.formb_wizard import (
     submit_form_b,
 )
 from database.database import get_db
-from crud.formb_investigator import add_form_b_investigator, list_form_b_investigators, remove_form_b_investigator
+from crud.formb_investigator import (
+    add_form_b_investigator,
+    link_form_b_investigator,
+    list_form_b_investigators,
+    remove_form_b_investigator,
+    search_linkable_investigator_users,
+)
 from dependencies.auth import require_investigator
 from models.user import User
 from schemas.schemas_formb import (
@@ -27,6 +33,8 @@ from schemas.schemas_formb import (
     FormBBase,
     FormBInvestigatorCreate,
     FormBInvestigatorRead,
+    FormBInvestigatorLinkUpdate,
+    InvestigatorUserSearchResult,
     FormBRead,
     FormBReviewRead,
     FormBStartRead,
@@ -166,6 +174,16 @@ def submit_form_b_application(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@router.get("/investigator-users/search", response_model=list[InvestigatorUserSearchResult])
+def search_investigator_users(
+    q: str = "",
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_investigator),
+):
+    users = search_linkable_investigator_users(db, q)
+    return [{"id": user.id, "name": user.name, "email": user.email} for user in users]
+
+
 @router.post("/investigators", response_model=FormBInvestigatorRead)
 def create_formb_investigator(
     payload: FormBInvestigatorCreate,
@@ -186,6 +204,26 @@ def list_formb_investigators(
 ):
     try:
         return list_form_b_investigators(db, current_user, form_b_id)
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.patch("/{form_b_id}/investigators/{investigator_id}", response_model=FormBInvestigatorRead)
+def link_formb_investigator(
+    form_b_id: int,
+    investigator_id: int,
+    payload: FormBInvestigatorLinkUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    try:
+        return link_form_b_investigator(
+            db,
+            current_user,
+            form_b_id,
+            investigator_id,
+            payload.user_id,
+        )
     except CRUDValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

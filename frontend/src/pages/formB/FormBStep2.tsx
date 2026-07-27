@@ -9,6 +9,7 @@ import {
 } from "../../components/forms/FormBAttachmentField";
 import { FormBInvestigatorsSection } from "../../components/forms/FormBInvestigatorsSection";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
+import { validateDateOnOrAfter } from "../../utils/businessValidation";
 
 const EMPTY = {
   title: "",
@@ -64,6 +65,13 @@ export function FormBStep2() {
     if (!form.durationMonths) return "Project duration is required.";
     if (!form.proposedStartDate) return "Proposed start date is required.";
     if (!form.proposedCompletionDate) return "Proposed completion date is required.";
+    const dateError = validateDateOnOrAfter(
+      form.proposedCompletionDate,
+      form.proposedStartDate,
+      "Proposed completion date",
+      "proposed start date",
+    );
+    if (dateError) return dateError;
     if (!form.fundingAgency) return "Funding agency is required.";
     if (!form.fundingAddress.trim()) return "Funding agency address is required.";
     if (!form.summary.trim()) return "Project summary is required.";

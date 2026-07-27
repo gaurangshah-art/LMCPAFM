@@ -2,7 +2,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
-import { createAllocation } from "../../api/requisitionApi";
+import { createAllocation, getRequisition } from "../../api/requisitionApi";
+import { getFormBDetails } from "../../api/formbApi";
 import {
   getApprovedRequisitionItemOptions,
   getApprovedRequisitionOptions,
@@ -15,6 +16,8 @@ import { useSubmitState } from "../../hooks/useSubmitState";
 import { ErrorAlert } from "../common/ErrorAlert";
 import { LookupSelectField } from "../common/LookupSelectField";
 import { SuccessNote } from "../common/SuccessNote";
+import { formatDisplayDate } from "../../utils/dateFormat";
+import { latestIsoDate, validateDateOnOrAfter } from "../../utils/businessValidation";
 
 const itemSchema = z.object({
   requisition_item_id: z.coerce.number().int().positive(),
@@ -52,10 +55,45 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
   const [itemOptions, setItemOptions] = useState<LookupOption[]>([]);
   const [itemLoading, setItemLoading] = useState(false);
   const [itemError, setItemError] = useState<string | null>(null);
+  const [requisitionDate, setRequisitionDate] = useState<string | null>(null);
+  const [approvalDate, setApprovalDate] = useState<string | null>(null);
   const requisitionLookup = useLookupOptions(getApprovedRequisitionOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
   const selectedRequisitionId = watch("requisition_id");
+  const watchedDate = watch("date");
+  const minAllocationDate = latestIsoDate(approvalDate ?? undefined, requisitionDate ?? undefined);
+  const dateValidationError =
+    watchedDate && minAllocationDate
+      ? validateDateOnOrAfter(
+          watchedDate,
+          minAllocationDate,
+          "Animal issue date",
+          "IAEC approval and requisition dates",
+        )
+      : null;
+
+  useEffect(() => {
+    async function loadRequisitionContext() {
+      if (!selectedRequisitionId || selectedRequisitionId <= 0) {
+        setRequisitionDate(null);
+        setApprovalDate(null);
+        return;
+      }
+
+      try {
+        const requisition = await getRequisition(selectedRequisitionId);
+        setRequisitionDate(requisition.date);
+        const protocol = await getFormBDetails(requisition.protocol_id);
+        setApprovalDate(protocol.approval_date);
+      } catch {
+        setRequisitionDate(null);
+        setApprovalDate(null);
+      }
+    }
+
+    void loadRequisitionContext();
+  }, [selectedRequisitionId]);
 
   useEffect(() => {
     async function loadRequisitionItems() {
@@ -83,6 +121,16 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
 
   const onSubmit = handleSubmit(async (values) => {
     start();
+    const dateError = validateDateOnOrAfter(
+      values.date,
+      minAllocationDate,
+      "Animal issue date",
+      "IAEC approval and requisition dates",
+    );
+    if (dateError) {
+      fail(dateError);
+      return;
+    }
     try {
       const created = await createAllocation(values);
       onCreated(created);
@@ -114,7 +162,11 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
       />
       <label>
         Date
-        <input type="date" {...register("date")} />
+        <input type="date" min={minAllocationDate} {...register("date")} />
+        {minAllocationDate ? (
+          <small>Must be on or after {formatDisplayDate(minAllocationDate)}.</small>
+        ) : null}
+        {dateValidationError ? <small className="field-error">{dateValidationError}</small> : null}
       </label>
       <label>
         Allocated By

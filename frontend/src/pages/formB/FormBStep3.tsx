@@ -10,6 +10,7 @@ import { getApiErrorMessage } from "../../api/errors";
 import { LoadingState } from "../../components/common/LoadingState";
 import { INSTITUTIONAL_DEFAULTS } from "../../constants/institution";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
+import { validateWeightGrams } from "../../utils/businessValidation";
 
 interface RequirementRow extends FormBAnimalRequirementEntry {
   id: string;
@@ -186,6 +187,8 @@ export function FormBStep3() {
       if (!row.sex) return `${label}: sex is required.`;
       if (!row.age) return `${label}: age is required.`;
       if (!row.weight.trim()) return `${label}: weight range is required.`;
+      const weightError = validateWeightGrams(row.weight);
+      if (weightError) return `${label}: ${weightError}`;
       if (!row.number_required || row.number_required <= 0) {
         return `${label}: number of animals must be greater than zero.`;
       }
@@ -399,6 +402,7 @@ export function FormBStep3() {
                   Weight range (grams)
                   <input
                     value={row.weight}
+                    placeholder="e.g. 200 g or 200-250 g"
                     onChange={(e) => updateRequirement(row.id, { weight: e.target.value })}
                   />
                 </label>

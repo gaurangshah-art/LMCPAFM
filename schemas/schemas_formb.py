@@ -1,7 +1,9 @@
 from datetime import date, datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from utils.business_validation import assert_iso_date_on_or_after, validate_weight_grams
 
 
 class FormBBase(BaseModel):
@@ -159,6 +161,16 @@ class FormBInvestigatorRead(BaseModel):
         orm_mode = True
 
 
+class FormBInvestigatorLinkUpdate(BaseModel):
+    user_id: int = Field(..., gt=0)
+
+
+class InvestigatorUserSearchResult(BaseModel):
+    id: int
+    name: str
+    email: str
+
+
 class FormBStep1AutofillRead(BaseModel):
     establishment_name: Optional[str] = None
     establishment_address: Optional[str] = None
@@ -207,6 +219,16 @@ class FormBStep2Save(BaseModel):
     expected_outcomes: str = Field(..., max_length=5000)
     study_plan_annexure_reference: str = Field("", max_length=500)
 
+    @model_validator(mode="after")
+    def validate_project_dates(self):
+        assert_iso_date_on_or_after(
+            self.proposed_completion_date,
+            self.proposed_start_date,
+            value_label="Proposed completion date",
+            minimum_label="proposed start date",
+        )
+        return self
+
 
 class FormBYearWiseCountEntry(BaseModel):
     year: str = Field(..., max_length=20)
@@ -227,6 +249,14 @@ class FormBAnimalRequirementEntry(BaseModel):
     breeder_name: str = Field(..., max_length=500)
     breeder_address: str = Field(..., max_length=1000)
     breeder_registration_number: str = Field(..., max_length=200)
+
+    @field_validator("weight")
+    @classmethod
+    def validate_weight_in_grams(cls, value: str) -> str:
+        try:
+            return validate_weight_grams(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 class FormBStep3Save(BaseModel):

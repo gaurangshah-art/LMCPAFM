@@ -623,3 +623,65 @@ input[type="number"] {
     justify-content: flex-start;
   }
 }
+
+.workflow-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.workflow-step {
+  border: 1px solid var(--border-color, #d8dee9);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: #fff;
+}
+
+.workflow-step-complete {
+  border-color: #2e7d32;
+  background: #f3fbf4;
+}
+
+.status-pill {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.85rem;
+}
+
+.status-pill-success {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.link-cell {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 220px;
+}
+
+.link-results {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.warning-card {
+  border-left: 4px solid #c77800;
+}
+
+.certificate-box-provisional {
+  border: 2px solid #c77800;
+}
+
+.certificate-box-final {
+  border: 2px solid #2e7d32;
+}
+
+.certificate-disclaimer-banner {
+  background: #fff3e0;
+  border: 2px solid #c77800;
+  border-radius: 8px;
+  color: #8a4b00;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}

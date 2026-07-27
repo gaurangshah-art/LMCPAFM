@@ -160,7 +160,7 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
                 <button
                   type="button"
                   className="btn-secondary btn-small"
-                  onClick={() => navigate(`/iaec/projects/${row.id}`)}
+                  onClick={() => navigate(`/projects/${row.id}`)}
                 >
                   Open
                 </button>
@@ -207,9 +207,17 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
                   <button
                     type="button"
                     className="btn-secondary btn-small"
-                    onClick={() => navigate(`/iaec/project/${row.id}/certificate`)}
+                    onClick={() => navigate(`/projects/${row.id}`)}
                   >
-                    View
+                    Workspace
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small"
+                    onClick={() => navigate(`/iaec/project/${row.id}/certificate`)}
+                    title="Provisional until all experiment records are complete"
+                  >
+                    Certificate
                   </button>
                 </div>
               ),
@@ -237,7 +245,7 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
                   <button
                     type="button"
                     className="btn-secondary btn-small"
-                    onClick={() => navigate(`/iaec/projects/${row.id}`)}
+                    onClick={() => navigate(`/projects/${row.id}`)}
                   >
                     View
                   </button>

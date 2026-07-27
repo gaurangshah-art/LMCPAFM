@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { getApiErrorMessage } from "../../api/errors";
 import {
   addFormBInvestigator,
+  linkFormBInvestigator,
   listFormBInvestigators,
   removeFormBInvestigator,
+  searchInvestigatorUsers,
   type FormBInvestigatorRecord,
+  type InvestigatorUserSearchResult,
 } from "../../api/formbApi";
 
 interface FormBInvestigatorsSectionProps {
@@ -18,6 +21,92 @@ const PROJECT_ROLES = [
 ] as const;
 
 const INVESTIGATOR_TYPES = ["faculty", "investigator", "student", "external"] as const;
+
+function InvestigatorLinkCell({
+  formBId,
+  investigator,
+  onLinked,
+}: {
+  formBId: number;
+  investigator: FormBInvestigatorRecord;
+  onLinked: () => Promise<void>;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<InvestigatorUserSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (investigator.user_id || query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      try {
+        setSearching(true);
+        setError(null);
+        const rows = await searchInvestigatorUsers(query.trim());
+        setResults(rows);
+      } catch (searchError) {
+        setError(getApiErrorMessage(searchError));
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [investigator.user_id, query]);
+
+  if (investigator.user_id) {
+    return <span className="status-pill status-pill-success">Linked (user #{investigator.user_id})</span>;
+  }
+
+  async function handleLink(userId: number) {
+    try {
+      setLinking(true);
+      setError(null);
+      await linkFormBInvestigator(formBId, investigator.id, userId);
+      setQuery("");
+      setResults([]);
+      await onLinked();
+    } catch (linkError) {
+      setError(getApiErrorMessage(linkError));
+    } finally {
+      setLinking(false);
+    }
+  }
+
+  return (
+    <div className="link-cell">
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search name or email"
+        disabled={linking}
+      />
+      {searching ? <small>Searching...</small> : null}
+      {error ? <small className="field-error">{error}</small> : null}
+      {results.length > 0 ? (
+        <div className="link-results">
+          {results.map((result) => (
+            <button
+              key={result.id}
+              type="button"
+              className="btn-small btn-secondary"
+              disabled={linking}
+              onClick={() => void handleLink(result.id)}
+            >
+              Link {result.name} ({result.email})
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSectionProps) {
   const [investigators, setInvestigators] = useState<FormBInvestigatorRecord[]>([]);
@@ -84,7 +173,10 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
   return (
     <section className="dashboard-section">
       <h3>Project Investigators</h3>
-      <p>Add co-investigators, faculty, or student contributors. At least one LMCP faculty member is required before submission.</p>
+      <p>
+        Add co-investigators, faculty, or student contributors. Link each person to their registered
+        LMCP account so students can fill operational data while faculty retains oversight.
+      </p>
 
       {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
 
@@ -97,6 +189,7 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
               <th>Name</th>
               <th>Role</th>
               <th>Type</th>
+              <th>Account</th>
               <th>Permissions</th>
               <th />
             </tr>
@@ -107,6 +200,13 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
                 <td>{investigator.name}</td>
                 <td>{investigator.project_role}</td>
                 <td>{investigator.investigator_type || "-"}</td>
+                <td>
+                  <InvestigatorLinkCell
+                    formBId={formBId}
+                    investigator={investigator}
+                    onLinked={loadInvestigators}
+                  />
+                </td>
                 <td>
                   {[
                     investigator.can_view_status ? "status" : null,

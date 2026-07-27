@@ -5,6 +5,8 @@ import type {
   InvestigatorProjectSummary,
   ExperimentGroup,
   ExperimentGroupCreate,
+  ExperimentPlanningStatus,
+  ProjectWorkspace,
   AnimalExperiment,
   AnimalExperimentCreate,
   IAECMeetingRecord,
@@ -60,6 +62,33 @@ export async function downloadProjectCertificate(projectId: number): Promise<voi
   window.URL.revokeObjectURL(blobUrl);
 }
 
+export async function uploadSignedProjectCertificate(
+  projectId: number,
+  file: File,
+): Promise<import("./types").ProjectSignedCertificate> {
+  const body = new FormData();
+  body.append("file", file);
+  const { data } = await apiClient.post(`/iaec/project/${projectId}/certificate/signed`, body, {
+    timeout: 120000,
+  });
+  return data;
+}
+
+export async function downloadSignedProjectCertificate(
+  projectId: number,
+  filename: string,
+): Promise<void> {
+  const response = await apiClient.get(`/iaec/project/${projectId}/certificate/signed/download`, {
+    responseType: "blob",
+  });
+  const blobUrl = window.URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(blobUrl);
+}
+
 export async function createGroup(payload: ExperimentGroupCreate): Promise<ExperimentGroup> {
   const { data } = await apiClient.post<ExperimentGroup>("/iaec/group", payload);
   return data;
@@ -67,6 +96,20 @@ export async function createGroup(payload: ExperimentGroupCreate): Promise<Exper
 
 export async function getGroupsByProject(projectId: number): Promise<ExperimentGroup[]> {
   const { data } = await apiClient.get<ExperimentGroup[]>(`/iaec/group/${projectId}`);
+  return data;
+}
+
+export async function getExperimentPlanningStatus(
+  projectId: number,
+): Promise<ExperimentPlanningStatus> {
+  const { data } = await apiClient.get<ExperimentPlanningStatus>(
+    `/iaec/project/${projectId}/experiment-planning`,
+  );
+  return data;
+}
+
+export async function getProjectWorkspace(projectId: number): Promise<ProjectWorkspace> {
+  const { data } = await apiClient.get<ProjectWorkspace>(`/iaec/project/${projectId}/workspace`);
   return data;
 }
 

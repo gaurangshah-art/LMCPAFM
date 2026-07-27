@@ -161,6 +161,7 @@ class ExperimentGroup(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("iaec_project.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    planned_animal_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     project: Mapped["IAECProject"] = relationship(back_populates="experiment_groups")
     experiments: Mapped[list["AnimalExperiment"]] = relationship(back_populates="group")
@@ -224,6 +225,24 @@ class IAECProjectClosure(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("iaec_project.id"))
     date: Mapped[Date] = mapped_column(Date)
     remarks: Mapped[str] = mapped_column(Text)
+
+
+class ProjectSignedCertificate(Base):
+    __tablename__ = "project_signed_certificate"
+    __table_args__ = (
+        UniqueConstraint("project_id", name="uq_project_signed_certificate_project"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("iaec_project.id"), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    stored_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    uploaded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    project: Mapped["IAECProject"] = relationship()
 
 
 # =========================================================

@@ -7,7 +7,13 @@ from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDNotFoundError
 from crud.formb_internal import get_meeting_form_b_summary
+from crud.project_certificate import (
+    FINAL_ATTESTATION,
+    PROVISIONAL_DISCLAIMER,
+    build_project_certificate_data,
+)
 from database.lmcpafm_models import FormB, FormBMeetingDecision, IAECMeeting, IAECProject
+from utils.institution import get_cpcsea_registration_number, get_establishment_name
 
 
 class _SimplePDF(FPDF):
@@ -96,42 +102,103 @@ def render_meeting_summary_pdf(db: Session, meeting_id: int) -> bytes:
 
 
 def render_project_certificate_pdf(db: Session, project_id: int) -> bytes:
+    certificate = build_project_certificate_data(db, project_id)
     project = db.query(IAECProject).filter(IAECProject.id == project_id).first()
     if project is None:
         raise CRUDNotFoundError("Project not found")
 
-    form_b = db.query(FormB).filter(FormB.project_id == project_id).first()
-    meeting = None
-    decision = None
-    if form_b and form_b.meeting_id:
-        meeting = db.query(IAECMeeting).filter(IAECMeeting.id == form_b.meeting_id).first()
-        decision = (
-            db.query(FormBMeetingDecision)
-            .filter(
-                FormBMeetingDecision.form_b_id == form_b.id,
-                FormBMeetingDecision.meeting_id == form_b.meeting_id,
-            )
-            .first()
-        )
-
     pdf = _SimplePDF()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "IAEC Approval Certificate", ln=True, align="C")
+
+    if certificate["is_final"]:
+        pdf.cell(0, 10, "IAEC Experiment Completion Certificate", ln=True, align="C")
+    else:
+        pdf.cell(0, 10, "IAEC Project Approval Certificate (Provisional)", ln=True, align="C")
+
     pdf.ln(4)
+
+    if not certificate["is_final"]:
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_text_color(180, 0, 0)
+        pdf.multi_cell(0, 7, _safe_text(certificate["disclaimer"] or PROVISIONAL_DISCLAIMER))
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(4)
+
     pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 8, _safe_text(f"Protocol: {project.protocol_number or 'Pending'}"), ln=True)
-    pdf.cell(0, 8, _safe_text(f"Project: {project.title}"), ln=True)
-    pdf.cell(0, 8, _safe_text(f"Principal Investigator: {project.principal_investigator}"), ln=True)
-    if meeting:
-        pdf.cell(0, 8, _safe_text(f"Meeting date: {meeting.date}"), ln=True)
-        pdf.cell(0, 8, _safe_text(f"Meeting number: {meeting.meeting_number or '-'}"), ln=True)
-    if decision:
-        pdf.cell(0, 8, _safe_text(f"Decision: {decision.decision}"), ln=True)
-        if decision.remarks:
-            pdf.multi_cell(0, 6, _safe_text(f"Remarks: {decision.remarks}"))
-    if project.approval_date:
-        pdf.cell(0, 8, _safe_text(f"Approval date: {project.approval_date}"), ln=True)
+    pdf.cell(0, 8, _safe_text(get_establishment_name()), ln=True)
+    pdf.cell(0, 8, _safe_text(f"CPCSEA Reg. No.: {get_cpcsea_registration_number()}"), ln=True)
+    pdf.cell(0, 8, _safe_text(f"Protocol: {certificate['lmcp_iaec_id'] or 'Pending'}"), ln=True)
+    pdf.cell(0, 8, _safe_text(f"Project: {certificate['title']}"), ln=True)
+    pdf.cell(0, 8, _safe_text(f"Principal Investigator: {certificate['investigator']}"), ln=True)
+    if certificate.get("department"):
+        pdf.cell(0, 8, _safe_text(f"Department: {certificate['department']}"), ln=True)
+
+    if certificate.get("meeting_date"):
+        pdf.cell(0, 8, _safe_text(f"IAEC meeting date: {certificate['meeting_date']}"), ln=True)
+    if certificate.get("meeting_number"):
+        pdf.cell(0, 8, _safe_text(f"IAEC meeting number: {certificate['meeting_number']}"), ln=True)
+    if certificate.get("approval_date"):
+        pdf.cell(0, 8, _safe_text(f"IAEC approval date: {certificate['approval_date']}"), ln=True)
+    if certificate.get("decision"):
+        pdf.cell(0, 8, _safe_text(f"Decision: {certificate['decision']}"), ln=True)
+    if certificate.get("approved_animal_count") is not None:
+        pdf.cell(
+            0,
+            8,
+            _safe_text(f"Approved animal count: {certificate['approved_animal_count']}"),
+            ln=True,
+        )
+
+    if certificate["is_final"]:
+        pdf.ln(3)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 8, "CPCSEA Compliance Attestation", ln=True)
+        pdf.set_font("Helvetica", "", 11)
+        pdf.multi_cell(0, 6, _safe_text(certificate["final_attestation"] or FINAL_ATTESTATION))
+        usage = certificate.get("usage_summary") or {}
+        pdf.cell(0, 8, _safe_text(f"Planned animals: {usage.get('planned_animals', 0)}"), ln=True)
+        pdf.cell(0, 8, _safe_text(f"Allocated animals: {usage.get('allocated_animals', 0)}"), ln=True)
+        pdf.cell(0, 8, _safe_text(f"Logged in experiments: {usage.get('logged_animals', 0)}"), ln=True)
+        if certificate.get("completion_date"):
+            pdf.cell(0, 8, _safe_text(f"Completion date: {certificate['completion_date']}"), ln=True)
+        if not certificate.get("publication_ready"):
+            pdf.ln(2)
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.multi_cell(
+                0,
+                6,
+                _safe_text(
+                    "This system-generated certificate is NOT the signed hard copy for journal submission. "
+                    "The official certificate requires signatures of the IAEC Chairperson, CPCSEA nominee, "
+                    "and Member Secretary and will be uploaded after signing."
+                ),
+            )
+            pdf.set_font("Helvetica", "", 11)
+    else:
+        pdf.ln(3)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 8, "Current Experimental Status", ln=True)
+        pdf.set_font("Helvetica", "", 11)
+        work_state = certificate.get("work_state", "not_initiated")
+        if work_state == "not_initiated":
+            pdf.multi_cell(0, 6, _safe_text("Experimental work has not been initiated."))
+        else:
+            pdf.multi_cell(0, 6, _safe_text("Experimental work is in progress but not fully logged."))
+        usage = certificate.get("usage_summary") or {}
+        pdf.cell(0, 8, _safe_text(f"Planned animals: {usage.get('planned_animals', 0)}"), ln=True)
+        pdf.cell(0, 8, _safe_text(f"Allocated animals: {usage.get('allocated_animals', 0)}"), ln=True)
+        pdf.cell(0, 8, _safe_text(f"Logged in experiments: {usage.get('logged_animals', 0)}"), ln=True)
+        blocking = (certificate.get("completion_status") or {}).get("blocking_reasons") or []
+        for reason in blocking:
+            pdf.multi_cell(0, 6, _safe_text(f"- {reason}"))
+
+    if certificate.get("comments"):
+        pdf.ln(2)
+        pdf.multi_cell(0, 6, _safe_text(f"IAEC remarks: {certificate['comments']}"))
+
+    pdf.ln(8)
+    pdf.cell(0, 8, _safe_text(f"IAEC Chairperson: {certificate.get('chairperson_name', 'IAEC Chairperson')}"), ln=True)
 
     output = pdf.output()
     if isinstance(output, bytearray):
@@ -139,38 +206,3 @@ def render_project_certificate_pdf(db: Session, project_id: int) -> bytes:
     if isinstance(output, str):
         return output.encode("latin-1")
     return output
-
-
-def build_project_certificate_data(db: Session, project_id: int) -> dict:
-    project = db.query(IAECProject).filter(IAECProject.id == project_id).first()
-    if project is None:
-        raise CRUDNotFoundError("Project not found")
-
-    form_b = db.query(FormB).filter(FormB.project_id == project_id).first()
-    meeting = None
-    decision = None
-    if form_b and form_b.meeting_id:
-        meeting = db.query(IAECMeeting).filter(IAECMeeting.id == form_b.meeting_id).first()
-        decision = (
-            db.query(FormBMeetingDecision)
-            .filter(
-                FormBMeetingDecision.form_b_id == form_b.id,
-                FormBMeetingDecision.meeting_id == form_b.meeting_id,
-            )
-            .first()
-        )
-
-    step1 = (form_b.application_data or {}).get("step1", {}) if form_b else {}
-    return {
-        "lmcp_iaec_id": project.protocol_number or "",
-        "title": project.title,
-        "investigator": project.principal_investigator or project.investigator_name,
-        "department": step1.get("department") or "",
-        "meeting_year": meeting.date.year if meeting else None,
-        "meeting_number": meeting.meeting_number if meeting else None,
-        "meeting_date": meeting.date.isoformat() if meeting else None,
-        "approval_date": project.approval_date.isoformat() if project.approval_date else None,
-        "comments": decision.remarks if decision and decision.remarks else "",
-        "chairperson_name": "IAEC Chairperson",
-        "decision": decision.decision if decision else None,
-    }

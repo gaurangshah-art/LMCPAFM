@@ -46,6 +46,7 @@ import { FormCPage } from "../pages/FormCPage";
 import { IAECProjectViewPage } from "../pages/IAECProjectViewPage";
 import { IAECProjectEditPage } from "../pages/IAECProjectEditPage";
 import { IAECWorkflowDashboardPage } from "../pages/IAECWorkflowDashboardPage";
+import { ProjectWorkspacePage } from "../pages/ProjectWorkspacePage";
 import { ExperimentEntryPage } from "../pages/experiment/ExperimentEntryPage";
 import { ExperimentLogsEntryPage } from "../pages/experiment/ExperimentLogsEntryPage";
 import { ExperimentLogsViewPage } from "../pages/experiment/ExperimentLogsViewPage";
@@ -206,6 +207,20 @@ export default function App() {
             }
           />
 
+          {/* PROJECT WORKSPACE */}
+          <Route
+            path="/projects/:projectId"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator", "iaec", "staff", "admin"]}
+              >
+                <ProjectWorkspacePage currentUser={currentUser!} />
+              </ProtectedRoute>
+            }
+          />
+
           {/* IAEC PROJECTS */}
           <Route
             path="/iaec-projects"
@@ -280,7 +295,7 @@ export default function App() {
                 isAuthLoading={isAuthLoading}
                 allowedRoles={["iaec", "investigator"]}
               >
-                <IaecApprovalCertificate />
+                <IaecApprovalCertificate currentUser={currentUser!} />
               </ProtectedRoute>
             }
           />

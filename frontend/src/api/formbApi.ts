@@ -357,6 +357,12 @@ export interface FormBInvestigatorPayload {
   can_submit_form_b?: boolean;
 }
 
+export interface InvestigatorUserSearchResult {
+  id: number;
+  name: string;
+  email: string;
+}
+
 export async function listFormBInvestigators(formBId: number): Promise<FormBInvestigatorRecord[]> {
   const { data } = await apiClient.get<FormBInvestigatorRecord[]>(`/formb/${formBId}/investigators`);
   return data;
@@ -369,6 +375,25 @@ export async function addFormBInvestigator(payload: FormBInvestigatorPayload): P
 
 export async function removeFormBInvestigator(formBId: number, investigatorId: number): Promise<void> {
   await apiClient.delete(`/formb/${formBId}/investigators/${investigatorId}`);
+}
+
+export async function searchInvestigatorUsers(query: string): Promise<InvestigatorUserSearchResult[]> {
+  const { data } = await apiClient.get<InvestigatorUserSearchResult[]>("/formb/investigator-users/search", {
+    params: { q: query },
+  });
+  return data;
+}
+
+export async function linkFormBInvestigator(
+  formBId: number,
+  investigatorId: number,
+  userId: number,
+): Promise<FormBInvestigatorRecord> {
+  const { data } = await apiClient.patch<FormBInvestigatorRecord>(
+    `/formb/${formBId}/investigators/${investigatorId}`,
+    { user_id: userId },
+  );
+  return data;
 }
 
 export function clearStoredFormBId(): void {

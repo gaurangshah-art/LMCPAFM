@@ -2,6 +2,7 @@
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy import or_
 from database.lmcpafm_models import IAECProject, ExperimentGroup, AnimalExperiment
 from schemas.schemas_iaec import (
     IAECProjectCreate,
@@ -9,6 +10,10 @@ from schemas.schemas_iaec import (
     AnimalExperimentCreate
 )
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
+from crud.experiment_group_planning import (
+    assert_project_approved_for_planning,
+    validate_group_planned_count,
+)
 
 def create_project(db: Session, project: IAECProjectCreate):
     project_data = project.model_dump(exclude_unset=True)
@@ -36,9 +41,8 @@ def get_projects(db: Session):
 
 
 def create_group(db: Session, group: ExperimentGroupCreate):
-    project = db.query(IAECProject).filter(IAECProject.id == group.project_id).first()
-    if not project:
-        raise CRUDNotFoundError(f"IAEC project {group.project_id} not found.")
+    assert_project_approved_for_planning(db, group.project_id)
+    validate_group_planned_count(db, group.project_id, group.planned_animal_count)
 
     db_group = ExperimentGroup(**group.model_dump(exclude_unset=True))
     db.add(db_group)
@@ -82,7 +86,12 @@ def get_projects_by_investigator(db: Session, user_id: int):
         .join(FormBInvestigator, FormBInvestigator.form_b_id == FormB.id)
         .filter(
             FormBInvestigator.user_id == user_id,
-            FormBInvestigator.can_view_status.is_(True),
+            or_(
+                FormBInvestigator.can_view_status.is_(True),
+                FormBInvestigator.can_edit_forms.is_(True),
+                FormBInvestigator.can_submit_form_b.is_(True),
+                FormBInvestigator.can_view_approval_letters.is_(True),
+            ),
         )
         .distinct()
         .options(

@@ -1,6 +1,6 @@
 from dependencies.auth import get_current_user, require_any_role, require_iaec, user_role_names
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from database.database import get_db
@@ -28,6 +28,12 @@ from crud.formb_email import (
     send_form_b_meeting_invitation_email,
     validate_form_b_meeting_invitation_ready,
 )
+from crud.experiment_group_planning import get_experiment_planning_status
+from crud.project_signed_certificate import (
+    read_signed_certificate_bytes,
+    upload_signed_certificate,
+)
+from crud.project_workspace import get_project_workspace, user_can_access_workspace
 from crud.formb_membership import (
     user_can_edit_project,
     user_can_view_approval_letter,
@@ -40,6 +46,8 @@ from schemas.schemas_iaec import (
     InvestigatorProjectSummary,
     ExperimentGroupCreate,
     ExperimentGroup,
+    ExperimentPlanningStatus,
+    ProjectWorkspaceRead,
     AnimalExperimentCreate,
     AnimalExperiment,
     IAECMeetingCreate,
@@ -172,6 +180,90 @@ def get_groups(
 ):
     _ensure_project_view(db, current_user, project_id)
     return crud_iaec.get_groups_by_project(db, project_id)
+
+
+@router.get("/project/{project_id}/experiment-planning", response_model=ExperimentPlanningStatus)
+def get_project_experiment_planning(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    _ensure_project_view(db, current_user, project_id)
+    try:
+        return get_experiment_planning_status(db, project_id)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/project/{project_id}/workspace", response_model=ProjectWorkspaceRead)
+def get_project_workspace_view(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    privileged = not _privileged_roles(current_user).isdisjoint(PRIVILEGED_IAEC_ROLES)
+    if not user_can_access_workspace(db, current_user, project_id, privileged):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    try:
+        workspace = get_project_workspace(db, current_user, project_id, privileged=privileged)
+        return {
+            **workspace,
+            "investigators": [
+                {
+                    "id": row.id,
+                    "form_b_id": row.form_b_id,
+                    "name": row.name,
+                    "project_role": row.project_role,
+                    "user_id": row.user_id,
+                    "investigator_profile_user_id": row.investigator_profile_user_id,
+                    "investigator_type": row.investigator_type,
+                    "can_view_status": row.can_view_status,
+                    "can_view_approval_letters": row.can_view_approval_letters,
+                    "can_edit_forms": row.can_edit_forms,
+                    "can_submit_form_b": row.can_submit_form_b,
+                    "is_linked": row.user_id is not None,
+                }
+                for row in workspace["investigators"]
+            ],
+            "requisitions": [
+                {
+                    "id": req.id,
+                    "protocol_id": req.protocol_id,
+                    "date": req.date,
+                    "purpose": req.purpose,
+                    "requester_name": req.requester_name,
+                    "item_count": len(req.items or []),
+                    "requested_total": sum(item.requested_count for item in (req.items or [])),
+                }
+                for req in workspace["requisitions"]
+            ],
+            "allocations": [
+                {
+                    "id": alloc.id,
+                    "requisition_id": alloc.requisition_id,
+                    "date": alloc.date,
+                    "allocated_by": alloc.allocated_by,
+                    "item_count": len(alloc.items or []),
+                }
+                for alloc in workspace["allocations"]
+            ],
+            "experiments": [
+                {
+                    "id": exp.id,
+                    "protocol_id": exp.protocol_id,
+                    "allocation_id": exp.allocation_id,
+                    "experiment_group_id": exp.experiment_group_id,
+                    "date": exp.date,
+                    "performed_by": exp.performed_by,
+                    "purpose": exp.purpose,
+                    "procedure": exp.procedure,
+                    "animal_count": len(exp.animals or []),
+                }
+                for exp in workspace["experiments"]
+            ],
+        }
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @router.post("/experiment", response_model=AnimalExperiment)
@@ -449,12 +541,63 @@ def download_project_certificate(
             raise HTTPException(status_code=403, detail="Forbidden")
     try:
         pdf_bytes = render_project_certificate_pdf(db, project_id)
+        cert = build_project_certificate_data(db, project_id)
+        filename_prefix = "IAEC_Final_Certificate" if cert.get("is_final") else "IAEC_Provisional_Approval"
+        protocol = cert.get("lmcp_iaec_id") or project_id
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f'attachment; filename="iaec_certificate_{project_id}.pdf"'
+                "Content-Disposition": f'attachment; filename="{filename_prefix}_{protocol}.pdf"'
             },
         )
     except CRUDNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.post("/project/{project_id}/certificate/signed")
+async def upload_project_signed_certificate(
+    project_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("iaec", "admin", "staff")),
+):
+    content = await file.read()
+    try:
+        return upload_signed_certificate(
+            db,
+            current_user,
+            project_id,
+            file.filename or "signed_certificate.pdf",
+            file.content_type,
+            content,
+        )
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/project/{project_id}/certificate/signed/download")
+def download_project_signed_certificate(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from fastapi.responses import Response
+
+    roles = set(user_role_names(current_user))
+    if roles.isdisjoint({"iaec", "admin", "staff"}):
+        if not user_can_view_approval_letter(db, current_user.id, project_id):
+            raise HTTPException(status_code=403, detail="Forbidden")
+    try:
+        content, filename, content_type = read_signed_certificate_bytes(db, project_id)
+        return Response(
+            content=content,
+            media_type=content_type or "application/octet-stream",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

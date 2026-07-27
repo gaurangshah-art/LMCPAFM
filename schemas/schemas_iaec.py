@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import date
 
 class IAECProjectBase(BaseModel):
@@ -44,14 +44,50 @@ class InvestigatorProjectSummary(BaseModel):
 
 class ExperimentGroupBase(BaseModel):
     name: str
+    planned_animal_count: int = Field(gt=0)
+
 
 class ExperimentGroupCreate(ExperimentGroupBase):
     project_id: int
+
 
 class ExperimentGroup(ExperimentGroupBase):
     id: int
     project_id: int
     experiments: list[AnimalExperiment] = []
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExperimentPlanningStatus(BaseModel):
+    project_id: int
+    project_status: str | None = None
+    approved_animal_count: int | None = None
+    planned_animal_total: int
+    remaining_animals: int | None = None
+    group_count: int
+    is_complete: bool
+    can_create_requisition: bool
+    message: str | None = None
+
+
+class ProjectWorkflowStatus(BaseModel):
+    planning_complete: bool
+    has_requisition: bool
+    has_allocation: bool
+    has_experiment_log: bool
+    can_create_requisition: bool
+
+
+class ProjectWorkspaceRead(BaseModel):
+    project: IAECProject
+    form_b_id: int | None = None
+    investigators: list[dict] = []
+    planning: ExperimentPlanningStatus
+    groups: list[ExperimentGroup]
+    requisitions: list[dict] = []
+    allocations: list[dict] = []
+    experiments: list[dict] = []
+    workflow: ProjectWorkflowStatus
     model_config = ConfigDict(from_attributes=True)
 
 

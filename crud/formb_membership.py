@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from crud.exceptions import CRUDValidationError
 from database.lmcpafm_models import FormB, FormBInvestigator
@@ -125,11 +126,12 @@ def user_can_view_project(db: Session, user_id: int, project_id: int) -> bool:
         .filter(
             FormB.project_id == project_id,
             FormBInvestigator.user_id == user_id,
-            FormBInvestigator.can_view_status.is_(True),
         )
         .first()
     )
-    return membership is not None
+    if membership is None:
+        return False
+    return _can_view_form_b(membership)
 
 
 def user_can_view_approval_letter(db: Session, user_id: int, project_id: int) -> bool:

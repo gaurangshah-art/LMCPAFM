@@ -3,6 +3,8 @@ from uuid import uuid4
 from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain
 
+from tests.planning_helpers import create_experiment_group, seed_project_animal_cap
+
 
 def test_create_and_get_requisition(client, staff_auth_headers, iaec_auth_headers):
     suffix = uuid4().hex[:8]
@@ -31,8 +33,19 @@ def test_create_and_get_requisition(client, staff_auth_headers, iaec_auth_header
         db.add(strain)
         db.commit()
         db.refresh(strain)
+
+        seed_project_animal_cap(db, project_id, cap=5, species_id=species.id, strain_id=strain.id)
     finally:
         db.close()
+
+    group_res = create_experiment_group(
+        client,
+        iaec_auth_headers,
+        project_id,
+        "Requisition Group",
+        5,
+    )
+    assert group_res.status_code == 200, group_res.text
 
     payload = {
         "protocol_id": project_id,

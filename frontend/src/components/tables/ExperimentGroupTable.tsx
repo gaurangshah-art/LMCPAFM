@@ -13,6 +13,7 @@ export function ExperimentGroupTable({ groups }: ExperimentGroupTableProps) {
       columns={[
         { header: "ID", cell: (row) => row.id },
         { header: "Name", cell: (row) => row.name },
+        { header: "Planned Animals", cell: (row) => row.planned_animal_count },
         { header: "Project ID", cell: (row) => row.project_id },
         { header: "Experiments", cell: (row) => row.experiments?.length ?? 0 },
       ]}

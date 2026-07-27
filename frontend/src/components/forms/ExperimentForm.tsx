@@ -4,21 +4,25 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { createExperiment } from "../../api/experimentApi";
+import { getGroupsByProject } from "../../api/iaecApi";
 import {
   getApprovedAllocationOptions,
   getApprovedAnimalOptions,
   getApprovedProtocolOptions,
+  type LookupOption,
 } from "../../api/lookupApi";
 
 import { getFormBDetails, type FormBDetails } from "../../api/formbApi";
 import { getFormDDetails, type FormDDetails } from "../../api/formdApi";
+import { getAllocation } from "../../api/requisitionApi";
 import { getApiErrorMessage } from "../../api/errors";
 
-import type { Experiment } from "../../api/types";
+import type { Experiment, ExperimentGroup } from "../../api/types";
 
 import { useLookupOptions } from "../../hooks/useLookupOptions";
 import { useSubmitState } from "../../hooks/useSubmitState";
 import { formatDisplayDate } from "../../utils/dateFormat";
+import { latestIsoDate, validateDateOnOrAfter } from "../../utils/businessValidation";
 
 import { ErrorAlert } from "../common/ErrorAlert";
 import { LookupSelectField } from "../common/LookupSelectField";
@@ -27,6 +31,7 @@ import { SuccessNote } from "../common/SuccessNote";
 const schema = z.object({
   protocol_id: z.coerce.number().int().positive(),
   allocation_id: z.coerce.number().int().positive(),
+  experiment_group_id: z.coerce.number().int().positive(),
   date: z.string().min(1),
   performed_by: z.string().min(1),
   purpose: z.string().min(1),
@@ -44,9 +49,10 @@ type FormValues = z.infer<typeof schema>;
 
 interface ExperimentFormProps {
   onCreated: (experiment: Experiment) => void;
+  defaultProtocolId?: number;
 }
 
-export function ExperimentForm({ onCreated }: ExperimentFormProps) {
+export function ExperimentForm({ onCreated, defaultProtocolId }: ExperimentFormProps) {
   const {
     register,
     control,
@@ -58,8 +64,9 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      protocol_id: 0,
+      protocol_id: defaultProtocolId ?? 0,
       allocation_id: 0,
+      experiment_group_id: 0,
       date: "",
       performed_by: "",
       purpose: "",
@@ -85,6 +92,11 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
   const [protocolDetailsError, setProtocolDetailsError] = useState<
     string | null
   >(null);
+  const [groupOptions, setGroupOptions] = useState<LookupOption[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+  const [allocationDate, setAllocationDate] = useState<string | null>(null);
+  const [dateValidationError, setDateValidationError] = useState<string | null>(null);
 
   const protocolLookup = useLookupOptions(getApprovedProtocolOptions);
   const allocationLookup = useLookupOptions(getApprovedAllocationOptions);
@@ -100,6 +112,48 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
   } = useSubmitState();
 
   const selectedProtocolId = watch("protocol_id");
+  const selectedAllocationId = watch("allocation_id");
+  const watchedDate = watch("date");
+
+  const minExperimentDate = latestIsoDate(
+    protocolDetails?.approval_date,
+    allocationDate ?? undefined,
+  );
+
+  useEffect(() => {
+    if (defaultProtocolId && defaultProtocolId > 0) {
+      setValue("protocol_id", defaultProtocolId, { shouldValidate: true });
+    }
+  }, [defaultProtocolId, setValue]);
+
+  useEffect(() => {
+    async function loadGroups() {
+      if (!selectedProtocolId || selectedProtocolId <= 0) {
+        setGroupOptions([]);
+        setGroupsError(null);
+        return;
+      }
+
+      try {
+        setGroupsLoading(true);
+        setGroupsError(null);
+        const groups = await getGroupsByProject(selectedProtocolId);
+        setGroupOptions(
+          groups.map((group: ExperimentGroup) => ({
+            id: group.id,
+            name: `${group.name} (${group.planned_animal_count} planned)`,
+          })),
+        );
+      } catch (error) {
+        setGroupsError(getApiErrorMessage(error));
+        setGroupOptions([]);
+      } finally {
+        setGroupsLoading(false);
+      }
+    }
+
+    void loadGroups();
+  }, [selectedProtocolId]);
 
   useEffect(() => {
     async function loadProtocolDetails() {
@@ -145,8 +199,52 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
     void loadProtocolDetails();
   }, [selectedProtocolId, setValue]);
 
+  useEffect(() => {
+    async function loadAllocationDate() {
+      if (!selectedAllocationId || selectedAllocationId <= 0) {
+        setAllocationDate(null);
+        return;
+      }
+
+      try {
+        const allocation = await getAllocation(selectedAllocationId);
+        setAllocationDate(allocation.date);
+      } catch {
+        setAllocationDate(null);
+      }
+    }
+
+    void loadAllocationDate();
+  }, [selectedAllocationId]);
+
+  useEffect(() => {
+    if (!watchedDate || !minExperimentDate) {
+      setDateValidationError(null);
+      return;
+    }
+    setDateValidationError(
+      validateDateOnOrAfter(
+        watchedDate,
+        minExperimentDate,
+        "Experiment date",
+        "IAEC approval/meeting and animal issue dates",
+      ),
+    );
+  }, [watchedDate, minExperimentDate]);
+
   const onSubmit = handleSubmit(async (values) => {
     start();
+
+    const dateError = validateDateOnOrAfter(
+      values.date,
+      minExperimentDate,
+      "Experiment date",
+      "IAEC approval/meeting and animal issue dates",
+    );
+    if (dateError) {
+      fail(dateError);
+      return;
+    }
 
     try {
       const payload = {
@@ -161,8 +259,9 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
       succeed(`Experiment created with id ${created.id}`);
 
       reset({
-        protocol_id: 0,
+        protocol_id: defaultProtocolId ?? 0,
         allocation_id: 0,
+        experiment_group_id: 0,
         date: "",
         performed_by: "",
         purpose: "",
@@ -195,6 +294,20 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
       />
 
       <LookupSelectField
+        label="Experiment Group"
+        value={watch("experiment_group_id")}
+        onChange={(value) =>
+          setValue("experiment_group_id", value, { shouldValidate: true })
+        }
+        options={groupOptions}
+        loading={groupsLoading}
+        error={groupsError}
+        placeholder="Select experiment group"
+        loadingLabel="Loading groups..."
+        fieldError={errors.experiment_group_id?.message}
+      />
+
+      <LookupSelectField
         label="Allocation"
         value={watch("allocation_id")}
         onChange={(value) =>
@@ -210,7 +323,11 @@ export function ExperimentForm({ onCreated }: ExperimentFormProps) {
 
       <label>
         Date
-        <input type="date" {...register("date")} />
+        <input type="date" min={minExperimentDate} {...register("date")} />
+        {minExperimentDate ? (
+          <small>Must be on or after {formatDisplayDate(minExperimentDate)}.</small>
+        ) : null}
+        {dateValidationError ? <small className="field-error">{dateValidationError}</small> : null}
       </label>
 
       <label>
