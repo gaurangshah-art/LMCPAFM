@@ -60,6 +60,7 @@ export interface UserCreate {
   email: string;
   password: string;
   roles: UserRole[];
+  status?: boolean;
 }
 
 // ---------------- IAEC CERTIFICATE ----------------

@@ -100,7 +100,7 @@ export function UsersPage({ currentUser }: UsersPageProps) {
     <div className="page-grid">
       <PageSection
         title="Create User"
-        subtitle="Admin/staff accounts only — investigators must self-register."
+        subtitle="Staff can create admin, IAEC, and staff accounts. Role editing is available in the Superadmin dashboard."
       >
         <form className="form-grid" onSubmit={onSubmit}>
           <label>

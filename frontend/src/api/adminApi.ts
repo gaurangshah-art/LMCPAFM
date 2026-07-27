@@ -1,17 +1,21 @@
 import { apiClient } from "./client";
+import type { ActivityLog, SystemSummary, User, UserRole } from "./types";
 
-export async function getAllUsers() {
-  return apiClient.get("/admin/users");
+export async function getAllUsers(): Promise<User[]> {
+  const { data } = await apiClient.get<User[]>("/admin/users");
+  return data;
 }
 
-export async function updateUserRoles(userId: string, roles: string[]) {
-  return apiClient.put(`/admin/users/${userId}/roles`, { roles });
+export async function updateUserRoles(userId: string, roles: UserRole[]) {
+  return apiClient.put<User>(`/admin/users/${userId}/roles`, { roles });
 }
 
-export async function getSystemActivityLogs() {
-  return apiClient.get("/admin/logs");
+export async function getSystemActivityLogs(): Promise<ActivityLog[]> {
+  const { data } = await apiClient.get<ActivityLog[]>("/admin/logs");
+  return data;
 }
 
-export async function getSystemSummary() {
-  return apiClient.get("/admin/summary");
+export async function getSystemSummary(): Promise<SystemSummary> {
+  const { data } = await apiClient.get<SystemSummary>("/admin/summary");
+  return data;
 }

@@ -1,101 +1,112 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import {
   getAllUsers,
-  updateUserRoles,
   getSystemActivityLogs,
   getSystemSummary,
+  updateUserRoles,
 } from "../api/adminApi";
-
-import type { User, SystemSummary, ActivityLog } from "../api/types";
-
-import { PageSection } from "../components/common/PageSection";
-import { LoadingState } from "../components/common/LoadingState";
+import { getApiErrorMessage } from "../api/errors";
+import type { ActivityLog, SystemSummary, User } from "../api/types";
+import { CreateStaffUserForm } from "../components/admin/CreateStaffUserForm";
+import { UserRoleEditForm } from "../components/admin/UserRoleEditForm";
 import { ErrorAlert } from "../components/common/ErrorAlert";
+import { LoadingState } from "../components/common/LoadingState";
+import { PageSection } from "../components/common/PageSection";
 import { DataTable } from "../components/tables/DataTable";
+import {
+  type AssignableAdminRole,
+  userHasInvestigatorRole,
+} from "../constants/adminRoles";
 import { formatDisplayDate } from "../utils/dateFormat";
 
-export function AdminDashboardPage() {
+interface AdminDashboardPageProps {
+  currentUser: User;
+}
+
+export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
   const navigate = useNavigate();
 
   const [users, setUsers] = useState<User[]>([]);
   const [summary, setSummary] = useState<SystemSummary | null>(null);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [roleSaveError, setRoleSaveError] = useState<string | null>(null);
+  const [isSavingRoles, setIsSavingRoles] = useState(false);
 
   const loadAll = useCallback(async () => {
     try {
-      setLoading(true);
-
-      const sys = await getSystemSummary();
-      setSummary(sys.data);
-
-      const usr = await getAllUsers();
-      setUsers(usr.data);
-
-      const lg = await getSystemActivityLogs();
-      setLogs(lg.data);
-
-    } catch {
-      setError("Failed to load admin dashboard.");
+      setLoadError(null);
+      const [summaryData, userData, logData] = await Promise.all([
+        getSystemSummary(),
+        getAllUsers(),
+        getSystemActivityLogs(),
+      ]);
+      setSummary(summaryData);
+      setUsers(userData);
+      setLogs(logData);
+    } catch (error) {
+      setLoadError(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    void loadAll();
+  }, [loadAll]);
 
-    (async () => {
-      try {
-        const sys = await getSystemSummary();
-        if (cancelled) return;
-        setSummary(sys.data);
+  const filteredUsers = useMemo(() => {
+    if (roleFilter === "all") {
+      return users;
+    }
+    return users.filter((user) => user.roles.includes(roleFilter as User["roles"][number]));
+  }, [roleFilter, users]);
 
-        const usr = await getAllUsers();
-        if (cancelled) return;
-        setUsers(usr.data);
+  function handleUserCreated(created: User) {
+    setUsers((prev) => [created, ...prev]);
+  }
 
-        const lg = await getSystemActivityLogs();
-        if (cancelled) return;
-        setLogs(lg.data);
-      } catch {
-        if (!cancelled) {
-          setError("Failed to load admin dashboard.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function handleRoleUpdate(userId: number) {
-    const newRole = prompt("Enter new role (admin, staff, iaec, investigator):");
-    if (!newRole) return;
-
+  async function handleSaveRoles(userId: number, roles: AssignableAdminRole[]) {
+    setIsSavingRoles(true);
+    setRoleSaveError(null);
     try {
-      await updateUserRoles(String(userId), [newRole]);
-      void loadAll();
-      alert("Role updated.");
-    } catch {
-      alert("Failed to update role.");
+      const response = await updateUserRoles(String(userId), roles);
+      const updated = response.data as User;
+      setUsers((prev) => prev.map((user) => (user.id === userId ? updated : user)));
+      setEditingUser(null);
+    } catch (error) {
+      setRoleSaveError(getApiErrorMessage(error));
+    } finally {
+      setIsSavingRoles(false);
     }
   }
 
-  if (loading) return <LoadingState label="Loading admin dashboard..." />;
-  if (error) return <ErrorAlert message={error} />;
+  if (loading) {
+    return <LoadingState label="Loading superadmin dashboard..." />;
+  }
+
+  if (loadError) {
+    return <ErrorAlert message={loadError} />;
+  }
 
   return (
     <div className="page-grid">
-      {/* SYSTEM SUMMARY */}
+      <section className="hero-panel hero-panel-wide">
+        <p className="eyebrow">Superadmin console</p>
+        <h1>Institutional account management</h1>
+        <p>
+          Create admin, staff, and IAEC accounts, review the user directory, and monitor
+          system activity from one place.
+        </p>
+        <p>
+          Signed in as <strong>{currentUser.email}</strong> ({currentUser.roles.join(", ")})
+        </p>
+      </section>
+
       <PageSection title="System Summary" subtitle="Overview of LMCPAFM">
         {summary ? (
           <div className="summary-grid">
@@ -125,33 +136,62 @@ export function AdminDashboardPage() {
         )}
       </PageSection>
 
-      {/* USER MANAGEMENT */}
-      <PageSection title="User Management" subtitle="Users and roles">
+      <PageSection
+        title="Create User"
+        subtitle="Admin, staff, and IAEC accounts — investigators self-register separately."
+      >
+        <CreateStaffUserForm onCreated={handleUserCreated} />
+      </PageSection>
+
+      <PageSection title="User Directory" subtitle="Manage roles for institutional accounts">
+        <div className="user-directory-header">
+          <label>
+            Filter by role
+            <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+              <option value="all">All users</option>
+              <option value="admin">Admin</option>
+              <option value="staff">Staff</option>
+              <option value="iaec">IAEC</option>
+              <option value="investigator">Investigator</option>
+            </select>
+          </label>
+          <button type="button" className="btn btn-secondary" onClick={() => void loadAll()}>
+            Refresh
+          </button>
+        </div>
+
         <DataTable
-          rows={users}
-          emptyText="No users found."
+          rows={filteredUsers}
+          emptyText="No users match this filter."
           columns={[
             { header: "ID", cell: (row) => row.id },
-            { header: "Name", cell: (row) => row.name },
+            { header: "Name", cell: (row) => row.name ?? "—" },
             { header: "Email", cell: (row) => row.email },
             { header: "Roles", cell: (row) => row.roles.join(", ") },
+            { header: "Status", cell: (row) => (row.status ? "Active" : "Inactive") },
             {
               header: "Actions",
-              cell: (row) => (
-                <button
-                  className="btn-small"
-                  onClick={() => handleRoleUpdate(row.id)}
-                >
-                  Update Role
-                </button>
-              ),
+              cell: (row) =>
+                userHasInvestigatorRole(row.roles) ? (
+                  <span className="muted-text">Self-registered</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small"
+                    onClick={() => {
+                      setRoleSaveError(null);
+                      setEditingUser(row);
+                    }}
+                  >
+                    Edit Roles
+                  </button>
+                ),
             },
           ]}
         />
       </PageSection>
 
-      {/* ACTIVITY LOGS */}
-      <PageSection title="Activity Logs" subtitle="System-wide actions">
+      <PageSection title="Activity Logs" subtitle="Recent administrative actions">
         <DataTable
           rows={logs}
           emptyText="No activity logs."
@@ -164,23 +204,36 @@ export function AdminDashboardPage() {
         />
       </PageSection>
 
-      {/* QUICK NAVIGATION */}
-      <PageSection title="Quick Navigation" subtitle="Admin tools">
+      <PageSection title="Quick Navigation" subtitle="Operational tools">
         <div className="quick-nav-grid">
-          <button className="btn" onClick={() => navigate("/users")}>
-            Manage Users
-          </button>
-          <button className="btn" onClick={() => navigate("/iaec-dashboard")}>
+          <button type="button" className="btn" onClick={() => navigate("/iaec-dashboard")}>
             IAEC Dashboard
           </button>
-          <button className="btn" onClick={() => navigate("/allocations")}>
+          <button type="button" className="btn" onClick={() => navigate("/form-c")}>
+            Form C Inventory
+          </button>
+          <button type="button" className="btn" onClick={() => navigate("/allocations")}>
             Allocations
           </button>
-          <button className="btn" onClick={() => navigate("/requisitions")}>
+          <button type="button" className="btn" onClick={() => navigate("/requisitions")}>
             Requisitions
           </button>
         </div>
       </PageSection>
+
+      {editingUser ? (
+        <UserRoleEditForm
+          user={editingUser}
+          currentUserId={currentUser.id}
+          isSaving={isSavingRoles}
+          errorMessage={roleSaveError}
+          onCancel={() => {
+            setEditingUser(null);
+            setRoleSaveError(null);
+          }}
+          onSave={handleSaveRoles}
+        />
+      ) : null}
     </div>
   );
 }

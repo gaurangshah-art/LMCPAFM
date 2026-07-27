@@ -58,8 +58,16 @@ const roleHome: Record<string, string> = {
   iaec: "/iaec-projects",
   staff: "/allocations",
   investigator: "/requisitions",
-  admin: "/users",
+  admin: "/admin-dashboard",
 };
+
+function UsersRoute({ currentUser }: { currentUser: User | null }) {
+  if (currentUser?.roles.includes("admin")) {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
+
+  return <UsersPage currentUser={currentUser} />;
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -185,7 +193,7 @@ export default function App() {
             }
           />
 
-          {/* USERS — staff + admin */}
+          {/* USERS — staff (admins redirect to superadmin dashboard) */}
           <Route
             path="/users"
             element={
@@ -194,7 +202,7 @@ export default function App() {
                 isAuthLoading={isAuthLoading}
                 allowedRoles={["staff", "admin"]}
               >
-                <UsersPage currentUser={currentUser} />
+                <UsersRoute currentUser={currentUser} />
               </ProtectedRoute>
             }
           />
@@ -590,45 +598,32 @@ export default function App() {
             }
               />
 
-              <Route
-                path="/admin-dashboard"
-                element={
-                  <ProtectedRoute
-                    currentUser={currentUser}
-                    isAuthLoading={isAuthLoading}
-                    allowedRoles={["admin"]}
-                  >
-                    <AdminDashboardPage />
-                  </ProtectedRoute>
-                }
-              />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["admin"]}
+              >
+                {currentUser ? <AdminDashboardPage currentUser={currentUser} /> : null}
+              </ProtectedRoute>
+            }
+          />
 
-                {/* ADMIN DASHBOARD */}
-                <Route
-                  path="/admin-dashboard"
-                  element={
-                    <ProtectedRoute
-                      currentUser={currentUser}
-                      isAuthLoading={isAuthLoading}
-                      allowedRoles={["admin"]}
-                    >
-                      <AdminDashboardPage />
-                    </ProtectedRoute>
-                  }
-                />  
-                  {/* EXPERIMENTS — investigator */}
-                  <Route
-                    path="/experiments"
-                    element={
-                      <ProtectedRoute
-                        currentUser={currentUser}
-                        isAuthLoading={isAuthLoading}
-                        allowedRoles={["investigator"]}
-                      >
-                        <ExperimentPage />
-                      </ProtectedRoute>
-                    }
-                  />
+          {/* EXPERIMENTS — investigator */}
+          <Route
+            path="/experiments"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator"]}
+              >
+                <ExperimentPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* NOT AUTHORIZED */}
           <Route path="/not-authorized" element={<NotAuthorizedPage />} />

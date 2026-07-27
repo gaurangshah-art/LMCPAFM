@@ -10,8 +10,8 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: "/", label: "Dashboard" },
-  { to: "/users", label: "Users", roles: ["staff", "admin"] },
-  { to: "/admin-dashboard", label: "Admin", roles: ["admin"] },
+  { to: "/users", label: "Users", roles: ["staff"] },
+  { to: "/admin-dashboard", label: "Superadmin", roles: ["admin"] },
   { to: "/iaec-dashboard", label: "IAEC Dashboard", roles: ["iaec"] },
   { to: "/iaec/workflow", label: "IAEC Workflow", roles: ["iaec"] },
   { to: "/iaec-projects", label: "IAEC Projects", roles: ["iaec"] },
