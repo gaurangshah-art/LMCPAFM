@@ -24,6 +24,7 @@ export function InvestigatorProfileGate({ currentUser, children }: InvestigatorP
     }
 
     let cancelled = false;
+    setChecking(true);
 
     (async () => {
       try {
@@ -45,7 +46,7 @@ export function InvestigatorProfileGate({ currentUser, children }: InvestigatorP
     return () => {
       cancelled = true;
     };
-  }, [currentUser]);
+  }, [currentUser, location.pathname]);
 
   if (!currentUser?.roles.includes("investigator")) {
     return <>{children}</>;

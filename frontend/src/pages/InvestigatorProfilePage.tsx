@@ -10,6 +10,7 @@ import {
 import { getApiErrorMessage } from "../api/errors";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
+import { SuccessNote } from "../components/common/SuccessNote";
 import { useSubmitState } from "../hooks/useSubmitState";
 import {
   institutionalEmailHint,
@@ -50,7 +51,7 @@ export function InvestigatorProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const { isSubmitting, errorMessage, start, fail, succeed } = useSubmitState();
+  const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
   const {
     register,
@@ -106,28 +107,37 @@ export function InvestigatorProfilePage() {
     };
   }, [reset]);
 
-  const onSubmit = handleSubmit(async (values) => {
-    start();
-    try {
-      const profile = await updateMyInvestigatorProfile({
-        institutional_email: values.institutional_email.trim().toLowerCase(),
-        institution_name: values.institution_name.trim(),
-        department: values.department.trim(),
-        designation: values.designation.trim(),
-        qualification: values.qualification.trim(),
-        age: values.age,
-        years_experience: values.years_experience,
-        animal_handling_experience: values.animal_handling_experience?.trim() || null,
-        is_lmcp_faculty: values.is_lmcp_faculty,
-      });
-      succeed("Profile saved.");
-      if (profile.is_complete) {
-        navigate("/investigator-dashboard", { replace: true });
+  const onSubmit = handleSubmit(
+    async (values) => {
+      start();
+      try {
+        const profile = await updateMyInvestigatorProfile({
+          institutional_email: values.institutional_email.trim().toLowerCase(),
+          institution_name: values.institution_name.trim(),
+          department: values.department.trim(),
+          designation: values.designation.trim(),
+          qualification: values.qualification.trim(),
+          age: values.age,
+          years_experience: values.years_experience,
+          animal_handling_experience: values.animal_handling_experience?.trim() || null,
+          is_lmcp_faculty: values.is_lmcp_faculty,
+        });
+
+        if (profile.is_complete) {
+          succeed("Profile saved. Continuing to your dashboard...");
+          navigate("/investigator-dashboard", { replace: true });
+          return;
+        }
+
+        succeed("Profile saved, but some required fields are still missing.");
+      } catch (error) {
+        fail(getApiErrorMessage(error));
       }
-    } catch (error) {
-      fail(getApiErrorMessage(error));
-    }
-  });
+    },
+    () => {
+      fail("Please fix the highlighted fields before saving.");
+    },
+  );
 
   if (loading) {
     return <LoadingState label="Loading investigator profile..." />;
@@ -154,6 +164,7 @@ export function InvestigatorProfilePage() {
       ) : null}
 
       {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
+      {successMessage ? <SuccessNote message={successMessage} /> : null}
 
       <form className="form-grid" onSubmit={onSubmit}>
         <label>
