@@ -3,9 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../../api/errors";
 import {
   clearStoredFormBId,
+  downloadFormBAttachment,
   getFormBReview,
+  listFormBAttachments,
   readStoredFormBId,
   submitFormB,
+  type FormBAttachmentRecord,
   type FormBReviewData,
 } from "../../api/formbApi";
 import { LoadingState } from "../../components/common/LoadingState";
@@ -18,6 +21,7 @@ export function FormBReview() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reviewData, setReviewData] = useState<FormBReviewData | null>(null);
+  const [attachments, setAttachments] = useState<FormBAttachmentRecord[]>([]);
 
   useEffect(() => {
     if (!formBId) {
@@ -30,8 +34,10 @@ export function FormBReview() {
     (async () => {
       try {
         const data = await getFormBReview(formBId);
+        const attachmentRows = await listFormBAttachments(formBId);
         if (!cancelled) {
           setReviewData(data);
+          setAttachments(attachmentRows);
         }
       } catch (error) {
         if (!cancelled) {
@@ -101,6 +107,35 @@ export function FormBReview() {
       </p>
 
       {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
+
+      <div className="dashboard-section">
+        <h3>Attachments</h3>
+        {attachments.length === 0 ? (
+          <p>No attachments uploaded yet.</p>
+        ) : (
+          <ul>
+            {attachments.map((attachment) => (
+              <li key={attachment.id}>
+                <strong>{attachment.category.replace(/_/g, " ")}:</strong>{" "}
+                {attachment.original_filename}{" "}
+                <button
+                  type="button"
+                  className="btn-secondary btn-small"
+                  onClick={() =>
+                    void downloadFormBAttachment(
+                      formBId,
+                      attachment.id,
+                      attachment.original_filename,
+                    )
+                  }
+                >
+                  Download
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {(["step1", "step2", "step3", "step4", "step5", "step6", "step7"] as const).map(
         (stepKey, index) => (

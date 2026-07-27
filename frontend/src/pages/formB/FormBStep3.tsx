@@ -1,35 +1,204 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  readStoredFormBId,
+  saveFormBStep3,
+  type FormBAnimalRequirementEntry,
+  type FormBYearWiseCountEntry,
+} from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
-import { readStoredFormBId, saveFormBStep3 } from "../../api/formbApi";
+import { LoadingState } from "../../components/common/LoadingState";
+import { INSTITUTIONAL_DEFAULTS } from "../../constants/institution";
+import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
+
+interface RequirementRow extends FormBAnimalRequirementEntry {
+  id: string;
+}
+
+interface Step3Form {
+  whyAnimalNecessary: string;
+  inVitroStudyDetails: string;
+  whySpeciesSelected: string;
+  whyNumberEssential: string;
+  similarExperimentsInEstablishment: string;
+  justifyNewExperiment: string;
+  similarExperimentsElsewhere: string;
+  requirements: RequirementRow[];
+}
+
+function createEmptyYearRow(): FormBYearWiseCountEntry {
+  return { year: "", count: 0 };
+}
+
+function createEmptyRequirement(): RequirementRow {
+  return {
+    id: crypto.randomUUID(),
+    species: "",
+    strain: "",
+    sex: "",
+    age: "",
+    weight: "",
+    number_required: 0,
+    source: "",
+    justification: "",
+    year_wise_breakup: [createEmptyYearRow()],
+    days_housed: 0,
+    breeder_name: INSTITUTIONAL_DEFAULTS.establishmentName,
+    breeder_address: INSTITUTIONAL_DEFAULTS.establishmentAddress,
+    breeder_registration_number: INSTITUTIONAL_DEFAULTS.registrationNumber,
+  };
+}
+
+const EMPTY_FORM: Step3Form = {
+  whyAnimalNecessary: "",
+  inVitroStudyDetails: "",
+  whySpeciesSelected: "",
+  whyNumberEssential: "",
+  similarExperimentsInEstablishment: "",
+  justifyNewExperiment: "",
+  similarExperimentsElsewhere: "",
+  requirements: [createEmptyRequirement()],
+};
+
+function parseSavedStep3(data: Record<string, unknown> | null | undefined): Step3Form {
+  if (!data) return EMPTY_FORM;
+
+  const requirementsRaw = data.requirements;
+  let requirements: RequirementRow[] = [createEmptyRequirement()];
+
+  if (Array.isArray(requirementsRaw) && requirementsRaw.length > 0) {
+    requirements = requirementsRaw.map((entry) => {
+      const row = entry as Record<string, unknown>;
+      const breakup = Array.isArray(row.year_wise_breakup)
+        ? row.year_wise_breakup.map((item) => {
+            const yearRow = item as Record<string, unknown>;
+            return {
+              year: String(yearRow.year ?? ""),
+              count: Number(yearRow.count ?? 0),
+            };
+          })
+        : [createEmptyYearRow()];
+
+      return {
+        id: crypto.randomUUID(),
+        species: String(row.species ?? ""),
+        strain: String(row.strain ?? ""),
+        sex: String(row.sex ?? ""),
+        age: String(row.age ?? ""),
+        weight: String(row.weight ?? ""),
+        number_required: Number(row.number_required ?? 0),
+        source: String(row.source ?? ""),
+        justification: String(row.justification ?? ""),
+        year_wise_breakup: breakup.length ? breakup : [createEmptyYearRow()],
+        days_housed: Number(row.days_housed ?? 0),
+        breeder_name: String(row.breeder_name ?? INSTITUTIONAL_DEFAULTS.establishmentName),
+        breeder_address: String(row.breeder_address ?? INSTITUTIONAL_DEFAULTS.establishmentAddress),
+        breeder_registration_number: String(
+          row.breeder_registration_number ?? INSTITUTIONAL_DEFAULTS.registrationNumber,
+        ),
+      };
+    });
+  }
+
+  return {
+    whyAnimalNecessary: readString(data, "why_animal_necessary"),
+    inVitroStudyDetails: readString(data, "in_vitro_study_details"),
+    whySpeciesSelected: readString(data, "why_species_selected"),
+    whyNumberEssential: readString(data, "why_number_essential"),
+    similarExperimentsInEstablishment: readString(data, "similar_experiments_in_establishment"),
+    justifyNewExperiment: readString(data, "justify_new_experiment"),
+    similarExperimentsElsewhere: readString(data, "similar_experiments_elsewhere"),
+    requirements,
+  };
+}
 
 export function FormBStep3() {
   const navigate = useNavigate();
-
   const [formBId] = useState<number | null>(readStoredFormBId());
-
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [form, setForm] = useState<Step3Form>(EMPTY_FORM);
 
-  const [species, setSpecies] = useState("");
-  const [strain, setStrain] = useState("");
-  const [sex, setSex] = useState("");
-  const [age, setAge] = useState("");
-  const [weight, setWeight] = useState("");
-  const [numberRequired, setNumberRequired] = useState("");
-  const [source, setSource] = useState("");
-  const [justification, setJustification] = useState("");
+  const { value: saved, loading: loadingSaved } = useFormBStepReview(
+    formBId,
+    "step3",
+    parseSavedStep3,
+    EMPTY_FORM,
+  );
+
+  useEffect(() => {
+    if (saved) {
+      setForm(saved);
+    }
+  }, [saved]);
+
+  function updateRationale<K extends keyof Omit<Step3Form, "requirements">>(
+    key: K,
+    value: Step3Form[K],
+  ) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateRequirement(id: string, patch: Partial<RequirementRow>) {
+    setForm((current) => ({
+      ...current,
+      requirements: current.requirements.map((row) =>
+        row.id === id ? { ...row, ...patch } : row,
+      ),
+    }));
+  }
+
+  function addRequirement() {
+    setForm((current) => ({
+      ...current,
+      requirements: [...current.requirements, createEmptyRequirement()],
+    }));
+  }
+
+  function removeRequirement(id: string) {
+    setForm((current) => ({
+      ...current,
+      requirements:
+        current.requirements.length === 1
+          ? current.requirements
+          : current.requirements.filter((row) => row.id !== id),
+    }));
+  }
 
   function validateStep3() {
-    if (!species) return "Species is required.";
-    if (!strain) return "Strain is required.";
-    if (!sex) return "Sex is required.";
-    if (!age) return "Age is required.";
-    if (!weight.trim()) return "Weight range is required.";
-    if (!numberRequired || Number(numberRequired) <= 0)
-      return "Number of animals must be greater than zero.";
-    if (!source) return "Source of animals is required.";
-    if (!justification.trim()) return "Justification is required.";
+    if (!form.whyAnimalNecessary.trim()) return "Explain why animal usage is necessary.";
+    if (!form.inVitroStudyDetails.trim()) return "Describe in vitro study status.";
+    if (!form.whySpeciesSelected.trim()) return "Explain species selection.";
+    if (!form.whyNumberEssential.trim()) return "Justify the number of animals.";
+    if (!form.similarExperimentsInEstablishment.trim()) {
+      return "State whether similar experiments were conducted in your establishment.";
+    }
+    if (!form.justifyNewExperiment.trim()) return "Justify the new experiment.";
+    if (!form.similarExperimentsElsewhere.trim()) {
+      return "Provide references for similar experiments elsewhere.";
+    }
+
+    for (let index = 0; index < form.requirements.length; index += 1) {
+      const row = form.requirements[index];
+      const label = `Requirement ${index + 1}`;
+      if (!row.species) return `${label}: species is required.`;
+      if (!row.strain) return `${label}: strain is required.`;
+      if (!row.sex) return `${label}: sex is required.`;
+      if (!row.age) return `${label}: age is required.`;
+      if (!row.weight.trim()) return `${label}: weight range is required.`;
+      if (!row.number_required || row.number_required <= 0) {
+        return `${label}: number of animals must be greater than zero.`;
+      }
+      if (!row.source) return `${label}: source is required.`;
+      if (!row.justification.trim()) return `${label}: justification is required.`;
+      if (!row.days_housed || row.days_housed <= 0) return `${label}: days housed is required.`;
+      if (!row.breeder_name.trim()) return `${label}: breeder name is required.`;
+      if (!row.breeder_address.trim()) return `${label}: breeder address is required.`;
+      if (!row.breeder_registration_number.trim()) {
+        return `${label}: breeder registration number is required.`;
+      }
+    }
+
     return null;
   }
 
@@ -50,14 +219,20 @@ export function FormBStep3() {
     try {
       await saveFormBStep3({
         form_b_id: formBId,
-        species,
-        strain,
-        sex,
-        age,
-        weight,
-        number_required: Number(numberRequired),
-        source,
-        justification,
+        why_animal_necessary: form.whyAnimalNecessary.trim(),
+        in_vitro_study_details: form.inVitroStudyDetails.trim(),
+        why_species_selected: form.whySpeciesSelected.trim(),
+        why_number_essential: form.whyNumberEssential.trim(),
+        similar_experiments_in_establishment: form.similarExperimentsInEstablishment.trim(),
+        justify_new_experiment: form.justifyNewExperiment.trim(),
+        similar_experiments_elsewhere: form.similarExperimentsElsewhere.trim(),
+        requirements: form.requirements.map(({ id: _id, ...row }) => ({
+          ...row,
+          weight: row.weight.trim(),
+          justification: row.justification.trim(),
+          number_required: Number(row.number_required),
+          days_housed: Number(row.days_housed),
+        })),
       });
 
       navigate("/form-b/step-4");
@@ -68,17 +243,19 @@ export function FormBStep3() {
     }
   }
 
+  if (loadingSaved) {
+    return <LoadingState label="Loading animal requirements..." />;
+  }
+
   return (
     <div className="page-card">
       <header className="section-header">
         <h2>Form B – Step 3</h2>
-        <p>Animal Requirements</p>
+        <p>Section II: Animal requirements and rationale for animal usage.</p>
       </header>
 
       {!formBId && (
-        <p className="error-text">
-          Form B ID not found. Please complete Step 1 and Step 2 first.
-        </p>
+        <p className="error-text">Form B ID not found. Please complete previous steps.</p>
       )}
 
       {formBId && (
@@ -87,98 +264,249 @@ export function FormBStep3() {
           <p><strong>Form B internal ID:</strong> {formBId}</p>
 
           <div className="form-grid">
-
-            <label>
-              Species
-              <select value={species} onChange={(e) => setSpecies(e.target.value)}>
-                <option value="">Select species</option>
-                <option value="Rat">Rat</option>
-                <option value="Mouse">Mouse</option>
-                <option value="Rabbit">Rabbit</option>
-                <option value="Guinea Pig">Guinea Pig</option>
-                <option value="Hamster">Hamster</option>
-                <option value="Other">Other</option>
-              </select>
-            </label>
-
-            <label>
-              Strain
-              <select value={strain} onChange={(e) => setStrain(e.target.value)}>
-                <option value="">Select strain</option>
-                <option value="Wistar">Wistar</option>
-                <option value="Sprague Dawley">Sprague Dawley</option>
-                <option value="Swiss Albino">Swiss Albino</option>
-                <option value="BALB/c">BALB/c</option>
-                <option value="C57BL/6">C57BL/6</option>
-                <option value="New Zealand White">New Zealand White</option>
-                <option value="Other">Other</option>
-              </select>
-            </label>
-
-            <label>
-              Sex
-              <select value={sex} onChange={(e) => setSex(e.target.value)}>
-                <option value="">Select sex</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Either">Either</option>
-              </select>
-            </label>
-
-            <label>
-              Age
-              <select value={age} onChange={(e) => setAge(e.target.value)}>
-                <option value="">Select age</option>
-                <option value="4–6 weeks">4–6 weeks</option>
-                <option value="6–8 weeks">6–8 weeks</option>
-                <option value="8–10 weeks">8–10 weeks</option>
-                <option value="Adult">Adult</option>
-              </select>
-            </label>
-
-            <label>
-              Weight Range (grams)
-              <input
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                placeholder="e.g., 150–200 g"
-              />
-            </label>
-
-            <label>
-              Number of Animals Required
-              <input
-                type="number"
-                value={numberRequired}
-                onChange={(e) => setNumberRequired(e.target.value)}
-              />
-            </label>
-
-            <label>
-              Source of Animals
-              <select value={source} onChange={(e) => setSource(e.target.value)}>
-                <option value="">Select source</option>
-                <option value="Institutional Animal House">Institutional Animal House</option>
-                <option value="CPCSEA Registered Breeder">CPCSEA Registered Breeder</option>
-                <option value="Other IAEC-approved source">Other IAEC-approved source</option>
-              </select>
-            </label>
-
-            <label>
-              Justification for Number of Animals
+            <label className="full-width">
+              Why is animal usage necessary for these studies?
               <textarea
-                value={justification}
-                onChange={(e) => setJustification(e.target.value)}
+                value={form.whyAnimalNecessary}
+                onChange={(e) => updateRationale("whyAnimalNecessary", e.target.value)}
               />
             </label>
-
+            <label className="full-width">
+              Whether similar study has been conducted on in vitro models? If yes, describe.
+              <textarea
+                value={form.inVitroStudyDetails}
+                onChange={(e) => updateRationale("inVitroStudyDetails", e.target.value)}
+              />
+            </label>
+            <label className="full-width">
+              Why are the particular species selected?
+              <textarea
+                value={form.whySpeciesSelected}
+                onChange={(e) => updateRationale("whySpeciesSelected", e.target.value)}
+              />
+            </label>
+            <label className="full-width">
+              Why is the estimated number of animals essential?
+              <textarea
+                value={form.whyNumberEssential}
+                onChange={(e) => updateRationale("whyNumberEssential", e.target.value)}
+              />
+            </label>
+            <label className="full-width">
+              Are similar experiments conducted in the past in your establishment?
+              <textarea
+                value={form.similarExperimentsInEstablishment}
+                onChange={(e) =>
+                  updateRationale("similarExperimentsInEstablishment", e.target.value)
+                }
+              />
+            </label>
+            <label className="full-width">
+              If yes, justify why a new experiment is required.
+              <textarea
+                value={form.justifyNewExperiment}
+                onChange={(e) => updateRationale("justifyNewExperiment", e.target.value)}
+              />
+            </label>
+            <label className="full-width">
+              Have similar experiments been conducted by any other organization? Provide references.
+              <textarea
+                value={form.similarExperimentsElsewhere}
+                onChange={(e) => updateRationale("similarExperimentsElsewhere", e.target.value)}
+              />
+            </label>
           </div>
+
+          <div className="subform-header full-width">
+            <h3>Species / strain rows</h3>
+            <button type="button" className="btn btn-secondary" onClick={addRequirement}>
+              Add species / strain
+            </button>
+          </div>
+
+          {form.requirements.map((row, index) => (
+            <div key={row.id} className="item-row full-width">
+              <div className="subform-header full-width">
+                <h3>Requirement {index + 1}</h3>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={() => removeRequirement(row.id)}
+                  disabled={form.requirements.length === 1}
+                >
+                  Remove
+                </button>
+              </div>
+
+              <div className="form-grid">
+                <label>
+                  Species
+                  <select
+                    value={row.species}
+                    onChange={(e) => updateRequirement(row.id, { species: e.target.value })}
+                  >
+                    <option value="">Select species</option>
+                    <option value="Rat">Rat</option>
+                    <option value="Mouse">Mouse</option>
+                    <option value="Rabbit">Rabbit</option>
+                    <option value="Guinea Pig">Guinea Pig</option>
+                    <option value="Hamster">Hamster</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <label>
+                  Strain
+                  <select
+                    value={row.strain}
+                    onChange={(e) => updateRequirement(row.id, { strain: e.target.value })}
+                  >
+                    <option value="">Select strain</option>
+                    <option value="Wistar">Wistar</option>
+                    <option value="Sprague Dawley">Sprague Dawley</option>
+                    <option value="Swiss Albino">Swiss Albino</option>
+                    <option value="BALB/c">BALB/c</option>
+                    <option value="C57BL/6">C57BL/6</option>
+                    <option value="New Zealand White">New Zealand White</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <label>
+                  Sex
+                  <select
+                    value={row.sex}
+                    onChange={(e) => updateRequirement(row.id, { sex: e.target.value })}
+                  >
+                    <option value="">Select sex</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Either">Either</option>
+                  </select>
+                </label>
+                <label>
+                  Age
+                  <select
+                    value={row.age}
+                    onChange={(e) => updateRequirement(row.id, { age: e.target.value })}
+                  >
+                    <option value="">Select age</option>
+                    <option value="4–6 weeks">4–6 weeks</option>
+                    <option value="6–8 weeks">6–8 weeks</option>
+                    <option value="8–10 weeks">8–10 weeks</option>
+                    <option value="Adult">Adult</option>
+                  </select>
+                </label>
+                <label>
+                  Weight range (grams)
+                  <input
+                    value={row.weight}
+                    onChange={(e) => updateRequirement(row.id, { weight: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Total number required
+                  <input
+                    type="number"
+                    value={row.number_required || ""}
+                    onChange={(e) =>
+                      updateRequirement(row.id, { number_required: Number(e.target.value) })
+                    }
+                  />
+                </label>
+                <label>
+                  Number of days each animal will be housed
+                  <input
+                    type="number"
+                    value={row.days_housed || ""}
+                    onChange={(e) =>
+                      updateRequirement(row.id, { days_housed: Number(e.target.value) })
+                    }
+                  />
+                </label>
+                <label>
+                  Source of animals
+                  <select
+                    value={row.source}
+                    onChange={(e) => updateRequirement(row.id, { source: e.target.value })}
+                  >
+                    <option value="">Select source</option>
+                    <option value="Institutional Animal House">Institutional Animal House</option>
+                    <option value="CPCSEA Registered Breeder">CPCSEA Registered Breeder</option>
+                    <option value="Other IAEC-approved source">Other IAEC-approved source</option>
+                  </select>
+                </label>
+                <label className="full-width">
+                  Justification for number of animals
+                  <textarea
+                    value={row.justification}
+                    onChange={(e) => updateRequirement(row.id, { justification: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Breeder name
+                  <input
+                    value={row.breeder_name}
+                    onChange={(e) => updateRequirement(row.id, { breeder_name: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Breeder registration number
+                  <input
+                    value={row.breeder_registration_number}
+                    onChange={(e) =>
+                      updateRequirement(row.id, { breeder_registration_number: e.target.value })
+                    }
+                  />
+                </label>
+                <label className="full-width">
+                  Breeder address
+                  <textarea
+                    value={row.breeder_address}
+                    onChange={(e) => updateRequirement(row.id, { breeder_address: e.target.value })}
+                  />
+                </label>
+                <label className="full-width">
+                  Year-wise breakup (year and count)
+                  <div className="form-grid">
+                    {row.year_wise_breakup.map((yearRow, yearIndex) => (
+                      <div key={`${row.id}-${yearIndex}`} className="full-width form-grid">
+                        <label>
+                          Year
+                          <input
+                            value={yearRow.year}
+                            onChange={(e) => {
+                              const next = [...row.year_wise_breakup];
+                              next[yearIndex] = { ...next[yearIndex], year: e.target.value };
+                              updateRequirement(row.id, { year_wise_breakup: next });
+                            }}
+                          />
+                        </label>
+                        <label>
+                          Count
+                          <input
+                            type="number"
+                            value={yearRow.count || ""}
+                            onChange={(e) => {
+                              const next = [...row.year_wise_breakup];
+                              next[yearIndex] = {
+                                ...next[yearIndex],
+                                count: Number(e.target.value),
+                              };
+                              updateRequirement(row.id, { year_wise_breakup: next });
+                            }}
+                          />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </label>
+              </div>
+            </div>
+          ))}
 
           <div className="wizard-actions">
             <button className="btn-secondary" onClick={() => navigate("/form-b/step-2")}>
               ← Back
             </button>
-
             <button className="btn" onClick={handleNext} disabled={loading}>
               Save & Next →
             </button>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  getFormBReview,
   getFormBStep1Autofill,
   readStoredFormBId,
   saveFormBStep1,
@@ -11,6 +12,8 @@ import {
 import { getApiErrorMessage } from "../../api/errors";
 import { ErrorAlert } from "../../components/common/ErrorAlert";
 import { LoadingState } from "../../components/common/LoadingState";
+import { InstitutionalFieldsPanel } from "../../components/forms/InstitutionalFieldsPanel";
+import { RESEARCH_TYPES } from "../../constants/institution";
 
 export function FormBStep1() {
   const navigate = useNavigate();
@@ -20,9 +23,8 @@ export function FormBStep1() {
   const [prefillLoading, setPrefillLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [profileComplete, setProfileComplete] = useState(true);
+  const [institutional, setInstitutional] = useState<FormBStep1Autofill | null>(null);
 
-  const [establishmentName, setEstablishmentName] = useState("");
-  const [registrationNumber, setRegistrationNumber] = useState("");
   const [principalInvestigator, setPrincipalInvestigator] = useState("");
   const [designation, setDesignation] = useState("");
   const [department, setDepartment] = useState("");
@@ -30,10 +32,10 @@ export function FormBStep1() {
   const [contactPhone, setContactPhone] = useState("");
   const [qualifications, setQualifications] = useState("");
   const [experience, setExperience] = useState("");
+  const [researchType, setResearchType] = useState("");
 
   function applyAutofill(autofill: FormBStep1Autofill) {
-    setEstablishmentName(autofill.establishment_name ?? "");
-    setRegistrationNumber(autofill.registration_number ?? "");
+    setInstitutional(autofill);
     setPrincipalInvestigator(autofill.principal_investigator ?? "");
     setDesignation(autofill.designation ?? "");
     setDepartment(autofill.department ?? "");
@@ -50,8 +52,22 @@ export function FormBStep1() {
     (async () => {
       try {
         const autofill = await getFormBStep1Autofill();
-        if (!cancelled) {
-          applyAutofill(autofill);
+        if (cancelled) return;
+        applyAutofill(autofill);
+
+        if (formBId) {
+          const review = await getFormBReview(formBId);
+          const step1 = review.step1;
+          if (!cancelled && step1) {
+            setResearchType(String(step1.research_type ?? ""));
+            setPrincipalInvestigator(String(step1.principal_investigator ?? autofill.principal_investigator ?? ""));
+            setDesignation(String(step1.designation ?? autofill.designation ?? ""));
+            setDepartment(String(step1.department ?? autofill.department ?? ""));
+            setContactEmail(String(step1.contact_email ?? autofill.contact_email ?? ""));
+            setContactPhone(String(step1.contact_phone ?? ""));
+            setQualifications(String(step1.qualifications ?? autofill.qualifications ?? ""));
+            setExperience(String(step1.experience ?? autofill.experience ?? ""));
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -67,7 +83,7 @@ export function FormBStep1() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [formBId]);
 
   async function handleStartFormB() {
     setLoading(true);
@@ -91,8 +107,7 @@ export function FormBStep1() {
   }
 
   function validateStep1() {
-    if (!establishmentName.trim()) return "Establishment name is required.";
-    if (!registrationNumber.trim()) return "Registration number is required.";
+    if (!researchType) return "Type of research is required.";
     if (!principalInvestigator.trim()) return "Principal investigator is required.";
     if (!designation.trim()) return "Designation is required.";
     if (!department.trim()) return "Department is required.";
@@ -119,8 +134,6 @@ export function FormBStep1() {
     try {
       await saveFormBStep1({
         form_b_id: formBId,
-        establishment_name: establishmentName.trim(),
-        registration_number: registrationNumber.trim(),
         principal_investigator: principalInvestigator.trim(),
         designation: designation.trim(),
         department: department.trim(),
@@ -128,6 +141,7 @@ export function FormBStep1() {
         contact_phone: contactPhone.trim(),
         qualifications: qualifications.trim(),
         experience: experience.trim(),
+        research_type: researchType,
       });
 
       navigate("/form-b/step-2");
@@ -146,7 +160,7 @@ export function FormBStep1() {
     <div className="page-card">
       <header className="section-header">
         <h2>Form B – Step 1</h2>
-        <p>Investigator and establishment details auto-populated from your profile.</p>
+        <p>Section I: Establishment details and principal investigator information.</p>
       </header>
 
       {!profileComplete ? (
@@ -171,21 +185,26 @@ export function FormBStep1() {
             <strong>Form B ID:</strong> {formBId}
           </p>
 
+          <InstitutionalFieldsPanel
+            establishmentName={institutional?.establishment_name ?? undefined}
+            establishmentAddress={institutional?.establishment_address ?? undefined}
+            registrationNumber={institutional?.registration_number ?? undefined}
+            registrationDate={institutional?.registration_date ?? undefined}
+            animalHousingLocation={institutional?.animal_housing_location ?? undefined}
+            experimentLocation={institutional?.experiment_location ?? undefined}
+          />
+
           <div className="form-grid">
             <label>
-              Establishment name
-              <input
-                value={establishmentName}
-                onChange={(e) => setEstablishmentName(e.target.value)}
-              />
-            </label>
-
-            <label>
-              Registration number
-              <input
-                value={registrationNumber}
-                onChange={(e) => setRegistrationNumber(e.target.value)}
-              />
+              Type of research
+              <select value={researchType} onChange={(e) => setResearchType(e.target.value)}>
+                <option value="">Select research type</option>
+                {RESEARCH_TYPES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label>
@@ -198,14 +217,11 @@ export function FormBStep1() {
 
             <label>
               Designation
-              <input
-                value={designation}
-                onChange={(e) => setDesignation(e.target.value)}
-              />
+              <input value={designation} onChange={(e) => setDesignation(e.target.value)} />
             </label>
 
             <label>
-              Department
+              Department / Division / Lab
               <input value={department} onChange={(e) => setDepartment(e.target.value)} />
             </label>
 
@@ -232,7 +248,7 @@ export function FormBStep1() {
             </label>
 
             <label className="full-width">
-              Experience in animal work
+              Experience in laboratory animal experimentation
               <textarea value={experience} onChange={(e) => setExperience(e.target.value)} />
             </label>
           </div>

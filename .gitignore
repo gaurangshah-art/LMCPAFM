@@ -47,3 +47,6 @@ database/*.sqbpro
 
 # Debug / local
 debug_e2e.py
+
+# Uploaded Form B attachments (local storage)
+data/form_b_attachments/

@@ -246,6 +246,26 @@ class FormB(Base):
     drug_injections: Mapped[list["FormBDrugInjection"]] = relationship(back_populates="form_b")
     investigators: Mapped[list["FormBInvestigator"]] = relationship(back_populates="form_b")
     meeting_decisions: Mapped[list["FormBMeetingDecision"]] = relationship(back_populates="form_b")
+    attachments: Mapped[list["FormBAttachment"]] = relationship(back_populates="form_b")
+
+
+class FormBAttachment(Base):
+    __tablename__ = "form_b_attachment"
+    __table_args__ = (
+        UniqueConstraint("form_b_id", "category", name="uq_form_b_attachment_category"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    form_b_id: Mapped[int] = mapped_column(ForeignKey("form_b.id"))
+    category: Mapped[str] = mapped_column(String(80), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    stored_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    uploaded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    form_b: Mapped["FormB"] = relationship(back_populates="attachments")
 
 
 class FormBMeetingDecision(Base):

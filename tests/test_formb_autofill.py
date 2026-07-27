@@ -1,5 +1,8 @@
 from uuid import uuid4
 
+from tests.formb_payloads import step1_body
+from utils.institution import DEFAULT_CPCSEA_REGISTRATION_NUMBER
+
 
 def _register_and_login(client, monkeypatch):
     monkeypatch.setenv("LMCP_INSTITUTIONAL_EMAIL_DOMAINS", "lmcp.ac.in")
@@ -48,6 +51,9 @@ def test_form_b_step1_autofill_from_profile(client, monkeypatch):
     assert autofill["department"] == "Pharmacology"
     assert autofill["designation"] == "Assistant Professor"
     assert autofill["qualifications"] == "PhD"
+    assert autofill["registration_number"] == DEFAULT_CPCSEA_REGISTRATION_NUMBER
+    assert autofill["establishment_address"]
+    assert autofill["animal_housing_location"]
     assert "Rodent handling" in autofill["experience"]
 
 
@@ -79,16 +85,7 @@ def test_form_b_start_and_save_step1(client, monkeypatch):
     save_res = client.post(
         "/formb/step-1",
         json={
-            "form_b_id": form_b_id,
-            "establishment_name": "LMCP",
-            "registration_number": "REG-001",
-            "principal_investigator": payload["name"],
-            "designation": "Assistant Professor",
-            "department": "Pharmacology",
-            "contact_email": payload["email"],
-            "contact_phone": "9999999999",
-            "qualifications": "PhD",
-            "experience": "6 years",
+            **step1_body(form_b_id, payload),
         },
         headers=headers,
     )

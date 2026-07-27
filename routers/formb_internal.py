@@ -1,7 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from crud.exceptions import CRUDValidationError
+from crud.exceptions import CRUDNotFoundError, CRUDValidationError
+from crud.formb_attachments import (
+    delete_form_b_attachment,
+    get_form_b_attachment,
+    list_form_b_attachments,
+    read_attachment_bytes,
+    upload_form_b_attachment,
+)
 from crud.formb_internal import get_formb_by_protocol, update_formb
 from crud.formb_wizard import (
     build_form_b_step1_autofill,
@@ -16,6 +23,7 @@ from crud.formb_investigator import add_form_b_investigator, list_form_b_investi
 from dependencies.auth import require_investigator
 from models.user import User
 from schemas.schemas_formb import (
+    FormBAttachmentRead,
     FormBBase,
     FormBInvestigatorCreate,
     FormBInvestigatorRead,
@@ -192,6 +200,80 @@ def delete_formb_investigator(
     try:
         remove_form_b_investigator(db, current_user, form_b_id, investigator_id)
         return {"ok": True}
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/{form_b_id}/attachments", response_model=list[FormBAttachmentRead])
+def list_formb_attachments(
+    form_b_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    try:
+        return list_form_b_attachments(db, current_user, form_b_id)
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/{form_b_id}/attachments", response_model=FormBAttachmentRead)
+async def upload_formb_attachment(
+    form_b_id: int,
+    category: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    content = await file.read()
+    try:
+        return upload_form_b_attachment(
+            db,
+            current_user,
+            form_b_id,
+            category,
+            file.filename or "attachment.bin",
+            file.content_type,
+            content,
+        )
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/{form_b_id}/attachments/{attachment_id}")
+def download_formb_attachment(
+    form_b_id: int,
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    from fastapi.responses import Response
+
+    try:
+        attachment = get_form_b_attachment(db, current_user, form_b_id, attachment_id)
+        content, filename, content_type = read_attachment_bytes(attachment)
+        return Response(
+            content=content,
+            media_type=content_type or "application/octet-stream",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.delete("/{form_b_id}/attachments/{attachment_id}")
+def delete_formb_attachment(
+    form_b_id: int,
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    try:
+        delete_form_b_attachment(db, current_user, form_b_id, attachment_id)
+        return {"ok": True}
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except CRUDValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

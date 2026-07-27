@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -161,7 +161,11 @@ class FormBInvestigatorRead(BaseModel):
 
 class FormBStep1AutofillRead(BaseModel):
     establishment_name: Optional[str] = None
+    establishment_address: Optional[str] = None
     registration_number: Optional[str] = None
+    registration_date: Optional[str] = None
+    animal_housing_location: Optional[str] = None
+    experiment_location: Optional[str] = None
     principal_investigator: str
     designation: Optional[str] = None
     department: Optional[str] = None
@@ -179,8 +183,6 @@ class FormBStartRead(BaseModel):
 
 class FormBStep1Save(BaseModel):
     form_b_id: int
-    establishment_name: str = Field(..., max_length=500)
-    registration_number: str = Field(..., max_length=200)
     principal_investigator: str = Field(..., max_length=200)
     designation: str = Field(..., max_length=200)
     department: str = Field(..., max_length=200)
@@ -188,20 +190,30 @@ class FormBStep1Save(BaseModel):
     contact_phone: str = Field(..., max_length=50)
     qualifications: str = Field(..., max_length=255)
     experience: str = Field("", max_length=5000)
+    research_type: str = Field(..., max_length=100)
 
 
 class FormBStep2Save(BaseModel):
     form_b_id: int
     title: str = Field(..., max_length=500)
-    duration_months: int = Field(..., ge=1, le=24)
+    duration_months: int = Field(..., ge=1, le=60)
+    proposed_start_date: str = Field(..., max_length=20)
+    proposed_completion_date: str = Field(..., max_length=20)
     funding_agency: str = Field(..., max_length=200)
+    funding_address: str = Field(..., max_length=1000)
+    funding_proof_reference: str = Field("", max_length=500)
     summary: str = Field(..., max_length=5000)
     objectives: str = Field(..., max_length=5000)
     expected_outcomes: str = Field(..., max_length=5000)
+    study_plan_annexure_reference: str = Field("", max_length=500)
 
 
-class FormBStep3Save(BaseModel):
-    form_b_id: int
+class FormBYearWiseCountEntry(BaseModel):
+    year: str = Field(..., max_length=20)
+    count: int = Field(..., ge=0)
+
+
+class FormBAnimalRequirementEntry(BaseModel):
     species: str = Field(..., max_length=200)
     strain: str = Field(..., max_length=200)
     sex: str = Field(..., max_length=50)
@@ -210,14 +222,46 @@ class FormBStep3Save(BaseModel):
     number_required: int = Field(..., ge=1)
     source: str = Field(..., max_length=200)
     justification: str = Field(..., max_length=5000)
+    year_wise_breakup: list[FormBYearWiseCountEntry] = Field(default_factory=list)
+    days_housed: int = Field(..., ge=1)
+    breeder_name: str = Field(..., max_length=500)
+    breeder_address: str = Field(..., max_length=1000)
+    breeder_registration_number: str = Field(..., max_length=200)
+
+
+class FormBStep3Save(BaseModel):
+    form_b_id: int
+    why_animal_necessary: str = Field(..., max_length=5000)
+    in_vitro_study_details: str = Field(..., max_length=5000)
+    why_species_selected: str = Field(..., max_length=5000)
+    why_number_essential: str = Field(..., max_length=5000)
+    similar_experiments_in_establishment: str = Field(..., max_length=5000)
+    justify_new_experiment: str = Field(..., max_length=5000)
+    similar_experiments_elsewhere: str = Field(..., max_length=5000)
+    requirements: list[FormBAnimalRequirementEntry] = Field(..., min_length=1)
 
 
 class FormBStep4Save(BaseModel):
     form_b_id: int
     procedure_description: str = Field(..., max_length=5000)
+    injection_substances: str = Field("", max_length=5000)
+    injection_doses: str = Field("", max_length=5000)
+    injection_sites: str = Field("", max_length=5000)
+    injection_volumes: str = Field("", max_length=5000)
+    blood_withdrawal_volumes: str = Field("", max_length=5000)
+    blood_withdrawal_sites: str = Field("", max_length=5000)
+    radiation_dosage_schedule: str = Field("", max_length=5000)
+    compound_nce_details: str = Field("", max_length=5000)
     pain_category: str = Field(..., max_length=50)
     anaesthesia: str = Field(..., max_length=200)
     analgesia: str = Field(..., max_length=200)
+    prohibit_analgesic_anesthetic: str = Field(..., max_length=10)
+    prohibit_analgesic_justification: str = Field("", max_length=5000)
+    survival_surgery: str = Field(..., max_length=10)
+    surgical_procedures: str = Field("", max_length=5000)
+    surgical_personnel: str = Field("", max_length=5000)
+    post_operative_care: str = Field("", max_length=5000)
+    repeat_surgery_justification: str = Field("", max_length=5000)
     euthanasia_method: str = Field(..., max_length=200)
     alternatives_considered: str = Field(..., max_length=5000)
     rationale_3rs: str = Field(..., max_length=5000)
@@ -229,11 +273,24 @@ class FormBStep5Save(BaseModel):
     special_requirements: str = Field("", max_length=5000)
     feeding: str = Field(..., max_length=200)
     environmental_enrichment: str = Field(..., max_length=200)
+    animal_transportation_methods: str = Field(..., max_length=5000)
+    scope_for_reuse: str = Field(..., max_length=5000)
+    rehabilitation_details: str = Field(..., max_length=5000)
+    carcass_disposal_method: str = Field(..., max_length=5000)
+
+
+class FormBAuthorizedPersonnelEntry(BaseModel):
+    name: str = Field(..., max_length=200)
+    designation: str = Field(..., max_length=200)
+    department: str = Field(..., max_length=200)
+    telephone: str = Field(..., max_length=50)
+    email: str = Field(..., max_length=255)
+    experience: str = Field(..., max_length=5000)
 
 
 class FormBStep6Save(BaseModel):
     form_b_id: int
-    personnel_names: list[str]
+    authorized_personnel: list[FormBAuthorizedPersonnelEntry] = Field(..., min_length=1)
     training_level: str = Field(..., max_length=200)
     training_details: str = Field(..., max_length=5000)
     competency_certification: str = Field(..., max_length=200)
@@ -241,10 +298,28 @@ class FormBStep6Save(BaseModel):
 
 class FormBStep7Save(BaseModel):
     form_b_id: int
+    hazardous_agents_used: str = Field(..., max_length=10)
+    hazardous_agent_details: str = Field("", max_length=5000)
+    aerb_approval_reference: str = Field("", max_length=500)
+    ibsc_approval_reference: str = Field("", max_length=500)
+    rcgm_approval_reference: str = Field("", max_length=500)
+    other_hazardous_reference: str = Field("", max_length=500)
     cpcsea_adherence: str = Field(..., max_length=200)
     iaec_history: str = Field(..., max_length=5000)
     safety_measures: str = Field(..., max_length=200)
     endpoint_criteria: str = Field(..., max_length=200)
+    declaration_not_duplicative: bool
+    declaration_qualified: bool
+    declaration_no_alternative: bool
+    declaration_iaec_approval_for_changes: bool
+    declaration_scientific_review: bool
+    declaration_hazardous_certificates: bool
+    declaration_form_d_records: bool
+    declaration_no_start_before_approval: bool
+    declaration_rehabilitation: bool
+    declaration_signature_name: str = Field(..., max_length=200)
+    declaration_date: str = Field(..., max_length=20)
+    declaration_place: str = Field(..., max_length=200)
 
 
 class FormBReviewRead(BaseModel):
@@ -257,6 +332,16 @@ class FormBReviewRead(BaseModel):
     step5: Optional[dict] = None
     step6: Optional[dict] = None
     step7: Optional[dict] = None
+
+
+class FormBAttachmentRead(BaseModel):
+    id: int
+    form_b_id: int
+    category: str
+    original_filename: str
+    content_type: Optional[str] = None
+    file_size: int
+    uploaded_at: datetime
 
 
 class FormBSubmitRequest(BaseModel):

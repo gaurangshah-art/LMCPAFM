@@ -20,7 +20,8 @@ from database.lmcpafm_models import (
     Species,
     Strain,
 )
-from models.user import User
+from crud.formb_attachments import has_form_b_attachment
+from utils.institution import get_institutional_form_b_defaults
 
 STEP_KEYS = ("step1", "step2", "step3", "step4", "step5", "step6", "step7")
 
@@ -38,9 +39,10 @@ def _format_experience(profile) -> str | None:
 
 def build_form_b_step1_autofill(db: Session, user: User) -> dict:
     profile = get_or_create_profile(db, user.id)
+    institutional = get_institutional_form_b_defaults()
     return {
-        "establishment_name": profile.institution_name or "LMCP",
-        "registration_number": None,
+        **institutional,
+        "establishment_name": profile.institution_name or institutional["establishment_name"],
         "principal_investigator": user.name,
         "designation": profile.designation,
         "department": profile.department,
@@ -58,37 +60,49 @@ def _set_step_data(form_b: FormB, step_key: str, data: dict) -> None:
     form_b.application_data = application_data
 
 
-def _sync_animal_requirement(db: Session, form_b: FormB, payload: dict) -> None:
-    species = (
-        db.query(Species)
-        .filter(Species.name.ilike(payload["species"].strip()))
-        .first()
-    )
-    strain = (
-        db.query(Strain)
-        .filter(Strain.name.ilike(payload["strain"].strip()))
-        .first()
-        if species
-        else None
-    )
-    if strain and strain.species_id != species.id:
-        strain = None
+def _normalize_step3_requirements(payload: dict) -> list[dict]:
+    requirements = payload.get("requirements")
+    if isinstance(requirements, list) and requirements:
+        return requirements
+    if payload.get("species"):
+        return [payload]
+    return []
 
-    if not species or not strain:
-        return
+
+def _sync_animal_requirements(db: Session, form_b: FormB, payload: dict) -> None:
+    requirements = _normalize_step3_requirements(payload)
 
     for existing in list(form_b.animal_requirements):
         db.delete(existing)
     db.flush()
 
-    db.add(
-        FormBAnimalRequirement(
-            form_b_id=form_b.id,
-            species_id=species.id,
-            strain_id=strain.id,
-            count=int(payload["number_required"]),
+    for requirement in requirements:
+        species = (
+            db.query(Species)
+            .filter(Species.name.ilike(requirement["species"].strip()))
+            .first()
         )
-    )
+        strain = (
+            db.query(Strain)
+            .filter(Strain.name.ilike(requirement["strain"].strip()))
+            .first()
+            if species
+            else None
+        )
+        if strain and strain.species_id != species.id:
+            strain = None
+
+        if not species or not strain:
+            continue
+
+        db.add(
+            FormBAnimalRequirement(
+                form_b_id=form_b.id,
+                species_id=species.id,
+                strain_id=strain.id,
+                count=int(requirement["number_required"]),
+            )
+        )
 
 
 def start_form_b(db: Session, user: User) -> FormB:
@@ -135,9 +149,9 @@ def save_form_b_step1(db: Session, user: User, form_b_id: int, payload: dict) ->
     if project is None:
         raise CRUDValidationError("Linked project not found")
 
+    institutional = get_institutional_form_b_defaults()
     step_payload = {
-        "establishment_name": payload["establishment_name"],
-        "registration_number": payload["registration_number"],
+        **institutional,
         "principal_investigator": payload["principal_investigator"],
         "designation": payload["designation"],
         "department": payload["department"],
@@ -145,6 +159,7 @@ def save_form_b_step1(db: Session, user: User, form_b_id: int, payload: dict) ->
         "contact_phone": payload["contact_phone"],
         "qualifications": payload["qualifications"],
         "experience": payload.get("experience") or "",
+        "research_type": payload["research_type"],
     }
     _set_step_data(form_b, "step1", step_payload)
 
@@ -173,6 +188,12 @@ def save_form_b_step(db: Session, user: User, form_b_id: int, step_key: str, dat
         raise CRUDValidationError("Invalid Form B step")
 
     form_b = get_editable_form_b(db, user, form_b_id)
+
+    if step_key == "step3":
+        data = {"requirements": _normalize_step3_requirements(data)}
+        if not data["requirements"]:
+            raise CRUDValidationError("Add at least one animal requirement.")
+
     _set_step_data(form_b, step_key, data)
 
     if step_key == "step2":
@@ -183,7 +204,7 @@ def save_form_b_step(db: Session, user: User, form_b_id: int, step_key: str, dat
             project.purpose = data["summary"]
 
     if step_key == "step3":
-        _sync_animal_requirement(db, form_b, data)
+        _sync_animal_requirements(db, form_b, data)
 
     db.commit()
     db.refresh(form_b)
@@ -220,6 +241,31 @@ def submit_form_b(db: Session, user: User, form_b_id: int) -> FormB:
         raise CRUDValidationError(
             "At least one LMCP faculty investigator is required before submission."
         )
+
+    if not has_form_b_attachment(db, form_b.id, "funding_proof"):
+        raise CRUDValidationError("Upload funding proof before submitting Form B.")
+    if not has_form_b_attachment(db, form_b.id, "study_plan_annexure"):
+        raise CRUDValidationError("Upload the study plan annexure before submitting Form B.")
+
+    step7 = application_data.get("step7") or {}
+    if step7.get("hazardous_agents_used") == "Yes":
+        certificate_categories = (
+            "aerb_certificate",
+            "ibsc_certificate",
+            "rcgm_certificate",
+            "other_hazardous_certificate",
+        )
+        reference_fields = (
+            "aerb_approval_reference",
+            "ibsc_approval_reference",
+            "rcgm_approval_reference",
+            "other_hazardous_reference",
+        )
+        for category, reference_field in zip(certificate_categories, reference_fields, strict=True):
+            if step7.get(reference_field) and not has_form_b_attachment(db, form_b.id, category):
+                raise CRUDValidationError(
+                    f"Upload the certificate file for {reference_field.replace('_', ' ')}."
+                )
 
     project = db.query(IAECProject).filter(IAECProject.id == form_b.project_id).first()
     if project:
