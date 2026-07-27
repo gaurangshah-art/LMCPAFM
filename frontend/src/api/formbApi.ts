@@ -226,7 +226,6 @@ export async function uploadFormBAttachment(
     `/formb/${formBId}/attachments?category=${encodeURIComponent(category)}`,
     body,
     {
-      headers: { "Content-Type": "multipart/form-data" },
       timeout: 120000,
     },
   );
