@@ -98,4 +98,4 @@ def test_form_b_start_and_save_step1(client, monkeypatch):
     assert investigators_res.status_code == 200
     investigators = investigators_res.json()
     assert len(investigators) == 1
-    assert investigators[0]["role"] == "principal_investigator"
+    assert investigators[0]["project_role"] == "principal_investigator"

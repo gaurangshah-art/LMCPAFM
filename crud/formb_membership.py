@@ -144,3 +144,17 @@ def user_can_view_approval_letter(db: Session, user_id: int, project_id: int) ->
         .first()
     )
     return membership is not None
+
+
+def user_can_edit_project(db: Session, user_id: int, project_id: int) -> bool:
+    membership = (
+        db.query(FormBInvestigator)
+        .join(FormB, FormB.id == FormBInvestigator.form_b_id)
+        .filter(
+            FormB.project_id == project_id,
+            FormBInvestigator.user_id == user_id,
+            FormBInvestigator.can_edit_forms.is_(True),
+        )
+        .first()
+    )
+    return membership is not None

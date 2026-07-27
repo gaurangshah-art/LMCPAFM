@@ -200,8 +200,9 @@ export interface FormBInvestigatorRecord {
   id: number;
   form_b_id: number;
   name: string;
-  role: string;
+  project_role: string;
   user_id?: number | null;
+  investigator_profile_user_id?: number | null;
   investigator_type?: string | null;
   can_view_status: boolean;
   can_view_approval_letters: boolean;
@@ -212,7 +213,7 @@ export interface FormBInvestigatorRecord {
 export interface FormBInvestigatorPayload {
   form_b_id: number;
   name: string;
-  role: string;
+  project_role: string;
   user_id?: number | null;
   investigator_type?: string | null;
   can_view_status?: boolean;

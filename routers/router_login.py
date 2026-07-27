@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from crud.activity_log import record_activity
 from crud.exceptions import CRUDValidationError
 from crud.investigator_registration import register_investigator
 from database.database import get_db
@@ -35,6 +36,13 @@ def register_investigator_account(
     except CRUDValidationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
+    record_activity(
+        db,
+        user=user,
+        action="investigator.registered",
+        details=f"Investigator self-registration for {user.email}",
+    )
+
     return {
         "id": user.id,
         "name": user.name,
@@ -61,4 +69,10 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         )
 
     token = create_access_token({"sub": str(user.id), "email": user.email})
+    record_activity(
+        db,
+        user=user,
+        action="auth.login",
+        details=f"Successful login for {user.email}",
+    )
     return TokenResponse(access_token=token)

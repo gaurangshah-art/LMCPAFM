@@ -296,8 +296,12 @@ class FormBInvestigator(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     form_b_id: Mapped[int] = mapped_column(ForeignKey("form_b.id"))
     name: Mapped[str] = mapped_column(String)
-    role: Mapped[str] = mapped_column(String)
+    project_role: Mapped[str] = mapped_column(String)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    investigator_profile_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("investigator_profile.user_id"),
+        nullable=True,
+    )
     investigator_type: Mapped[str | None] = mapped_column(String, nullable=True)
     can_view_status: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     can_view_approval_letters: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

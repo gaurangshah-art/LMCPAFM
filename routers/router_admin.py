@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from crud.activity_log import list_activity_logs, record_activity
 from database.database import get_db
 from database.lmcpafm_models import IAECProject
 from database.lmcpafm_requisition_allocation import AnimalRequisition
@@ -26,8 +27,20 @@ def read_system_summary(
 
 
 @router.get("/logs")
-def read_activity_logs(_current_user: User = Depends(require_admin_or_staff)):
-    return []
+def read_activity_logs(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin_or_staff),
+):
+    logs = list_activity_logs(db)
+    return [
+        {
+            "timestamp": log.created_at.isoformat(),
+            "user_name": log.user_name,
+            "action": log.action,
+            "details": log.details,
+        }
+        for log in logs
+    ]
 
 
 @router.get("/users")
@@ -80,6 +93,12 @@ def update_user_roles(
     user.roles = db_roles
     db.commit()
     db.refresh(user)
+    record_activity(
+        db,
+        user=_current_user,
+        action="user.roles.updated",
+        details=f"Updated roles for {user.email} to {', '.join(role_names)}",
+    )
     return {
         "id": user.id,
         "name": user.name,

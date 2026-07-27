@@ -148,7 +148,7 @@ def test_student_investigator_gets_limited_permissions(client, monkeypatch):
         json={
             "form_b_id": form_b_id,
             "name": "Student Helper",
-            "role": "student_contributor",
+            "project_role": "student_contributor",
             "investigator_type": "student",
         },
         headers=headers,

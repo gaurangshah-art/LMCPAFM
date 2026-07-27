@@ -4,7 +4,7 @@ from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain
 
 
-def test_create_and_get_requisition(client, staff_auth_headers):
+def test_create_and_get_requisition(client, staff_auth_headers, iaec_auth_headers):
     suffix = uuid4().hex[:8]
     project_res = client.post(
         "/iaec/project",
@@ -15,6 +15,7 @@ def test_create_and_get_requisition(client, staff_auth_headers):
             "approval_date": "2026-01-01",
             "status": "approved",
         },
+        headers=iaec_auth_headers,
     )
     assert project_res.status_code == 200, project_res.text
     project_id = project_res.json()["id"]

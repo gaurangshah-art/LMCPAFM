@@ -44,6 +44,14 @@ import { IaecProjectReview } from "../pages/iaec/IaecProjectReview";
 import { IaecApprovalCertificate } from "../pages/iaec/IaecApprovalCertificate";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
 import { FormCPage } from "../pages/FormCPage";
+import { IAECProjectViewPage } from "../pages/IAECProjectViewPage";
+import { IAECProjectEditPage } from "../pages/IAECProjectEditPage";
+import { IAECWorkflowDashboardPage } from "../pages/IAECWorkflowDashboardPage";
+import { ExperimentEntryPage } from "../pages/experiment/ExperimentEntryPage";
+import { ExperimentLogsEntryPage } from "../pages/experiment/ExperimentLogsEntryPage";
+import { ExperimentLogsViewPage } from "../pages/experiment/ExperimentLogsViewPage";
+import { FinalReportEntryPage } from "../pages/final/FinalReportEntryPage";
+import { FinalReportViewPage } from "../pages/final/FinalReportViewPage";
 
 
 const roleHome: Record<string, string> = {
@@ -266,6 +274,110 @@ export default function App() {
                 allowedRoles={["iaec", "investigator"]}
               >
                 <IaecApprovalCertificate />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/workflow"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec"]}
+              >
+                <IAECWorkflowDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/projects/:id"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec", "investigator", "staff", "admin"]}
+              >
+                <IAECProjectViewPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/projects/:id/edit"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec"]}
+              >
+                <IAECProjectEditPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/experiments/entry/:allocationId"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator"]}
+              >
+                <ExperimentEntryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/experiments/logs/:allocationId"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator", "staff", "iaec"]}
+              >
+                <ExperimentLogsViewPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/experiments/logs/:allocationId/entry"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator"]}
+              >
+                <ExperimentLogsEntryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/final-report/:allocationId"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator", "staff", "iaec"]}
+              >
+                <FinalReportViewPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/final-report/:allocationId/entry"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator"]}
+              >
+                <FinalReportEntryPage />
               </ProtectedRoute>
             }
           />

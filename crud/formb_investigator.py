@@ -26,8 +26,9 @@ def add_form_b_investigator(db: Session, user: User, payload: dict) -> FormBInve
     investigator = FormBInvestigator(
         form_b_id=form_b_id,
         name=payload["name"],
-        role=payload["role"],
+        project_role=payload.get("project_role") or payload.get("role"),
         user_id=payload.get("user_id"),
+        investigator_profile_user_id=payload.get("user_id"),
         investigator_type=payload.get("investigator_type"),
         can_view_status=payload["can_view_status"] if payload.get("can_view_status") is not None else defaults["can_view_status"],
         can_view_approval_letters=payload["can_view_approval_letters"] if payload.get("can_view_approval_letters") is not None else defaults["can_view_approval_letters"],
@@ -57,7 +58,7 @@ def remove_form_b_investigator(
     )
     if investigator is None:
         raise CRUDValidationError("Investigator not found on this Form B")
-    if investigator.role == "principal_investigator":
+    if investigator.project_role == "principal_investigator":
         raise CRUDValidationError("Cannot remove the principal investigator")
 
     db.delete(investigator)

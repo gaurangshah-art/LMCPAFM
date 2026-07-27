@@ -114,8 +114,9 @@ def start_form_b(db: Session, user: User) -> FormB:
     investigator = FormBInvestigator(
         form_b_id=form_b.id,
         name=user.name,
-        role="principal_investigator",
+        project_role="principal_investigator",
         user_id=user.id,
+        investigator_profile_user_id=user.id,
         investigator_type="faculty" if profile.is_lmcp_faculty else "investigator",
         can_view_status=True,
         can_view_approval_letters=True,

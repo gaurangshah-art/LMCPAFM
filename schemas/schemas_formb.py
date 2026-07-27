@@ -133,7 +133,7 @@ class FormBMeetingCertificateRead(BaseModel):
 class FormBInvestigatorCreate(BaseModel):
     form_b_id: int
     name: str = Field(..., max_length=200)
-    role: str = Field(..., max_length=200)
+    project_role: str = Field(..., max_length=200)
     user_id: Optional[int] = None
     investigator_type: Optional[str] = Field(None, max_length=100)
     can_view_status: Optional[bool] = None
@@ -146,8 +146,9 @@ class FormBInvestigatorRead(BaseModel):
     id: int
     form_b_id: int
     name: str
-    role: str
+    project_role: str
     user_id: Optional[int] = None
+    investigator_profile_user_id: Optional[int] = None
     investigator_type: Optional[str] = None
     can_view_status: bool
     can_view_approval_letters: bool

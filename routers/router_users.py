@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from crud.activity_log import record_activity
 from database.database import get_db
 from models.role import Role
 from models.user import User
@@ -60,6 +61,12 @@ def create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+    record_activity(
+        db,
+        user=_current_user,
+        action="user.created",
+        details=f"Created user {user.email} with roles {', '.join(role_names)}",
+    )
     return {
         "id": user.id,
         "name": user.name,

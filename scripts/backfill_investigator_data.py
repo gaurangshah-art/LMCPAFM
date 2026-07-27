@@ -9,6 +9,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from database.database import SessionLocal, engine
+from database import lmcpafm_models  # noqa: F401
+from database import lmcpafm_requisition_allocation  # noqa: F401
+from database import lmcpafm_experiments  # noqa: F401
+import models.activity_log  # noqa: F401
 from database.lmcpafm_models import FormBInvestigator
 from models.investigator_profile import InvestigatorProfile
 from models.role import Role
@@ -52,6 +56,31 @@ def backfill_form_b_investigator_links(db) -> int:
         if len(matches) != 1:
             continue
         row.user_id = matches[0].id
+        row.investigator_profile_user_id = matches[0].id
+        linked += 1
+    db.commit()
+    return linked
+
+
+def backfill_investigator_profile_links(db) -> int:
+    linked = 0
+    rows = (
+        db.query(FormBInvestigator)
+        .filter(
+            FormBInvestigator.user_id.isnot(None),
+            FormBInvestigator.investigator_profile_user_id.is_(None),
+        )
+        .all()
+    )
+    for row in rows:
+        profile = (
+            db.query(InvestigatorProfile)
+            .filter(InvestigatorProfile.user_id == row.user_id)
+            .first()
+        )
+        if profile is None:
+            continue
+        row.investigator_profile_user_id = row.user_id
         linked += 1
     db.commit()
     return linked
@@ -65,8 +94,10 @@ def main() -> None:
     try:
         profiles_created = backfill_investigator_profiles(db)
         links_created = backfill_form_b_investigator_links(db)
+        profile_links = backfill_investigator_profile_links(db)
         print(f"Created {profiles_created} investigator profile shell(s).")
         print(f"Linked {links_created} form_b_investigator row(s) to users.")
+        print(f"Linked {profile_links} form_b_investigator row(s) to investigator profiles.")
     finally:
         db.close()
 

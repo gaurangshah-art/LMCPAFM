@@ -1,10 +1,10 @@
-from dependencies.auth import get_current_user, require_any_role, require_iaec, require_investigator, user_role_names
+from dependencies.auth import get_current_user, require_any_role, require_iaec, user_role_names
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database.database import SessionLocal
-from database.lmcpafm_models import IAECMeeting
+from database.database import get_db
+from database.lmcpafm_models import ExperimentGroup, IAECMeeting
 from crud import crud_iaec
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
 from crud.formb_internal import (
@@ -28,7 +28,11 @@ from crud.formb_email import (
     send_form_b_meeting_invitation_email,
     validate_form_b_meeting_invitation_ready,
 )
-from crud.formb_membership import user_can_view_approval_letter, user_can_view_project
+from crud.formb_membership import (
+    user_can_edit_project,
+    user_can_view_approval_letter,
+    user_can_view_project,
+)
 from models.user import User
 from schemas.schemas_iaec import (
     IAECProjectCreate,
@@ -53,17 +57,40 @@ from schemas.schemas_formb import (
 
 router = APIRouter(prefix="/iaec", tags=["IAEC"])
 
+PRIVILEGED_IAEC_ROLES = {"iaec", "admin", "staff"}
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
+def _privileged_roles(user: User) -> set[str]:
+    return set(user_role_names(user))
+
+
+def _ensure_project_view(db: Session, user: User, project_id: int) -> None:
+    if not _privileged_roles(user).isdisjoint(PRIVILEGED_IAEC_ROLES):
+        return
+    if not user_can_view_project(db, user.id, project_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+def _ensure_project_edit(db: Session, user: User, project_id: int) -> None:
+    if not _privileged_roles(user).isdisjoint(PRIVILEGED_IAEC_ROLES):
+        return
+    if not user_can_edit_project(db, user.id, project_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+def _get_group_or_404(db: Session, group_id: int) -> ExperimentGroup:
+    group = db.query(ExperimentGroup).filter(ExperimentGroup.id == group_id).first()
+    if group is None:
+        raise HTTPException(status_code=404, detail="Experiment group not found.")
+    return group
 
 
 @router.post("/project", response_model=IAECProject)
-def create_project(project: IAECProjectCreate, db: Session = Depends(get_db)):
+def create_project(
+    project: IAECProjectCreate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_any_role("iaec", "admin")),
+):
     try:
         return crud_iaec.create_project(db, project)
     except CRUDValidationError as exc:
@@ -75,7 +102,10 @@ def create_project(project: IAECProjectCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/project", response_model=list[IAECProject])
-def get_projects(db: Session = Depends(get_db)):
+def get_projects(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_any_role("iaec", "admin", "staff")),
+):
     return crud_iaec.get_projects(db)
 
 
@@ -112,7 +142,12 @@ def get_project(
 
 
 @router.post("/group", response_model=ExperimentGroup)
-def create_group(group: ExperimentGroupCreate, db: Session = Depends(get_db)):
+def create_group(
+    group: ExperimentGroupCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    _ensure_project_edit(db, current_user, group.project_id)
     try:
         return crud_iaec.create_group(db, group)
     except CRUDNotFoundError as exc:
@@ -126,12 +161,23 @@ def create_group(group: ExperimentGroupCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/group/{project_id}", response_model=list[ExperimentGroup])
-def get_groups(project_id: int, db: Session = Depends(get_db)):
+def get_groups(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    _ensure_project_view(db, current_user, project_id)
     return crud_iaec.get_groups_by_project(db, project_id)
 
 
 @router.post("/experiment", response_model=AnimalExperiment)
-def create_experiment(exp: AnimalExperimentCreate, db: Session = Depends(get_db)):
+def create_experiment(
+    exp: AnimalExperimentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    group = _get_group_or_404(db, exp.group_id)
+    _ensure_project_edit(db, current_user, group.project_id)
     try:
         return crud_iaec.create_experiment(db, exp)
     except CRUDNotFoundError as exc:
@@ -145,7 +191,13 @@ def create_experiment(exp: AnimalExperimentCreate, db: Session = Depends(get_db)
 
 
 @router.get("/experiment/{group_id}", response_model=list[AnimalExperiment])
-def get_experiments(group_id: int, db: Session = Depends(get_db)):
+def get_experiments(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    group = _get_group_or_404(db, group_id)
+    _ensure_project_view(db, current_user, group.project_id)
     return crud_iaec.get_experiments_by_group(db, group_id)
 
 

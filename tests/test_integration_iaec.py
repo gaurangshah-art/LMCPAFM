@@ -4,7 +4,7 @@ from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain, Animal
 
 
-def test_integration_project_requisition_allocation_experiment(client, staff_auth_headers):
+def test_integration_project_requisition_allocation_experiment(client, staff_auth_headers, iaec_auth_headers):
     # 1) Create IAEC project (protocol)
     proj_payload = {
         "title": "Integration Project",
@@ -13,7 +13,7 @@ def test_integration_project_requisition_allocation_experiment(client, staff_aut
         "approval_date": "2026-02-01",
         "status": "approved",
     }
-    resp = client.post("/iaec/project", json=proj_payload)
+    resp = client.post("/iaec/project", json=proj_payload, headers=iaec_auth_headers)
     assert resp.status_code == 200
     project = resp.json()
     project_id = project["id"]

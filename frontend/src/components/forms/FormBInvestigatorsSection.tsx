@@ -24,7 +24,7 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [role, setRole] = useState<(typeof PROJECT_ROLES)[number]>("co_investigator");
+  const [projectRole, setProjectRole] = useState<(typeof PROJECT_ROLES)[number]>("co_investigator");
   const [investigatorType, setInvestigatorType] =
     useState<(typeof INVESTIGATOR_TYPES)[number]>("faculty");
   const [saving, setSaving] = useState(false);
@@ -58,7 +58,7 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
       await addFormBInvestigator({
         form_b_id: formBId,
         name: name.trim(),
-        role,
+        project_role: projectRole,
         investigator_type: investigatorType,
       });
       setName("");
@@ -105,7 +105,7 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
             {investigators.map((investigator) => (
               <tr key={investigator.id}>
                 <td>{investigator.name}</td>
-                <td>{investigator.role}</td>
+                <td>{investigator.project_role}</td>
                 <td>{investigator.investigator_type || "-"}</td>
                 <td>
                   {[
@@ -118,7 +118,7 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
                     .join(", ") || "none"}
                 </td>
                 <td>
-                  {investigator.role !== "principal_investigator" ? (
+                  {investigator.project_role !== "principal_investigator" ? (
                     <button
                       type="button"
                       className="btn-small"
@@ -141,7 +141,7 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
         </label>
         <label>
           Project role
-          <select value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
+          <select value={projectRole} onChange={(e) => setProjectRole(e.target.value as typeof projectRole)}>
             {PROJECT_ROLES.map((option) => (
               <option key={option} value={option}>
                 {option}

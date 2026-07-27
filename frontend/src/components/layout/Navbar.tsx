@@ -13,6 +13,7 @@ const navItems: NavItem[] = [
   { to: "/users", label: "Users", roles: ["staff", "admin"] },
   { to: "/admin-dashboard", label: "Admin", roles: ["admin"] },
   { to: "/iaec-dashboard", label: "IAEC Dashboard", roles: ["iaec"] },
+  { to: "/iaec/workflow", label: "IAEC Workflow", roles: ["iaec"] },
   { to: "/iaec-projects", label: "IAEC Projects", roles: ["iaec"] },
   { to: "/form-b/step-1", label: "New Form B", roles: ["investigator"] },
   { to: "/investigator-profile", label: "My Profile", roles: ["investigator"] },
