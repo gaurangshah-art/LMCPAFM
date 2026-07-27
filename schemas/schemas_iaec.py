@@ -25,6 +25,23 @@ class IAECProject(IAECProjectBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class InvestigatorProjectSummary(BaseModel):
+    id: int
+    title: str
+    investigator_name: str
+    protocol_number: str | None = None
+    approval_date: date | None = None
+    principal_investigator: str | None = None
+    status: str | None = None
+    form_b_id: int | None = None
+    meeting_id: int | None = None
+    meeting_year: int | None = None
+    meeting_number: str | None = None
+    submitted_at: str | None = None
+    experiment_group_count: int = 0
+    experiment_count: int = 0
+
+
 class ExperimentGroupBase(BaseModel):
     name: str
 

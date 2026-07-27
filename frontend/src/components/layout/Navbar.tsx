@@ -17,7 +17,6 @@ const navItems: NavItem[] = [
   { to: "/iaec-projects", label: "IAEC Projects", roles: ["iaec"] },
   { to: "/form-b/step-1", label: "New Form B", roles: ["investigator"] },
   { to: "/investigator-profile", label: "My Profile", roles: ["investigator"] },
-  { to: "/investigator-dashboard", label: "My Dashboard", roles: ["investigator"] },
   { to: "/requisitions", label: "Requisitions", roles: ["investigator", "staff", "iaec"] },
   { to: "/allocations", label: "Allocations", roles: ["staff", "investigator", "iaec"] },
   { to: "/form-c", label: "Form C", roles: ["staff", "iaec", "admin"] },

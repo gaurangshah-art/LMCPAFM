@@ -173,6 +173,23 @@ export interface IAECProject extends IAECProjectCreate {
   experiment_groups?: ExperimentGroup[];
 }
 
+export interface InvestigatorProjectSummary {
+  id: number;
+  title: string;
+  investigator_name: string;
+  protocol_number?: string | null;
+  approval_date?: string | null;
+  principal_investigator?: string | null;
+  status?: string | null;
+  form_b_id?: number | null;
+  meeting_id?: number | null;
+  meeting_year?: number | null;
+  meeting_number?: string | null;
+  submitted_at?: string | null;
+  experiment_group_count: number;
+  experiment_count: number;
+}
+
 // ---------------- FORM B ----------------
 export interface FormB {
   id: number;

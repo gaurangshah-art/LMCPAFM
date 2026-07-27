@@ -24,7 +24,6 @@ import { RegisterInvestigatorPage } from "../pages/RegisterInvestigatorPage";
 import { UsersPage } from "../pages/UsersPage";
 import { NotAuthorizedPage } from "../pages/NotAuthorizedPage";
 import { IaecDashboard } from "../pages/iaec/IaecDashboard";
-import { InvestigatorDashboardPage } from "../pages/InvestigatorDashboardPage";
 import { RequisitionViewPage } from "../pages/RequisitionViewPage";
 import { AllocationViewPage } from "../pages/AllocationViewPage";
 import { InvestigatorProfilePage } from "../pages/InvestigatorProfilePage";
@@ -57,7 +56,7 @@ import { FinalReportViewPage } from "../pages/final/FinalReportViewPage";
 const roleHome: Record<string, string> = {
   iaec: "/iaec-projects",
   staff: "/allocations",
-  investigator: "/requisitions",
+  investigator: "/",
   admin: "/admin-dashboard",
 };
 
@@ -521,17 +520,17 @@ export default function App() {
             />
 
             <Route
-  path="/investigator-dashboard"
-  element={
-    <ProtectedRoute
-      currentUser={currentUser}
-      isAuthLoading={isAuthLoading}
-      allowedRoles={["investigator"]}
-    >
-      <InvestigatorDashboardPage currentUser={currentUser} />
-    </ProtectedRoute>
-  }
-/>
+              path="/investigator-dashboard"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <Navigate to="/" replace />
+                </ProtectedRoute>
+              }
+            />
   
           <Route
             path="/form-c"

@@ -2,6 +2,7 @@ import { apiClient } from "./client";
 import type {
   IAECProject,
   IAECProjectCreate,
+  InvestigatorProjectSummary,
   ExperimentGroup,
   ExperimentGroupCreate,
   AnimalExperiment,
@@ -10,6 +11,7 @@ import type {
   IAECMeetingCreate,
   FormBWithMeeting,
   FormBMeetingDecisionUpsert,
+  IAECApprovalCertificate,
 } from "./types";
 
 export async function createProject(payload: IAECProjectCreate): Promise<IAECProject> {
@@ -22,12 +24,40 @@ export async function getProjects(): Promise<IAECProject[]> {
   return data;
 }
 
-// ⭐ NEW — required by InvestigatorDashboardPage
-export async function getProjectsByInvestigator(investigatorId: number): Promise<IAECProject[]> {
-  const { data } = await apiClient.get<IAECProject[]>(
-    `/iaec/project/investigator/${investigatorId}`
+// ⭐ Investigator dashboard summaries (Form B + project metadata)
+export async function getInvestigatorProjectSummaries(
+  investigatorId: number,
+): Promise<InvestigatorProjectSummary[]> {
+  const { data } = await apiClient.get<InvestigatorProjectSummary[]>(
+    `/iaec/project/investigator/${investigatorId}`,
   );
   return data;
+}
+
+/** @deprecated Use getInvestigatorProjectSummaries for dashboard views. */
+export async function getProjectsByInvestigator(
+  investigatorId: number,
+): Promise<InvestigatorProjectSummary[]> {
+  return getInvestigatorProjectSummaries(investigatorId);
+}
+
+export async function getProjectCertificate(projectId: number): Promise<IAECApprovalCertificate> {
+  const { data } = await apiClient.get<IAECApprovalCertificate>(
+    `/iaec/project/${projectId}/certificate`,
+  );
+  return data;
+}
+
+export async function downloadProjectCertificate(projectId: number): Promise<void> {
+  const response = await apiClient.get(`/iaec/project/${projectId}/certificate/download`, {
+    responseType: "blob",
+  });
+  const blobUrl = window.URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = `iaec_certificate_${projectId}.pdf`;
+  link.click();
+  window.URL.revokeObjectURL(blobUrl);
 }
 
 export async function createGroup(payload: ExperimentGroupCreate): Promise<ExperimentGroup> {

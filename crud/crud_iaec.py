@@ -1,7 +1,7 @@
 # crud/iaec.py
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from database.lmcpafm_models import IAECProject, ExperimentGroup, AnimalExperiment
 from schemas.schemas_iaec import (
     IAECProjectCreate,
@@ -93,6 +93,45 @@ def get_projects_by_investigator(db: Session, user_id: int):
         .order_by(IAECProject.id.desc())
         .all()
     )
+
+
+def get_investigator_project_summaries(db: Session, user_id: int) -> list[dict]:
+    from database.lmcpafm_models import FormB
+
+    projects = get_projects_by_investigator(db, user_id)
+    summaries: list[dict] = []
+
+    for project in projects:
+        form_b = (
+            db.query(FormB)
+            .options(joinedload(FormB.meeting))
+            .filter(FormB.project_id == project.id)
+            .first()
+        )
+        meeting = form_b.meeting if form_b else None
+        groups = project.experiment_groups or []
+        experiment_count = sum(len(group.experiments or []) for group in groups)
+
+        summaries.append(
+            {
+                "id": project.id,
+                "title": project.title,
+                "investigator_name": project.investigator_name,
+                "protocol_number": project.protocol_number,
+                "approval_date": project.approval_date,
+                "principal_investigator": project.principal_investigator,
+                "status": project.status,
+                "form_b_id": form_b.id if form_b else None,
+                "meeting_id": form_b.meeting_id if form_b else None,
+                "meeting_year": meeting.date.year if meeting and meeting.date else None,
+                "meeting_number": meeting.meeting_number if meeting else None,
+                "submitted_at": form_b.submitted_at.isoformat() if form_b and form_b.submitted_at else None,
+                "experiment_group_count": len(groups),
+                "experiment_count": experiment_count,
+            }
+        )
+
+    return summaries
 
 
 def get_meeting_details(db: Session, meeting_id: int):

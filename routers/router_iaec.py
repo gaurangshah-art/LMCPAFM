@@ -37,6 +37,7 @@ from models.user import User
 from schemas.schemas_iaec import (
     IAECProjectCreate,
     IAECProject,
+    InvestigatorProjectSummary,
     ExperimentGroupCreate,
     ExperimentGroup,
     AnimalExperimentCreate,
@@ -109,7 +110,10 @@ def get_projects(
     return crud_iaec.get_projects(db)
 
 
-@router.get("/project/investigator/{investigator_id}", response_model=list[IAECProject])
+@router.get(
+    "/project/investigator/{investigator_id}",
+    response_model=list[InvestigatorProjectSummary],
+)
 def get_investigator_projects(
     investigator_id: int,
     db: Session = Depends(get_db),
@@ -120,7 +124,7 @@ def get_investigator_projects(
         and current_user.id != investigator_id
     ):
         raise HTTPException(status_code=403, detail="Forbidden")
-    return crud_iaec.get_projects_by_investigator(db, investigator_id)
+    return crud_iaec.get_investigator_project_summaries(db, investigator_id)
 
 
 @router.get("/project/{project_id}", response_model=IAECProject)
