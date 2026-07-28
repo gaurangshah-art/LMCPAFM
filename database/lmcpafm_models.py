@@ -158,6 +158,44 @@ class FacilityCareLog(Base):
     cage: Mapped["Cage | None"] = relationship(back_populates="care_logs")
 
 
+class SupplyItem(Base):
+    __tablename__ = "supply_item"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
+    unit: Mapped[str] = mapped_column(String(30), nullable=False, default="each")
+    reorder_level: Mapped[float] = mapped_column(nullable=False, default=0)
+    quantity_on_hand: Mapped[float] = mapped_column(nullable=False, default=0)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    transactions: Mapped[list["SupplyTransaction"]] = relationship(back_populates="item")
+
+    __table_args__ = (UniqueConstraint("name", "category", name="uq_supply_item_name_category"),)
+
+
+class SupplyTransaction(Base):
+    __tablename__ = "supply_transaction"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("supply_item.id"), nullable=False)
+    txn_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    quantity: Mapped[float] = mapped_column(nullable=False)
+    date: Mapped[Date] = mapped_column(Date, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    room_id: Mapped[int | None] = mapped_column(ForeignKey("facility_room.id"), nullable=True)
+    recorded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    item: Mapped["SupplyItem"] = relationship(back_populates="transactions")
+    room: Mapped["FacilityRoom | None"] = relationship()
+
+
 # =========================================================
 # ANIMAL TABLES (Base)
 # =========================================================

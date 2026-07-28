@@ -4,7 +4,9 @@ from sqlalchemy.orm import Session
 
 from crud import admin_facility as facility_crud
 from crud import cage_labels as cage_label_crud
-from crud.exceptions import CRUDNotFoundError
+from crud import facility_dashboard as dashboard_crud
+from crud import supply_inventory as supply_crud
+from crud.exceptions import CRUDNotFoundError, CRUDValidationError
 from crud.formb_membership import user_can_view_project
 from crud.formc_documents import render_form_c_pdf
 from crud.crud_inventory import get_form_c_data
@@ -19,15 +21,24 @@ from schemas.schemas_admin_facility import (
     CageLabelRead,
     CageMapRoomRead,
     CageRead,
+    FacilityCareLogCreate,
     FacilityCareLogRead,
     FacilityRoomRead,
     FacilitySummaryRead,
+    PiDashboardRead,
     ProcurementRead,
     BreedingRecordRead,
+    RoomDashboardRead,
+    StrainDashboardRead,
 )
 from schemas.schemas_inventory import FormCData
+from schemas.schemas_supply import (
+    SupplyItemRead,
+    SupplyStaffTransactionCreate,
+    SupplyTransactionRead,
+)
 
-router = APIRouter(prefix="/facility", tags=["Facility (Read-only)"])
+router = APIRouter(prefix="/facility", tags=["Facility"])
 
 PRIVILEGED_FACILITY_ROLES = {"staff", "admin", "iaec"}
 
@@ -242,6 +253,81 @@ def list_care_logs(
     _current_user: User = Depends(require_any_role("staff", "admin")),
 ):
     return facility_crud.list_care_logs(db, log_type=log_type)
+
+
+@router.post("/care-logs", response_model=FacilityCareLogRead)
+def create_care_log(
+    payload: FacilityCareLogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    try:
+        return facility_crud.create_care_log(db, current_user, payload)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/dashboard/pi", response_model=PiDashboardRead)
+def read_pi_dashboard(
+    protocol_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    try:
+        return dashboard_crud.get_pi_dashboard(db, protocol_id=protocol_id)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/dashboard/rooms", response_model=RoomDashboardRead)
+def read_room_dashboard(
+    stale_days: int = Query(7, ge=1, le=90),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    return dashboard_crud.get_room_dashboard(db, stale_days=stale_days)
+
+
+@router.get("/dashboard/strains", response_model=StrainDashboardRead)
+def read_strain_dashboard(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    return dashboard_crud.get_strain_dashboard(db)
+
+
+@router.get("/supplies/items", response_model=list[SupplyItemRead])
+def list_supply_items(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    return supply_crud.list_supply_items(db)
+
+
+@router.get("/supplies/transactions", response_model=list[SupplyTransactionRead])
+def list_supply_transactions(
+    item_id: int | None = Query(None),
+    txn_type: str | None = Query(None),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    return supply_crud.list_supply_transactions(db, item_id=item_id, txn_type=txn_type)
+
+
+@router.post("/supplies/transactions", response_model=SupplyTransactionRead)
+def record_supply_usage(
+    payload: SupplyStaffTransactionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    try:
+        return supply_crud.record_staff_supply_usage(db, current_user, payload)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/form-c-data", response_model=FormCData)

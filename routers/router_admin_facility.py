@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 
 from crud import admin_facility as facility_crud
 from crud import cage_labels as cage_label_crud
+from crud import facility_dashboard as dashboard_crud
+from crud import supply_inventory as supply_crud
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError
 from database.database import get_db
 from dependencies.auth import require_admin
@@ -28,12 +30,22 @@ from schemas.schemas_admin_facility import (
     FacilityRoomRead,
     FacilityRoomUpdate,
     FacilitySummaryRead,
+    PiDashboardRead,
     ProcurementCreate,
     ProcurementRead,
+    RoomDashboardRead,
+    StrainDashboardRead,
     CageMapRoomRead,
     AnimalTimelineEventRead,
     AnimalLabelRead,
     CageLabelRead,
+)
+from schemas.schemas_supply import (
+    SupplyItemCreate,
+    SupplyItemRead,
+    SupplyItemUpdate,
+    SupplyTransactionCreate,
+    SupplyTransactionRead,
 )
 
 router = APIRouter(prefix="/admin/facility", tags=["Admin Facility"])
@@ -296,6 +308,35 @@ def create_care_log(
         _handle_errors(exc)
 
 
+@router.get("/dashboard/pi", response_model=PiDashboardRead)
+def read_pi_dashboard(
+    protocol_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    try:
+        return dashboard_crud.get_pi_dashboard(db, protocol_id=protocol_id)
+    except Exception as exc:
+        _handle_errors(exc)
+
+
+@router.get("/dashboard/rooms", response_model=RoomDashboardRead)
+def read_room_dashboard(
+    stale_days: int = Query(7, ge=1, le=90),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    return dashboard_crud.get_room_dashboard(db, stale_days=stale_days)
+
+
+@router.get("/dashboard/strains", response_model=StrainDashboardRead)
+def read_strain_dashboard(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    return dashboard_crud.get_strain_dashboard(db)
+
+
 @router.get("/cage-map", response_model=list[CageMapRoomRead])
 def read_cage_map(
     db: Session = Depends(get_db),
@@ -414,3 +455,59 @@ def download_animal_label(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/supplies/items", response_model=list[SupplyItemRead])
+def list_supply_items(
+    include_inactive: bool = Query(False),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    return supply_crud.list_supply_items(db, include_inactive=include_inactive)
+
+
+@router.post("/supplies/items", response_model=SupplyItemRead)
+def create_supply_item(
+    payload: SupplyItemCreate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    try:
+        return supply_crud.create_supply_item(db, payload)
+    except Exception as exc:
+        _handle_errors(exc)
+
+
+@router.put("/supplies/items/{item_id}", response_model=SupplyItemRead)
+def update_supply_item(
+    item_id: int,
+    payload: SupplyItemUpdate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    try:
+        return supply_crud.update_supply_item(db, item_id, payload)
+    except Exception as exc:
+        _handle_errors(exc)
+
+
+@router.get("/supplies/transactions", response_model=list[SupplyTransactionRead])
+def list_supply_transactions(
+    item_id: int | None = Query(None),
+    txn_type: str | None = Query(None),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    return supply_crud.list_supply_transactions(db, item_id=item_id, txn_type=txn_type)
+
+
+@router.post("/supplies/transactions", response_model=SupplyTransactionRead)
+def record_supply_transaction(
+    payload: SupplyTransactionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    try:
+        return supply_crud.record_supply_transaction(db, current_user, payload)
+    except Exception as exc:
+        _handle_errors(exc)

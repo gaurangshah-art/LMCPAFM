@@ -20,6 +20,20 @@ from database.lmcpafm_models import (
     Strain,
 )
 from models.user import User
+
+CARE_LOG_TYPES = frozenset(
+    {
+        "feeding",
+        "watering",
+        "cleaning",
+        "cage_cleaning",
+        "cage_wash",
+        "autoclave",
+        "room_sanitize",
+        "ivc_check",
+    }
+)
+ROOM_ONLY_CARE_LOG_TYPES = frozenset({"autoclave", "room_sanitize", "ivc_check"})
 from schemas.schemas_admin_facility import (
     AnimalAdminCreate,
     AnimalAdminUpdate,
@@ -566,17 +580,27 @@ def record_animal_outcome(db: Session, user: User, payload: AnimalOutcomeCreate)
 
 
 def create_care_log(db: Session, user: User, payload: FacilityCareLogCreate) -> dict:
-    if payload.log_type not in {"feeding", "watering", "cleaning"}:
-        raise CRUDValidationError("Care log type must be feeding, watering, or cleaning.")
+    log_type = payload.log_type.strip().lower()
+    if log_type not in CARE_LOG_TYPES:
+        allowed = ", ".join(sorted(CARE_LOG_TYPES))
+        raise CRUDValidationError(f"Care log type must be one of: {allowed}.")
     if payload.room_id is None and payload.cage_id is None:
         raise CRUDValidationError("Provide a room or cage for the care log.")
+    if log_type in ROOM_ONLY_CARE_LOG_TYPES and payload.room_id is None:
+        raise CRUDValidationError(f"{log_type} logs require a room.")
     if payload.room_id is not None and not db.query(FacilityRoom).filter(FacilityRoom.id == payload.room_id).first():
         raise CRUDNotFoundError("Room not found.")
     if payload.cage_id is not None and not db.query(Cage).filter(Cage.id == payload.cage_id).first():
         raise CRUDNotFoundError("Cage not found.")
 
+    performed_by = (payload.performed_by_name or user.name or user.email or "Staff").strip()
     row = FacilityCareLog(
-        **payload.model_dump(),
+        log_type=log_type,
+        room_id=payload.room_id,
+        cage_id=payload.cage_id,
+        date=payload.date,
+        details=payload.details,
+        performed_by_name=performed_by,
         recorded_by_user_id=user.id,
     )
     db.add(row)

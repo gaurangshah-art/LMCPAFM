@@ -13,12 +13,15 @@ import { getApiErrorMessage } from "../api/errors";
 import { AnimalTimelinePanel } from "../components/facility/AnimalTimelinePanel";
 import { CageMapView } from "../components/facility/CageMapView";
 import { CageLabelBulkActions } from "../components/facility/CageLabelBulkActions";
+import { CareLogPanel } from "../components/facility/CareLogPanel";
+import { FacilityDashboardPanel } from "../components/facility/FacilityDashboardPanel";
+import { SupplyInventoryPanel } from "../components/facility/SupplyInventoryPanel";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
 import { DataTable } from "../components/tables/DataTable";
 
-type TabKey = "overview" | "map" | "animals";
+type TabKey = "overview" | "dashboards" | "care" | "supplies" | "map" | "animals";
 
 export function StaffFacilityPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
@@ -89,8 +92,8 @@ export function StaffFacilityPage() {
   return (
     <div className="page-card">
       <header className="section-header">
-        <h1>Animal Facility Inventory</h1>
-        <p>Read-only view for staff. Issue animals to investigators via the allocation workflow.</p>
+        <h1>Animal Facility</h1>
+        <p>Census, daily care logs, and cage operations for facility staff.</p>
       </header>
 
       <div className="info-card compact-info-card">
@@ -108,6 +111,9 @@ export function StaffFacilityPage() {
         {(
           [
             ["overview", "Overview"],
+            ["dashboards", "Dashboards"],
+            ["care", "Care Logs"],
+            ["supplies", "Supplies"],
             ["map", "Cage Map"],
             ["animals", "Animals & Timeline"],
           ] as const
@@ -134,6 +140,16 @@ export function StaffFacilityPage() {
           </div>
         </PageSection>
       ) : null}
+
+      {activeTab === "dashboards" ? (
+        <PageSection title="Facility dashboards">
+          <FacilityDashboardPanel />
+        </PageSection>
+      ) : null}
+
+      {activeTab === "care" ? <CareLogPanel /> : null}
+
+      {activeTab === "supplies" ? <SupplyInventoryPanel mode="staff" /> : null}
 
       {activeTab === "map" ? (
         <PageSection title="Cage map">

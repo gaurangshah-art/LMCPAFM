@@ -1,9 +1,17 @@
 import { apiClient } from "./client";
 import type {
   FacilityAnimal,
+  FacilityCage,
+  FacilityCareLog,
   FacilityCageMapRoom,
+  FacilityRoom,
   FacilitySummary,
   AnimalTimelineEvent,
+  PiDashboard,
+  RoomDashboard,
+  StrainDashboard,
+  SupplyItem,
+  SupplyTransaction,
 } from "./facilityTypes";
 
 export async function getStaffFacilitySummary(): Promise<FacilitySummary> {
@@ -20,6 +28,78 @@ export async function getStaffFacilityAnimals(params?: {
   status?: string;
 }): Promise<FacilityAnimal[]> {
   const { data } = await apiClient.get<FacilityAnimal[]>("/facility/animals", { params });
+  return data;
+}
+
+export async function getStaffFacilityRooms(): Promise<FacilityRoom[]> {
+  const { data } = await apiClient.get<FacilityRoom[]>("/facility/rooms");
+  return data;
+}
+
+export async function getStaffFacilityCages(): Promise<FacilityCage[]> {
+  const { data } = await apiClient.get<FacilityCage[]>("/facility/cages");
+  return data;
+}
+
+export async function getStaffCareLogs(logType?: string): Promise<FacilityCareLog[]> {
+  const { data } = await apiClient.get<FacilityCareLog[]>("/facility/care-logs", {
+    params: logType ? { log_type: logType } : undefined,
+  });
+  return data;
+}
+
+export async function createStaffCareLog(payload: {
+  log_type: string;
+  room_id?: number | null;
+  cage_id?: number | null;
+  date: string;
+  details: string;
+  performed_by_name?: string;
+}): Promise<FacilityCareLog> {
+  const { data } = await apiClient.post<FacilityCareLog>("/facility/care-logs", payload);
+  return data;
+}
+
+export async function getPiDashboard(protocolId?: number): Promise<PiDashboard> {
+  const { data } = await apiClient.get<PiDashboard>("/facility/dashboard/pi", {
+    params: protocolId ? { protocol_id: protocolId } : undefined,
+  });
+  return data;
+}
+
+export async function getRoomDashboard(staleDays = 7): Promise<RoomDashboard> {
+  const { data } = await apiClient.get<RoomDashboard>("/facility/dashboard/rooms", {
+    params: { stale_days: staleDays },
+  });
+  return data;
+}
+
+export async function getStrainDashboard(): Promise<StrainDashboard> {
+  const { data } = await apiClient.get<StrainDashboard>("/facility/dashboard/strains");
+  return data;
+}
+
+export async function getSupplyItems(): Promise<SupplyItem[]> {
+  const { data } = await apiClient.get<SupplyItem[]>("/facility/supplies/items");
+  return data;
+}
+
+export async function getSupplyTransactions(params?: {
+  item_id?: number;
+  txn_type?: string;
+}): Promise<SupplyTransaction[]> {
+  const { data } = await apiClient.get<SupplyTransaction[]>("/facility/supplies/transactions", { params });
+  return data;
+}
+
+export async function recordSupplyUsage(payload: {
+  item_id: number;
+  quantity: number;
+  date: string;
+  notes?: string;
+  room_id?: number | null;
+}): Promise<SupplyTransaction> {
+  const { data } = await apiClient.post<SupplyTransaction>("/facility/supplies/transactions", payload);
   return data;
 }
 

@@ -55,6 +55,131 @@ export interface AnimalTimelineEvent {
   details?: string | null;
 }
 
+export interface FacilityCareLog {
+  id: number;
+  log_type: string;
+  room_id?: number | null;
+  cage_id?: number | null;
+  room_code?: string | null;
+  cage_label?: string | null;
+  date: string;
+  details: string;
+  performed_by_name: string;
+  created_at: string;
+}
+
+export interface PiDashboardGroup {
+  group_id: number;
+  group_name: string;
+  animal_count: number;
+  caged_count: number;
+}
+
+export interface PiDashboardProtocol {
+  protocol_id: number;
+  protocol_number?: string | null;
+  title: string;
+  principal_investigator?: string | null;
+  status?: string | null;
+  total_animals: number;
+  allocated_count: number;
+  in_experiment_count: number;
+  caged_count: number;
+  uncaged_count: number;
+  groups: PiDashboardGroup[];
+}
+
+export interface PiDashboard {
+  protocols: PiDashboardProtocol[];
+}
+
+export interface RoomDashboardRow {
+  room_id: number;
+  room_code: string;
+  room_name: string;
+  building?: string | null;
+  cage_count: number;
+  occupied_cages: number;
+  total_capacity: number;
+  animal_count: number;
+  quarantine_count: number;
+  available_count: number;
+  allocated_count: number;
+  rehabilitated_count: number;
+  last_care_date?: string | null;
+  care_stale: boolean;
+}
+
+export interface RoomDashboard {
+  stale_days: number;
+  rooms: RoomDashboardRow[];
+}
+
+export interface StrainDashboardRow {
+  strain_id: number;
+  strain_name: string;
+  species_id: number;
+  species_name?: string | null;
+  total_animals: number;
+  available_count: number;
+  quarantine_count: number;
+  allocated_count: number;
+  in_experiment_count: number;
+  rehabilitated_count: number;
+  deceased_count: number;
+}
+
+export interface StrainDashboard {
+  strains: StrainDashboardRow[];
+}
+
+export interface FacilityRoom {
+  id: number;
+  code: string;
+  name: string;
+  building?: string | null;
+  notes?: string | null;
+}
+
+export interface FacilityCage {
+  id: number;
+  label: string;
+  location: string;
+  room_id?: number | null;
+  capacity: number;
+  status: string;
+  room_code?: string | null;
+  room_name?: string | null;
+  animal_count: number;
+}
+
+export interface SupplyItem {
+  id: number;
+  name: string;
+  category: string;
+  unit: string;
+  reorder_level: number;
+  quantity_on_hand: number;
+  active: boolean;
+  notes?: string | null;
+  low_stock: boolean;
+}
+
+export interface SupplyTransaction {
+  id: number;
+  item_id: number;
+  item_name: string;
+  item_category: string;
+  item_unit: string;
+  txn_type: string;
+  quantity: number;
+  date: string;
+  notes?: string | null;
+  room_id?: number | null;
+  room_code?: string | null;
+  created_at: string;
+}
+
 export interface FormCBreedingRow {
   date: string;
   number_born: number;

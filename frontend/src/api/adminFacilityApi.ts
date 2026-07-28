@@ -181,3 +181,84 @@ export async function downloadAdminBulkCageLabels(
   link.click();
   window.URL.revokeObjectURL(url);
 }
+
+export interface AdminSupplyItem {
+  id: number;
+  name: string;
+  category: string;
+  unit: string;
+  reorder_level: number;
+  quantity_on_hand: number;
+  active: boolean;
+  notes?: string | null;
+  low_stock: boolean;
+}
+
+export interface AdminSupplyTransaction {
+  id: number;
+  item_id: number;
+  item_name: string;
+  item_category: string;
+  item_unit: string;
+  txn_type: string;
+  quantity: number;
+  date: string;
+  notes?: string | null;
+  room_id?: number | null;
+  room_code?: string | null;
+  created_at: string;
+}
+
+export async function getAdminSupplyItems(includeInactive = false): Promise<AdminSupplyItem[]> {
+  const { data } = await apiClient.get<AdminSupplyItem[]>("/admin/facility/supplies/items", {
+    params: { include_inactive: includeInactive },
+  });
+  return data;
+}
+
+export async function createAdminSupplyItem(payload: {
+  name: string;
+  category: string;
+  unit?: string;
+  reorder_level?: number;
+  initial_quantity?: number;
+  notes?: string;
+}): Promise<AdminSupplyItem> {
+  const { data } = await apiClient.post<AdminSupplyItem>("/admin/facility/supplies/items", payload);
+  return data;
+}
+
+export async function updateAdminSupplyItem(
+  itemId: number,
+  payload: Partial<{
+    name: string;
+    category: string;
+    unit: string;
+    reorder_level: number;
+    active: boolean;
+    notes: string;
+  }>,
+): Promise<AdminSupplyItem> {
+  const { data } = await apiClient.put<AdminSupplyItem>(`/admin/facility/supplies/items/${itemId}`, payload);
+  return data;
+}
+
+export async function getAdminSupplyTransactions(params?: {
+  item_id?: number;
+  txn_type?: string;
+}): Promise<AdminSupplyTransaction[]> {
+  const { data } = await apiClient.get<AdminSupplyTransaction[]>("/admin/facility/supplies/transactions", { params });
+  return data;
+}
+
+export async function recordAdminSupplyTransaction(payload: {
+  item_id: number;
+  txn_type: "in" | "out" | "adjust";
+  quantity: number;
+  date: string;
+  notes?: string;
+  room_id?: number | null;
+}): Promise<AdminSupplyTransaction> {
+  const { data } = await apiClient.post<AdminSupplyTransaction>("/admin/facility/supplies/transactions", payload);
+  return data;
+}

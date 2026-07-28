@@ -219,7 +219,7 @@ class FacilityCareLogCreate(BaseModel):
     cage_id: int | None = None
     date: date
     details: str
-    performed_by_name: str = Field(..., max_length=200)
+    performed_by_name: str | None = Field(default=None, max_length=200)
 
 
 class FacilityCareLogRead(FacilityCareLogCreate):
@@ -305,3 +305,68 @@ class CageLabelRead(BaseModel):
     group_name: str | None = None
     protocol_number: str | None = None
     animals: list[CageLabelAnimalRead] = Field(default_factory=list)
+
+
+class PiDashboardGroupRead(BaseModel):
+    group_id: int
+    group_name: str
+    animal_count: int
+    caged_count: int
+
+
+class PiDashboardProtocolRead(BaseModel):
+    protocol_id: int
+    protocol_number: str | None = None
+    title: str
+    principal_investigator: str | None = None
+    status: str | None = None
+    total_animals: int
+    allocated_count: int
+    in_experiment_count: int
+    caged_count: int
+    uncaged_count: int
+    groups: list[PiDashboardGroupRead] = Field(default_factory=list)
+
+
+class PiDashboardRead(BaseModel):
+    protocols: list[PiDashboardProtocolRead] = Field(default_factory=list)
+
+
+class RoomDashboardRowRead(BaseModel):
+    room_id: int
+    room_code: str
+    room_name: str
+    building: str | None = None
+    cage_count: int
+    occupied_cages: int
+    total_capacity: int
+    animal_count: int
+    quarantine_count: int
+    available_count: int
+    allocated_count: int
+    rehabilitated_count: int
+    last_care_date: date | None = None
+    care_stale: bool
+
+
+class RoomDashboardRead(BaseModel):
+    stale_days: int
+    rooms: list[RoomDashboardRowRead] = Field(default_factory=list)
+
+
+class StrainDashboardRowRead(BaseModel):
+    strain_id: int
+    strain_name: str
+    species_id: int
+    species_name: str | None = None
+    total_animals: int
+    available_count: int
+    quarantine_count: int
+    allocated_count: int
+    in_experiment_count: int
+    rehabilitated_count: int
+    deceased_count: int
+
+
+class StrainDashboardRead(BaseModel):
+    strains: list[StrainDashboardRowRead] = Field(default_factory=list)

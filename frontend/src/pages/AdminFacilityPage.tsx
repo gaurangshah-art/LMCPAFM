@@ -39,10 +39,14 @@ import { formatDisplayDate } from "../utils/dateFormat";
 import { CageMapView } from "../components/facility/CageMapView";
 import { CageLabelBulkActions } from "../components/facility/CageLabelBulkActions";
 import { AnimalTimelinePanel } from "../components/facility/AnimalTimelinePanel";
+import { FacilityDashboardPanel } from "../components/facility/FacilityDashboardPanel";
+import { SupplyInventoryPanel } from "../components/facility/SupplyInventoryPanel";
+import { CARE_LOG_TYPES } from "../constants/careLogTypes";
 import type { FacilityCageMapRoom } from "../api/facilityTypes";
 
 type TabKey =
   | "overview"
+  | "dashboards"
   | "rooms"
   | "cages"
   | "map"
@@ -50,10 +54,12 @@ type TabKey =
   | "procurement"
   | "breeding"
   | "outcomes"
-  | "care";
+  | "care"
+  | "supplies";
 
 const TABS: Array<{ key: TabKey; label: string }> = [
   { key: "overview", label: "Overview" },
+  { key: "dashboards", label: "Dashboards" },
   { key: "rooms", label: "Rooms" },
   { key: "cages", label: "Cages" },
   { key: "map", label: "Cage Map" },
@@ -62,6 +68,7 @@ const TABS: Array<{ key: TabKey; label: string }> = [
   { key: "breeding", label: "Breeding" },
   { key: "outcomes", label: "Outcomes" },
   { key: "care", label: "Care Logs" },
+  { key: "supplies", label: "Supplies" },
 ];
 
 export function AdminFacilityPage() {
@@ -401,6 +408,12 @@ export function AdminFacilityPage() {
         </PageSection>
       ) : null}
 
+      {activeTab === "dashboards" ? (
+        <PageSection title="Facility Dashboard">
+          <FacilityDashboardPanel />
+        </PageSection>
+      ) : null}
+
       {activeTab === "rooms" ? (
         <>
           <PageSection title="Add Room">
@@ -623,13 +636,13 @@ export function AdminFacilityPage() {
 
       {activeTab === "care" ? (
         <>
-          <PageSection title="Feeding / Watering / Cleaning Log">
+          <PageSection title="Feeding / Watering / Cleaning / Sanitation Log">
             <div className="form-grid">
               <label>Type
                 <select value={careForm.log_type} onChange={(e) => setCareForm({ ...careForm, log_type: e.target.value })}>
-                  <option value="feeding">Feeding</option>
-                  <option value="watering">Watering</option>
-                  <option value="cleaning">Cleaning</option>
+                  {CARE_LOG_TYPES.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </label>
               <label>Room
@@ -659,6 +672,8 @@ export function AdminFacilityPage() {
           </PageSection>
         </>
       ) : null}
+
+      {activeTab === "supplies" ? <SupplyInventoryPanel mode="admin" /> : null}
     </div>
   );
 }
