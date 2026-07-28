@@ -47,8 +47,35 @@ class FormCSuppliedRow(BaseModel):
     allocation_id: int
 
 
+class FormCBreedingRow(BaseModel):
+    date: date
+    number_born: int
+    litter_count: int
+    species_id: int
+    species_name: str
+    strain_id: int
+    strain_name: str
+    breeding_record_id: int
+    remarks: Optional[str] = None
+
+
+class FormCDisposalRow(BaseModel):
+    date: date
+    animal_id: int
+    animal_number: Optional[str] = None
+    method: str
+    reason: str
+    species_id: int
+    species_name: str
+    strain_id: int
+    strain_name: str
+    disposal_id: int
+
+
 class FormCData(BaseModel):
     as_of_date: date
     stock_rows: List[FormCStockRow]
     acquisition_rows: List[FormCAcquisitionRow]
+    breeding_rows: List[FormCBreedingRow] = []
+    disposal_rows: List[FormCDisposalRow] = []
     supplied_rows: List[FormCSuppliedRow]

@@ -21,14 +21,32 @@ BaseRA = Base
 # FACILITY / CAGE / PROCUREMENT TABLES (Base)
 # =========================================================
 
+class FacilityRoom(Base):
+    __tablename__ = "facility_room"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    building: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    cages: Mapped[list["Cage"]] = relationship(back_populates="room")
+    care_logs: Mapped[list["FacilityCareLog"]] = relationship(back_populates="room")
+
+
 class Cage(Base):
     __tablename__ = "cage"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     label: Mapped[str] = mapped_column(String, unique=True)
     location: Mapped[str] = mapped_column(String)
+    room_id: Mapped[int | None] = mapped_column(ForeignKey("facility_room.id"), nullable=True)
+    capacity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
 
     animals: Mapped[list["Animal"]] = relationship(back_populates="cage")
+    room: Mapped["FacilityRoom | None"] = relationship(back_populates="cages")
+    care_logs: Mapped[list["FacilityCareLog"]] = relationship(back_populates="cage")
 
 
 class CageLabel(Base):
@@ -72,9 +90,72 @@ class Procurement(Base):
     strain_id: Mapped[int] = mapped_column(ForeignKey("strain.id"))
     count: Mapped[int] = mapped_column(Integer)
     date: Mapped[Date] = mapped_column(Date)
+    supplier_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    supplier_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    supplier_registration_number: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    acquired_from: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    voucher_or_bill_number: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    received_by_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    remarks: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recorded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     species: Mapped["Species"] = relationship()
     strain: Mapped["Strain"] = relationship()
+    animals: Mapped[list["Animal"]] = relationship(back_populates="procurement")
+
+
+class BreedingRecord(Base):
+    __tablename__ = "breeding_record"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    date: Mapped[Date] = mapped_column(Date, nullable=False)
+    species_id: Mapped[int] = mapped_column(ForeignKey("species.id"), nullable=False)
+    strain_id: Mapped[int] = mapped_column(ForeignKey("strain.id"), nullable=False)
+    sire_animal_id: Mapped[int | None] = mapped_column(ForeignKey("animal.id"), nullable=True)
+    dam_animal_id: Mapped[int | None] = mapped_column(ForeignKey("animal.id"), nullable=True)
+    litter_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    offspring_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    offspring_male_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    offspring_female_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cage_id: Mapped[int | None] = mapped_column(ForeignKey("cage.id"), nullable=True)
+    room_id: Mapped[int | None] = mapped_column(ForeignKey("facility_room.id"), nullable=True)
+    remarks: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recorded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    species: Mapped["Species"] = relationship(foreign_keys=[species_id])
+    strain: Mapped["Strain"] = relationship(foreign_keys=[strain_id])
+    cage: Mapped["Cage | None"] = relationship(foreign_keys=[cage_id])
+    room: Mapped["FacilityRoom | None"] = relationship(foreign_keys=[room_id])
+    animals: Mapped[list["Animal"]] = relationship(
+        back_populates="breeding_record",
+        foreign_keys="Animal.breeding_record_id",
+    )
+
+
+class FacilityCareLog(Base):
+    __tablename__ = "facility_care_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    log_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    room_id: Mapped[int | None] = mapped_column(ForeignKey("facility_room.id"), nullable=True)
+    cage_id: Mapped[int | None] = mapped_column(ForeignKey("cage.id"), nullable=True)
+    date: Mapped[Date] = mapped_column(Date, nullable=False)
+    details: Mapped[str] = mapped_column(Text, nullable=False)
+    performed_by_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    recorded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    room: Mapped["FacilityRoom | None"] = relationship(back_populates="care_logs")
+    cage: Mapped["Cage | None"] = relationship(back_populates="care_logs")
 
 
 # =========================================================
@@ -85,20 +166,35 @@ class Animal(Base):
     __tablename__ = "animal"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    animal_number: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
     species_id: Mapped[int] = mapped_column(ForeignKey("species.id"), nullable=False)
     strain_id: Mapped[int] = mapped_column(ForeignKey("strain.id"), nullable=False)
-    cage_id: Mapped[int] = mapped_column(ForeignKey("cage.id"), nullable=True)
+    cage_id: Mapped[int | None] = mapped_column(ForeignKey("cage.id"), nullable=True)
+    sex: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    date_of_birth: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    source_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    procurement_id: Mapped[int | None] = mapped_column(ForeignKey("procurement.id"), nullable=True)
+    breeding_record_id: Mapped[int | None] = mapped_column(ForeignKey("breeding_record.id"), nullable=True)
+    quarantine_start_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    quarantine_end_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    rehabilitation_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Lifecycle / protocol fields used by CRUD modules
     status: Mapped[str] = mapped_column(String, nullable=True)
-    protocol_id: Mapped[int] = mapped_column(ForeignKey("iaec_project.id"), nullable=True)
+    protocol_id: Mapped[int | None] = mapped_column(ForeignKey("iaec_project.id"), nullable=True)
 
     species: Mapped["Species"] = relationship(back_populates="animals")
     strain: Mapped["Strain"] = relationship(back_populates="animals")
-    cage: Mapped["Cage"] = relationship(back_populates="animals")
+    cage: Mapped["Cage | None"] = relationship(back_populates="animals")
+    procurement: Mapped["Procurement | None"] = relationship(back_populates="animals")
+    breeding_record: Mapped["BreedingRecord | None"] = relationship(
+        back_populates="animals",
+        foreign_keys=[breeding_record_id],
+    )
 
     weights: Mapped[list["AnimalWeight"]] = relationship(back_populates="animal")
     movements: Mapped[list["AnimalMovement"]] = relationship(back_populates="animal")
-    protocol: Mapped["IAECProject"] = relationship(back_populates="animals")
+    protocol: Mapped["IAECProject | None"] = relationship(back_populates="animals")
     experiments: Mapped[list["ExperimentAnimal"]] = relationship(back_populates="animal")
     allocation_items: Mapped[list["AnimalAllocationItem"]] = relationship(
         secondary="allocation_item_animals",
@@ -122,9 +218,13 @@ class AnimalMovement(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     animal_id: Mapped[int] = mapped_column(ForeignKey("animal.id"))
-    from_cage_id: Mapped[int] = mapped_column(ForeignKey("cage.id"))
-    to_cage_id: Mapped[int] = mapped_column(ForeignKey("cage.id"))
+    from_cage_id: Mapped[int | None] = mapped_column(ForeignKey("cage.id"), nullable=True)
+    to_cage_id: Mapped[int | None] = mapped_column(ForeignKey("cage.id"), nullable=True)
+    from_room_id: Mapped[int | None] = mapped_column(ForeignKey("facility_room.id"), nullable=True)
+    to_room_id: Mapped[int | None] = mapped_column(ForeignKey("facility_room.id"), nullable=True)
     date: Mapped[DateTime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    recorded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     animal: Mapped["Animal"] = relationship(back_populates="movements")
 

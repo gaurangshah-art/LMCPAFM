@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getFormCData } from "../api/inventoryApi";
+import { downloadFormCPdf } from "../api/facilityApi";
 import { getApiErrorMessage } from "../api/errors";
 import type { FormCData } from "../api/types";
 import { ErrorAlert } from "../components/common/ErrorAlert";
@@ -49,6 +50,9 @@ export function FormCPage() {
         </p>
         <button type="button" className="btn" onClick={() => void loadFormC()} disabled={isLoading}>
           Refresh register
+        </button>
+        <button type="button" className="btn-secondary" onClick={() => void downloadFormCPdf()} disabled={isLoading}>
+          Download PDF
         </button>
       </section>
 
@@ -119,6 +123,72 @@ export function FormCPage() {
                         <td>{cell(row.supplier_name)}</td>
                         <td>{cell(row.acquired_from ?? row.supplier_address)}</td>
                         <td>{cell(row.voucher_or_bill_number)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PageSection>
+
+          <PageSection title="Breeding births" subtitle="In-house breeding records">
+            {(formC.breeding_rows ?? []).length === 0 ? (
+              <p className="empty-text">No breeding rows recorded.</p>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Species</th>
+                      <th>Strain</th>
+                      <th>Offspring</th>
+                      <th>Litters</th>
+                      <th>Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(formC.breeding_rows ?? []).map((row) => (
+                      <tr key={row.breeding_record_id}>
+                        <td>{formatDisplayDate(row.date)}</td>
+                        <td>{row.species_name}</td>
+                        <td>{row.strain_name}</td>
+                        <td>{row.number_born}</td>
+                        <td>{row.litter_count}</td>
+                        <td>{cell(row.remarks)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PageSection>
+
+          <PageSection title="Disposals / deaths" subtitle="Sacrifice, euthanasia, and natural deaths">
+            {(formC.disposal_rows ?? []).length === 0 ? (
+              <p className="empty-text">No disposal rows recorded.</p>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Animal</th>
+                      <th>Species</th>
+                      <th>Strain</th>
+                      <th>Method</th>
+                      <th>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(formC.disposal_rows ?? []).map((row) => (
+                      <tr key={row.disposal_id}>
+                        <td>{formatDisplayDate(row.date)}</td>
+                        <td>{cell(row.animal_number ?? row.animal_id)}</td>
+                        <td>{row.species_name}</td>
+                        <td>{row.strain_name}</td>
+                        <td>{row.method}</td>
+                        <td>{row.reason}</td>
                       </tr>
                     ))}
                   </tbody>

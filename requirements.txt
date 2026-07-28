@@ -14,3 +14,5 @@ pydantic[email]>=2.0
 pytest==9.1.1
 httpx==0.28.1
 fpdf2>=2.8,<3
+python-barcode[images]>=0.15,<1
+Pillow>=10,<12

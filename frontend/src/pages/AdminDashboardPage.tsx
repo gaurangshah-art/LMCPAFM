@@ -209,6 +209,9 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
           <button type="button" className="btn" onClick={() => navigate("/iaec-dashboard")}>
             IAEC Dashboard
           </button>
+          <button type="button" className="btn" onClick={() => navigate("/admin/facility")}>
+            Animal Facility Control
+          </button>
           <button type="button" className="btn" onClick={() => navigate("/form-c")}>
             Form C Inventory
           </button>

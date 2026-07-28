@@ -42,6 +42,8 @@ import { IaecMeetingDetails } from "../pages/iaec/IaecMeetingDetails";
 import { IaecProjectReview } from "../pages/iaec/IaecProjectReview";
 import { IaecApprovalCertificate } from "../pages/iaec/IaecApprovalCertificate";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
+import { AdminFacilityPage } from "../pages/AdminFacilityPage";
+import { StaffFacilityPage } from "../pages/StaffFacilityPage";
 import { FormCPage } from "../pages/FormCPage";
 import { IAECProjectViewPage } from "../pages/IAECProjectViewPage";
 import { IAECProjectEditPage } from "../pages/IAECProjectEditPage";
@@ -621,6 +623,32 @@ export default function App() {
                 allowedRoles={["admin"]}
               >
                 {currentUser ? <AdminDashboardPage currentUser={currentUser} /> : null}
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/facility"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["staff", "admin"]}
+              >
+                <StaffFacilityPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/facility"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["admin"]}
+              >
+                <AdminFacilityPage />
               </ProtectedRoute>
             }
           />

@@ -532,7 +532,30 @@ export interface FormCData {
   as_of_date: string;
   stock_rows: FormCStockRow[];
   acquisition_rows: FormCAcquisitionRow[];
+  breeding_rows?: FormCBreedingRow[];
+  disposal_rows?: FormCDisposalRow[];
   supplied_rows: FormCSuppliedRow[];
+}
+
+export interface FormCBreedingRow {
+  date: string;
+  number_born: number;
+  litter_count: number;
+  species_name: string;
+  strain_name: string;
+  breeding_record_id: number;
+  remarks?: string | null;
+}
+
+export interface FormCDisposalRow {
+  date: string;
+  animal_id: number;
+  animal_number?: string | null;
+  method: string;
+  reason: string;
+  species_name: string;
+  strain_name: string;
+  disposal_id: number;
 }
 
 // ---------------- FINAL REPORT ----------------

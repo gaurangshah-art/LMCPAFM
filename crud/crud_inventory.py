@@ -3,7 +3,8 @@ from datetime import date
 
 from sqlalchemy.orm import Session, joinedload
 
-from database.lmcpafm_models import Animal, Procurement, Species, Strain
+from database.lmcpafm_disposal import Disposal
+from database.lmcpafm_models import Animal, BreedingRecord, Procurement, Species, Strain
 from database.lmcpafm_requisition_allocation import (
     AnimalAllocation,
     AnimalAllocationItem,
@@ -55,17 +56,64 @@ def get_form_c_data(db: Session, as_of_date: date | None = None) -> dict:
             {
                 "date": row.date,
                 "number_acquired": row.count,
-                "supplier_name": getattr(row, "supplier_name", None),
-                "supplier_address": getattr(row, "supplier_address", None),
-                "acquired_from": getattr(row, "acquired_from", None),
+                "source_type": "procurement",
+                "supplier_name": row.supplier_name,
+                "supplier_address": row.supplier_address,
+                "acquired_from": row.acquired_from,
                 "species_id": row.species_id,
                 "species_name": row.species.name if row.species else "",
                 "strain_id": row.strain_id,
                 "strain_name": row.strain.name if row.strain else "",
                 "sex": None,
                 "age": None,
-                "voucher_or_bill_number": getattr(row, "voucher_or_bill_number", None),
+                "voucher_or_bill_number": row.voucher_or_bill_number,
                 "procurement_id": row.id,
+            }
+        )
+
+    breeding_rows = []
+    breeding_records = (
+        db.query(BreedingRecord)
+        .options(joinedload(BreedingRecord.species), joinedload(BreedingRecord.strain))
+        .order_by(BreedingRecord.date.asc(), BreedingRecord.id.asc())
+        .all()
+    )
+    for row in breeding_records:
+        breeding_rows.append(
+            {
+                "date": row.date,
+                "number_born": row.offspring_count,
+                "litter_count": row.litter_count,
+                "species_id": row.species_id,
+                "species_name": row.species.name if row.species else "",
+                "strain_id": row.strain_id,
+                "strain_name": row.strain.name if row.strain else "",
+                "breeding_record_id": row.id,
+                "remarks": row.remarks,
+            }
+        )
+
+    disposal_rows = []
+    disposals = (
+        db.query(Disposal)
+        .options(joinedload(Disposal.animal).joinedload(Animal.species), joinedload(Disposal.animal).joinedload(Animal.strain))
+        .order_by(Disposal.date.asc(), Disposal.id.asc())
+        .all()
+    )
+    for row in disposals:
+        animal = row.animal
+        disposal_rows.append(
+            {
+                "date": row.date,
+                "animal_id": row.animal_id,
+                "animal_number": animal.animal_number if animal else None,
+                "method": row.method,
+                "reason": row.reason,
+                "species_id": animal.species_id if animal else 0,
+                "species_name": animal.species.name if animal and animal.species else "",
+                "strain_id": animal.strain_id if animal else 0,
+                "strain_name": animal.strain.name if animal and animal.strain else "",
+                "disposal_id": row.id,
             }
         )
 
@@ -109,5 +157,7 @@ def get_form_c_data(db: Session, as_of_date: date | None = None) -> dict:
         "as_of_date": snapshot_date,
         "stock_rows": stock_rows,
         "acquisition_rows": acquisition_rows,
+        "breeding_rows": breeding_rows,
+        "disposal_rows": disposal_rows,
         "supplied_rows": supplied_rows,
     }
