@@ -10,6 +10,7 @@ import { ExperimentForm } from "../components/forms/ExperimentForm";
 import { ExperimentGroupForm } from "../components/forms/ExperimentGroupForm";
 import { RequisitionForm } from "../components/forms/RequisitionForm";
 import { ExperimentGroupTable } from "../components/tables/ExperimentGroupTable";
+import { GroupAssignmentPanel } from "../components/facility/GroupAssignmentPanel";
 import { DataTable } from "../components/tables/DataTable";
 import { formatDisplayDate } from "../utils/dateFormat";
 import { projectStatusLabel } from "../utils/projectStatus";
@@ -190,7 +191,10 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
           </PageSection>
 
           <PageSection title="Existing Groups">
-            <ExperimentGroupTable groups={workspace.groups} />
+            <ExperimentGroupTable
+              groups={workspace.groups}
+              assignments={workspace.group_assignments}
+            />
           </PageSection>
         </>
       ) : null}
@@ -232,6 +236,14 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
 
       {activeTab === "run" ? (
         <>
+          <PageSection title="Group assignment and cage labels" subtitle="Assign allocated animals to experiment groups before logging experiments">
+            <GroupAssignmentPanel
+              assignments={workspace.group_assignments}
+              unassignedAnimals={workspace.unassigned_animals}
+              onUpdated={loadWorkspace}
+            />
+          </PageSection>
+
           <PageSection title="Allocations" subtitle="Experiment logs require an allocation and experiment group">
             <DataTable
               rows={workspace.allocations}

@@ -352,6 +352,7 @@ export interface AnimalAllocationCreate {
   allocated_by: string;
   remarks: string;
   items: AnimalAllocationItemCreate[];
+  experiment_group_id?: number | null;
 }
 
 export interface AnimalAllocation extends AnimalAllocationCreate {
@@ -448,7 +449,31 @@ export interface ProjectWorkspace {
   requisitions: ProjectWorkspaceRequisition[];
   allocations: ProjectWorkspaceAllocation[];
   experiments: ProjectWorkspaceExperiment[];
+  group_assignments: ExperimentGroupAssignmentSummary[];
+  unassigned_animals: ProjectUnassignedAnimal[];
   workflow: ProjectWorkflowStatus;
+}
+
+export interface ExperimentGroupAssignmentSummary {
+  group_id: number;
+  group_name: string;
+  project_id: number;
+  planned_animal_count: number;
+  assigned_count: number;
+  cage_count: number;
+  animals: Array<{
+    id: number;
+    animal_number?: string | null;
+    status?: string | null;
+    cage_id?: number | null;
+  }>;
+}
+
+export interface ProjectUnassignedAnimal {
+  id: number;
+  animal_number?: string | null;
+  status?: string | null;
+  cage_id?: number | null;
 }
 
 // ---------------- REQUISITION (VIEW) ----------------

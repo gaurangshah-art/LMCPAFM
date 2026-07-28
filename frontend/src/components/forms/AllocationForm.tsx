@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { createAllocation, getRequisition } from "../../api/requisitionApi";
+import { getGroupsByProject } from "../../api/iaecApi";
+import type { ExperimentGroup } from "../../api/types";
 import { getFormBDetails } from "../../api/formbApi";
 import {
   getApprovedRequisitionItemOptions,
@@ -30,6 +32,7 @@ const schema = z.object({
   date: z.string().min(1),
   allocated_by: z.string().min(1),
   remarks: z.string().min(1),
+  experiment_group_id: z.coerce.number().int().positive().optional().or(z.literal(0)),
   items: z.array(itemSchema).min(1),
 });
 
@@ -47,6 +50,7 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
       date: "",
       allocated_by: "",
       remarks: "",
+      experiment_group_id: 0,
       items: [{ requisition_item_id: 0, allocated_count: 0, remaining_count: 0 }],
     },
   });
@@ -57,6 +61,8 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
   const [itemError, setItemError] = useState<string | null>(null);
   const [requisitionDate, setRequisitionDate] = useState<string | null>(null);
   const [approvalDate, setApprovalDate] = useState<string | null>(null);
+  const [protocolId, setProtocolId] = useState<number | null>(null);
+  const [groupOptions, setGroupOptions] = useState<ExperimentGroup[]>([]);
   const requisitionLookup = useLookupOptions(getApprovedRequisitionOptions);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
@@ -78,17 +84,23 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
       if (!selectedRequisitionId || selectedRequisitionId <= 0) {
         setRequisitionDate(null);
         setApprovalDate(null);
+        setProtocolId(null);
+        setGroupOptions([]);
         return;
       }
 
       try {
         const requisition = await getRequisition(selectedRequisitionId);
         setRequisitionDate(requisition.date);
+        setProtocolId(requisition.protocol_id);
+        setGroupOptions(await getGroupsByProject(requisition.protocol_id));
         const protocol = await getFormBDetails(requisition.protocol_id);
         setApprovalDate(protocol.approval_date);
       } catch {
         setRequisitionDate(null);
         setApprovalDate(null);
+        setProtocolId(null);
+        setGroupOptions([]);
       }
     }
 
@@ -132,7 +144,11 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
       return;
     }
     try {
-      const created = await createAllocation(values);
+      const { experiment_group_id, ...rest } = values;
+      const created = await createAllocation({
+        ...rest,
+        experiment_group_id: experiment_group_id && experiment_group_id > 0 ? experiment_group_id : undefined,
+      });
       onCreated(created);
       succeed(`Allocation created with id ${created.id}`);
       reset({
@@ -140,6 +156,7 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
         date: "",
         allocated_by: "",
         remarks: "",
+        experiment_group_id: 0,
         items: [{ requisition_item_id: 0, allocated_count: 0, remaining_count: 0 }],
       });
     } catch (error) {
@@ -176,6 +193,23 @@ export function AllocationForm({ onCreated }: AllocationFormProps) {
         Remarks
         <textarea rows={2} {...register("remarks")} />
       </label>
+
+      {groupOptions.length > 0 ? (
+        <label className="full-width">
+          Target experiment group (optional)
+          <select {...register("experiment_group_id")}>
+            <option value={0}>Assign later in project workspace</option>
+            {groupOptions.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name} (planned {group.planned_animal_count})
+              </option>
+            ))}
+          </select>
+          {protocolId ? (
+            <small>Animals issued in this allocation can be tagged to a group immediately.</small>
+          ) : null}
+        </label>
+      ) : null}
 
       <div className="full-width subform-header">
         <h3>Allocation Items</h3>

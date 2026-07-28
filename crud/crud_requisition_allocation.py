@@ -12,6 +12,7 @@ from schemas.schemas_requisition_allocation import (
 )
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
 from crud.experiment_group_planning import assert_requisition_allowed
+from crud.experiment_group_assignment import validate_group_assignment_capacity
 from utils.business_validation import assert_allocation_date_valid, assert_requisition_date_valid
 
 
@@ -123,6 +124,26 @@ def create_allocation(db: Session, alloc: AnimalAllocationCreate):
         allocation_date=alloc.date,
     )
 
+    experiment_group = None
+    if alloc.experiment_group_id is not None:
+        from database.lmcpafm_models import ExperimentGroup
+
+        experiment_group = (
+            db.query(ExperimentGroup)
+            .filter(ExperimentGroup.id == alloc.experiment_group_id)
+            .first()
+        )
+        if experiment_group is None:
+            raise CRUDNotFoundError(f"Experiment group {alloc.experiment_group_id} not found.")
+        if experiment_group.project_id != requisition.protocol_id:
+            raise CRUDValidationError(
+                "Experiment group does not belong to the requisition protocol."
+            )
+
+    total_to_allocate = sum(item.allocated_count for item in alloc.items)
+    if experiment_group is not None and total_to_allocate > 0:
+        validate_group_assignment_capacity(db, experiment_group, total_to_allocate)
+
     db_alloc = AnimalAllocation(
         requisition_id=alloc.requisition_id,
         date=alloc.date,
@@ -210,6 +231,8 @@ def create_allocation(db: Session, alloc: AnimalAllocationCreate):
         for animal in animals_to_allocate:
             animal.status = "allocated"
             animal.protocol_id = protocol.id
+            if experiment_group is not None:
+                animal.experiment_group_id = experiment_group.id
             db.add(animal)
 
         # Remaining count after this allocation

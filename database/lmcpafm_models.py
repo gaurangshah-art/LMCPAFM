@@ -182,6 +182,9 @@ class Animal(Base):
     # Lifecycle / protocol fields used by CRUD modules
     status: Mapped[str] = mapped_column(String, nullable=True)
     protocol_id: Mapped[int | None] = mapped_column(ForeignKey("iaec_project.id"), nullable=True)
+    experiment_group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("experiment_group.id"), nullable=True
+    )
 
     species: Mapped["Species"] = relationship(back_populates="animals")
     strain: Mapped["Strain"] = relationship(back_populates="animals")
@@ -195,6 +198,7 @@ class Animal(Base):
     weights: Mapped[list["AnimalWeight"]] = relationship(back_populates="animal")
     movements: Mapped[list["AnimalMovement"]] = relationship(back_populates="animal")
     protocol: Mapped["IAECProject | None"] = relationship(back_populates="animals")
+    experiment_group: Mapped["ExperimentGroup | None"] = relationship(back_populates="animals")
     experiments: Mapped[list["ExperimentAnimal"]] = relationship(back_populates="animal")
     allocation_items: Mapped[list["AnimalAllocationItem"]] = relationship(
         secondary="allocation_item_animals",
@@ -265,6 +269,7 @@ class ExperimentGroup(Base):
 
     project: Mapped["IAECProject"] = relationship(back_populates="experiment_groups")
     experiments: Mapped[list["AnimalExperiment"]] = relationship(back_populates="group")
+    animals: Mapped[list["Animal"]] = relationship(back_populates="experiment_group")
 
 
 class AnimalExperiment(Base):

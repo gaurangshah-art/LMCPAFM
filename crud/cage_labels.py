@@ -7,14 +7,16 @@ from sqlalchemy.orm import Session, joinedload
 
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError
 from crud.formb_documents import _safe_text
-from database.lmcpafm_models import Animal, Cage, FacilityRoom
+from database.lmcpafm_models import Animal, Cage, ExperimentGroup, FacilityRoom, IAECProject
 
-CAGE_LABEL_CATEGORIES = frozenset({"quarantine", "available", "rehabilitated"})
+CAGE_LABEL_CATEGORIES = frozenset({"quarantine", "available", "rehabilitated", "experiment"})
+EXPERIMENT_STATUSES = frozenset({"allocated", "in_experiment"})
 
 CATEGORY_BANNERS = {
     "quarantine": "QUARANTINE",
     "available": "AVAILABLE FOR EXPERIMENTS",
     "rehabilitated": "REHABILITATED",
+    "experiment": "EXPERIMENT GROUP",
 }
 
 MAX_ANIMALS_ON_LABEL = 8
@@ -32,16 +34,28 @@ def _pdf_bytes(pdf: FPDF) -> bytes:
 def _resolve_cage_category(animals: list[Animal]) -> str:
     if not animals:
         raise CRUDValidationError("Cage has no animals; cannot print a cage label.")
+
+    group_ids = {animal.experiment_group_id for animal in animals}
     statuses = {animal.status for animal in animals}
+
     if len(statuses) > 1:
         raise CRUDValidationError(
             "Cage has mixed animal statuses. Move animals so each cage has one category before printing."
         )
+
+    if len(group_ids) == 1 and None not in group_ids and statuses <= EXPERIMENT_STATUSES:
+        return "experiment"
+
+    if len(group_ids) > 1 or (None in group_ids and any(gid is not None for gid in group_ids)):
+        raise CRUDValidationError(
+            "Cage has mixed experiment group assignments. Assign all animals to the same group first."
+        )
+
     category = next(iter(statuses))
     if category not in CAGE_LABEL_CATEGORIES:
         raise CRUDValidationError(
             f"Cage labels for status '{category}' are not supported yet. "
-            "Supported categories: quarantine, available, rehabilitated."
+            "Supported categories: quarantine, available, rehabilitated, experiment (allocated/in_experiment with group)."
         )
     return category
 
@@ -55,7 +69,12 @@ def _species_strain_summary(animals: list[Animal]) -> tuple[str | None, str | No
     )
 
 
-def _subtitle_for_category(category: str, animals: list[Animal]) -> str | None:
+def _subtitle_for_category(category: str, animals: list[Animal], context: dict | None = None) -> str | None:
+    if category == "experiment" and context:
+        parts = [f"Group: {context.get('group_name') or '-'}"]
+        if context.get("protocol_number"):
+            parts.append(f"Protocol: {context['protocol_number']}")
+        return "  |  ".join(parts)
     if category == "quarantine":
         starts = [animal.quarantine_start_date for animal in animals if animal.quarantine_start_date]
         if starts:
@@ -86,11 +105,26 @@ def _load_cage(db: Session, cage_id: int) -> Cage:
 def _load_cage_animals(db: Session, cage_id: int) -> list[Animal]:
     return (
         db.query(Animal)
-        .options(joinedload(Animal.species), joinedload(Animal.strain))
+        .options(
+            joinedload(Animal.species),
+            joinedload(Animal.strain),
+            joinedload(Animal.experiment_group).joinedload(ExperimentGroup.project),
+        )
         .filter(Animal.cage_id == cage_id)
         .order_by(Animal.animal_number.asc(), Animal.id.asc())
         .all()
     )
+
+
+def _experiment_context(animals: list[Animal]) -> dict:
+    group = animals[0].experiment_group if animals else None
+    project: IAECProject | None = group.project if group else None
+    return {
+        "group_id": group.id if group else None,
+        "group_name": group.name if group else None,
+        "protocol_number": project.protocol_number if project else None,
+        "project_title": project.title if project else None,
+    }
 
 
 def build_cage_label_context(db: Session, cage_id: int) -> dict:
@@ -99,17 +133,24 @@ def build_cage_label_context(db: Session, cage_id: int) -> dict:
     category = _resolve_cage_category(animals)
     species_summary, strain_summary = _species_strain_summary(animals)
     room_code = cage.room.code if cage.room else None
+    experiment_meta = _experiment_context(animals) if category == "experiment" else {}
+    banner = CATEGORY_BANNERS[category]
+    if category == "experiment" and experiment_meta.get("group_name"):
+        banner = f"EXPERIMENT: {experiment_meta['group_name']}"
     return {
         "cage_id": cage.id,
         "cage_label": cage.label,
         "room_code": room_code,
         "location": cage.location,
         "category": category,
-        "banner_text": CATEGORY_BANNERS[category],
+        "banner_text": banner,
         "species_summary": species_summary,
         "strain_summary": strain_summary,
-        "subtitle": _subtitle_for_category(category, animals),
+        "subtitle": _subtitle_for_category(category, animals, experiment_meta),
         "barcode_value": f"CAGE-{cage.id}",
+        "group_id": experiment_meta.get("group_id"),
+        "group_name": experiment_meta.get("group_name"),
+        "protocol_number": experiment_meta.get("protocol_number"),
         "animals": [
             {
                 "id": animal.id,
@@ -155,6 +196,7 @@ def _render_cage_label_page(pdf: FPDF, context: dict) -> None:
         "quarantine": (255, 220, 170),
         "available": (200, 240, 200),
         "rehabilitated": (210, 225, 255),
+        "experiment": (230, 210, 255),
     }
     fill = banner_colors.get(category, (230, 230, 230))
 
@@ -227,6 +269,46 @@ def render_bulk_cage_labels_pdf(
     cage_ids = list_cage_ids_for_category(db, category, room_id=room_id)
     if not cage_ids:
         raise CRUDNotFoundError(f"No cages found for category '{category}'.")
+
+    pdf = FPDF(orientation="L", unit="mm", format=(100, 70))
+    pdf.set_margin(4)
+    for cage_id in cage_ids:
+        context = build_cage_label_context(db, cage_id)
+        _render_cage_label_page(pdf, context)
+    return _pdf_bytes(pdf)
+
+
+def list_cage_ids_for_group(db: Session, group_id: int) -> list[int]:
+    group = db.query(ExperimentGroup).filter(ExperimentGroup.id == group_id).first()
+    if group is None:
+        raise CRUDNotFoundError("Experiment group not found.")
+
+    cage_ids = (
+        db.query(Animal.cage_id)
+        .filter(
+            Animal.experiment_group_id == group_id,
+            Animal.cage_id.isnot(None),
+        )
+        .distinct()
+        .order_by(Animal.cage_id.asc())
+        .all()
+    )
+
+    matching: list[int] = []
+    for (cage_id,) in cage_ids:
+        animals = _load_cage_animals(db, cage_id)
+        if not animals:
+            continue
+        group_ids = {animal.experiment_group_id for animal in animals}
+        if group_ids == {group_id}:
+            matching.append(cage_id)
+    return matching
+
+
+def render_group_cage_labels_pdf(db: Session, group_id: int) -> bytes:
+    cage_ids = list_cage_ids_for_group(db, group_id)
+    if not cage_ids:
+        raise CRUDNotFoundError("No cages found for this experiment group.")
 
     pdf = FPDF(orientation="L", unit="mm", format=(100, 70))
     pdf.set_margin(4)

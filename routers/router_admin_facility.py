@@ -316,6 +316,24 @@ def read_animal_timeline(
         _handle_errors(exc)
 
 
+@router.get("/labels/groups/{group_id}/cages/download")
+def download_group_cage_labels(
+    group_id: int,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    try:
+        pdf_bytes = cage_label_crud.render_group_cage_labels_pdf(db, group_id)
+    except Exception as exc:
+        _handle_errors(exc)
+    filename = f"group_cage_labels_{group_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/labels/cages/download")
 def download_bulk_cage_labels(
     category: str = Query(..., description="quarantine, available, or rehabilitated"),

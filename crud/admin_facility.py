@@ -89,6 +89,8 @@ def _animal_to_read(db: Session, animal: Animal) -> dict:
         "notes": animal.notes,
         "status": animal.status,
         "protocol_id": animal.protocol_id,
+        "experiment_group_id": animal.experiment_group_id,
+        "experiment_group_name": animal.experiment_group.name if animal.experiment_group else None,
         "latest_weight_g": latest_weight.weight_g if latest_weight else None,
     }
 
@@ -208,6 +210,7 @@ def list_animals(
             joinedload(Animal.species),
             joinedload(Animal.strain),
             joinedload(Animal.cage).joinedload(Cage.room),
+            joinedload(Animal.experiment_group),
         )
         .order_by(Animal.animal_number.asc(), Animal.id.asc())
     )
@@ -227,6 +230,7 @@ def get_animal(db: Session, animal_id: int) -> dict:
             joinedload(Animal.species),
             joinedload(Animal.strain),
             joinedload(Animal.cage).joinedload(Cage.room),
+            joinedload(Animal.experiment_group),
         )
         .filter(Animal.id == animal_id)
         .first()

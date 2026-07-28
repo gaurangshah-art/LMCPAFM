@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Up
 from sqlalchemy.orm import Session
 
 from database.database import get_db
-from database.lmcpafm_models import ExperimentGroup, IAECMeeting
+from database.lmcpafm_models import ExperimentGroup as ExperimentGroupModel, IAECMeeting
 from crud import crud_iaec
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
 from crud.formb_internal import (
@@ -28,7 +28,7 @@ from crud.formb_email import (
     send_form_b_meeting_invitation_email,
     validate_form_b_meeting_invitation_ready,
 )
-from crud.experiment_group_planning import get_experiment_planning_status
+from crud.experiment_group_assignment import assign_animals_to_group, get_group_assignment_summary
 from crud.project_signed_certificate import (
     read_signed_certificate_bytes,
     upload_signed_certificate,
@@ -46,6 +46,8 @@ from schemas.schemas_iaec import (
     InvestigatorProjectSummary,
     ExperimentGroupCreate,
     ExperimentGroup,
+    ExperimentGroupAssignAnimals,
+    ExperimentGroupAssignmentSummary,
     ExperimentPlanningStatus,
     ProjectWorkspaceRead,
     AnimalExperimentCreate,
@@ -87,8 +89,8 @@ def _ensure_project_edit(db: Session, user: User, project_id: int) -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
-def _get_group_or_404(db: Session, group_id: int) -> ExperimentGroup:
-    group = db.query(ExperimentGroup).filter(ExperimentGroup.id == group_id).first()
+def _get_group_or_404(db: Session, group_id: int) -> ExperimentGroupModel:
+    group = db.query(ExperimentGroupModel).filter(ExperimentGroupModel.id == group_id).first()
     if group is None:
         raise HTTPException(status_code=404, detail="Experiment group not found.")
     return group
@@ -283,6 +285,37 @@ def create_experiment(
     except CRUDDatabaseError:
         raise HTTPException(status_code=500, detail="Database error")
     except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/group/{group_id}/assignment", response_model=ExperimentGroupAssignmentSummary)
+def read_group_assignment(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    group = _get_group_or_404(db, group_id)
+    _ensure_project_view(db, current_user, group.project_id)
+    try:
+        return get_group_assignment_summary(db, group_id)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.post("/group/{group_id}/assign-animals", response_model=ExperimentGroupAssignmentSummary)
+def assign_group_animals(
+    group_id: int,
+    payload: ExperimentGroupAssignAnimals,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    group = _get_group_or_404(db, group_id)
+    _ensure_project_edit(db, current_user, group.project_id)
+    try:
+        return assign_animals_to_group(db, group_id, payload.animal_ids)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except CRUDValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
 

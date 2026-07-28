@@ -58,6 +58,27 @@ class ExperimentGroup(ExperimentGroupBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ExperimentGroupAssignAnimals(BaseModel):
+    animal_ids: list[int] = Field(min_length=1)
+
+
+class ExperimentGroupAssignmentSummary(BaseModel):
+    group_id: int
+    group_name: str
+    project_id: int
+    planned_animal_count: int
+    assigned_count: int
+    cage_count: int
+    animals: list[dict] = Field(default_factory=list)
+
+
+class ProjectUnassignedAnimal(BaseModel):
+    id: int
+    animal_number: str | None = None
+    status: str | None = None
+    cage_id: int | None = None
+
+
 class ExperimentPlanningStatus(BaseModel):
     project_id: int
     project_status: str | None = None
@@ -87,6 +108,8 @@ class ProjectWorkspaceRead(BaseModel):
     requisitions: list[dict] = []
     allocations: list[dict] = []
     experiments: list[dict] = []
+    group_assignments: list[ExperimentGroupAssignmentSummary] = Field(default_factory=list)
+    unassigned_animals: list[ProjectUnassignedAnimal] = Field(default_factory=list)
     workflow: ProjectWorkflowStatus
     model_config = ConfigDict(from_attributes=True)
 

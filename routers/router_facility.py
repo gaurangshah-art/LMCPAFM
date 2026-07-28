@@ -5,10 +5,12 @@ from sqlalchemy.orm import Session
 from crud import admin_facility as facility_crud
 from crud import cage_labels as cage_label_crud
 from crud.exceptions import CRUDNotFoundError
+from crud.formb_membership import user_can_view_project
 from crud.formc_documents import render_form_c_pdf
 from crud.crud_inventory import get_form_c_data
 from database.database import get_db
-from dependencies.auth import require_any_role
+from database.lmcpafm_models import ExperimentGroup
+from dependencies.auth import require_any_role, user_role_names
 from models.user import User
 from schemas.schemas_admin_facility import (
     AnimalAdminRead,
@@ -26,6 +28,19 @@ from schemas.schemas_admin_facility import (
 from schemas.schemas_inventory import FormCData
 
 router = APIRouter(prefix="/facility", tags=["Facility (Read-only)"])
+
+PRIVILEGED_FACILITY_ROLES = {"staff", "admin", "iaec"}
+
+
+def _ensure_group_label_access(db: Session, user: User, group_id: int) -> None:
+    group = db.query(ExperimentGroup).filter(ExperimentGroup.id == group_id).first()
+    if group is None:
+        raise HTTPException(status_code=404, detail="Experiment group not found.")
+    roles = set(user_role_names(user))
+    if not roles.isdisjoint(PRIVILEGED_FACILITY_ROLES):
+        return
+    if not user_can_view_project(db, user.id, group.project_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 @router.get("/summary", response_model=FacilitySummaryRead)
@@ -93,6 +108,27 @@ def read_animal_timeline(
         return facility_crud.get_animal_timeline(db, animal_id)
     except CRUDNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/labels/groups/{group_id}/cages/download")
+def download_group_cage_labels(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "staff", "admin", "iaec")),
+):
+    _ensure_group_label_access(db, current_user, group_id)
+    try:
+        pdf_bytes = cage_label_crud.render_group_cage_labels_pdf(db, group_id)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    filename = f"group_cage_labels_{group_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/labels/cages/download")

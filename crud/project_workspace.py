@@ -7,6 +7,10 @@ from crud.crud_iaec import get_groups_by_project, get_project
 from crud.crud_requisition_allocation import list_requisitions_by_protocol
 from crud.exceptions import CRUDNotFoundError
 from crud.experiment_group_planning import get_experiment_planning_status
+from crud.experiment_group_assignment import (
+    get_group_assignment_summaries,
+    list_unassigned_project_animals,
+)
 from crud.formb_investigator import list_form_b_investigators
 from crud.formb_membership import user_can_view_project
 from database.lmcpafm_models import FormB
@@ -65,6 +69,8 @@ def get_project_workspace(
         "requisitions": requisitions,
         "allocations": allocations,
         "experiments": experiments,
+        "group_assignments": get_group_assignment_summaries(db, project_id),
+        "unassigned_animals": list_unassigned_project_animals(db, project_id),
         "workflow": {
             "planning_complete": planning["is_complete"],
             "has_requisition": len(requisitions) > 0,

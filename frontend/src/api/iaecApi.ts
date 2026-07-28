@@ -7,6 +7,7 @@ import type {
   ExperimentGroupCreate,
   ExperimentPlanningStatus,
   ProjectWorkspace,
+  ExperimentGroupAssignmentSummary,
   AnimalExperiment,
   AnimalExperimentCreate,
   IAECMeetingRecord,
@@ -111,6 +112,30 @@ export async function getExperimentPlanningStatus(
 export async function getProjectWorkspace(projectId: number): Promise<ProjectWorkspace> {
   const { data } = await apiClient.get<ProjectWorkspace>(`/iaec/project/${projectId}/workspace`);
   return data;
+}
+
+export async function assignGroupAnimals(
+  groupId: number,
+  animalIds: number[],
+): Promise<ExperimentGroupAssignmentSummary> {
+  const { data } = await apiClient.post<ExperimentGroupAssignmentSummary>(
+    `/iaec/group/${groupId}/assign-animals`,
+    { animal_ids: animalIds },
+  );
+  return data;
+}
+
+export async function downloadGroupCageLabels(groupId: number): Promise<void> {
+  const response = await apiClient.get(`/facility/labels/groups/${groupId}/cages/download`, {
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "application/pdf" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `group_cage_labels_${groupId}.pdf`;
+  link.click();
+  window.URL.revokeObjectURL(url);
 }
 
 export async function createIAECExperiment(payload: AnimalExperimentCreate): Promise<AnimalExperiment> {

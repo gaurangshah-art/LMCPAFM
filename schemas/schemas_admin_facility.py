@@ -301,4 +301,7 @@ class CageLabelRead(BaseModel):
     strain_summary: str | None = None
     subtitle: str | None = None
     barcode_value: str
+    group_id: int | None = None
+    group_name: str | None = None
+    protocol_number: str | None = None
     animals: list[CageLabelAnimalRead] = Field(default_factory=list)

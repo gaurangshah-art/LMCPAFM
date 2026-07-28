@@ -119,6 +119,7 @@ def create_experiment(db: Session, exp: ExperimentCreate):
             )
 
         animal.status = "in_experiment"
+        animal.experiment_group_id = exp.experiment_group_id
         db.add(animal)
 
         link = ExperimentAnimal(
