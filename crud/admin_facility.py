@@ -803,6 +803,11 @@ def get_animal_label_data(db: Session, animal_id: int) -> dict:
     }
 
 
+# Rodent ear-tag label size (landscape PDF, millimeters).
+EAR_TAG_WIDTH_MM = 32
+EAR_TAG_HEIGHT_MM = 12
+
+
 def render_animal_label_pdf(db: Session, animal_id: int) -> bytes:
     from io import BytesIO
 
@@ -811,19 +816,15 @@ def render_animal_label_pdf(db: Session, animal_id: int) -> bytes:
     from crud.formb_documents import _safe_text
 
     label = get_animal_label_data(db, animal_id)
-    pdf = FPDF(orientation="L", unit="mm", format=(70, 25))
-    pdf.set_margin(2)
-    pdf.add_page()
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(0, 6, _safe_text(label["animal_number"]), ln=True, align="C")
-    pdf.set_font("Helvetica", "", 8)
-    pdf.cell(
-        0,
-        5,
-        _safe_text(f"{label['species_name'] or ''} / {label['strain_name'] or ''}"),
-        ln=True,
-        align="C",
+    pdf = FPDF(
+        orientation="L",
+        unit="mm",
+        format=(EAR_TAG_WIDTH_MM, EAR_TAG_HEIGHT_MM),
     )
+    pdf.set_margin(1)
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 7)
+    pdf.cell(0, 4, _safe_text(label["animal_number"]), ln=True, align="C")
 
     try:
         from barcode import Code128
@@ -832,10 +833,10 @@ def render_animal_label_pdf(db: Session, animal_id: int) -> bytes:
         buffer = BytesIO()
         Code128(label["barcode_value"], writer=ImageWriter()).write(buffer, options={"write_text": False})
         buffer.seek(0)
-        pdf.image(buffer, x=8, y=12, w=54, h=10)
+        pdf.image(buffer, x=2, y=5, w=28, h=6)
     except Exception:
-        pdf.set_font("Courier", "", 10)
-        pdf.cell(0, 8, _safe_text(label["barcode_value"]), ln=True, align="C")
+        pdf.set_font("Courier", "", 6)
+        pdf.cell(0, 5, _safe_text(label["barcode_value"]), ln=True, align="C")
 
     output = pdf.output()
     if isinstance(output, bytearray):
