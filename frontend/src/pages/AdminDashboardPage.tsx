@@ -6,6 +6,8 @@ import {
   getSystemSummary,
   updateUserRoles,
 } from "../api/adminApi";
+import { getAdminOperationsSummary } from "../api/adminFacilityApi";
+import type { FacilityOperationsSummary } from "../api/facilityTypes";
 import { getApiErrorMessage } from "../api/errors";
 import type { ActivityLog, SystemSummary, User } from "../api/types";
 import { CreateStaffUserForm } from "../components/admin/CreateStaffUserForm";
@@ -29,6 +31,7 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
 
   const [users, setUsers] = useState<User[]>([]);
   const [summary, setSummary] = useState<SystemSummary | null>(null);
+  const [facilityOps, setFacilityOps] = useState<FacilityOperationsSummary | null>(null);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -40,14 +43,16 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
   const loadAll = useCallback(async () => {
     try {
       setLoadError(null);
-      const [summaryData, userData, logData] = await Promise.all([
+      const [summaryData, userData, logData, facilityOpsData] = await Promise.all([
         getSystemSummary(),
         getAllUsers(),
         getSystemActivityLogs(),
+        getAdminOperationsSummary().catch(() => null),
       ]);
       setSummary(summaryData);
       setUsers(userData);
       setLogs(logData);
+      setFacilityOps(facilityOpsData);
     } catch (error) {
       setLoadError(getApiErrorMessage(error));
     } finally {
@@ -133,6 +138,47 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
           </div>
         ) : (
           <p>No summary available.</p>
+        )}
+      </PageSection>
+
+      <PageSection
+        title="Facility Operations"
+        subtitle="Daily care, supplies, and environment control across animal rooms"
+      >
+        {facilityOps ? (
+          <>
+            <div className="summary-grid">
+              <div className="summary-card">
+                <h4>Animals on site</h4>
+                <p>{facilityOps.facility_summary.total_animals}</p>
+              </div>
+              <div className="summary-card">
+                <h4>Rooms</h4>
+                <p>{facilityOps.facility_summary.total_rooms}</p>
+              </div>
+              <div className="summary-card">
+                <h4>Env logs today</h4>
+                <p>
+                  {facilityOps.rooms_logged_today}/{facilityOps.total_rooms}
+                </p>
+              </div>
+              <div className="summary-card">
+                <h4>Low stock</h4>
+                <p>{facilityOps.low_stock_count}</p>
+              </div>
+              <div className="summary-card">
+                <h4>Stale care rooms</h4>
+                <p>{facilityOps.stale_care_room_count}</p>
+              </div>
+            </div>
+            <div className="dashboard-quick-actions">
+              <button type="button" className="btn" onClick={() => navigate("/admin/facility")}>
+                Open Facility Operations Hub
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="muted-text">Facility operations summary unavailable.</p>
         )}
       </PageSection>
 

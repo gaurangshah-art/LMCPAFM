@@ -40,7 +40,10 @@ import { CageMapView } from "../components/facility/CageMapView";
 import { CageLabelBulkActions } from "../components/facility/CageLabelBulkActions";
 import { AnimalTimelinePanel } from "../components/facility/AnimalTimelinePanel";
 import { FacilityDashboardPanel } from "../components/facility/FacilityDashboardPanel";
+import { FacilityOperationsHub } from "../components/facility/FacilityOperationsHub";
 import { SupplyInventoryPanel } from "../components/facility/SupplyInventoryPanel";
+import { EnvironmentLogPanel } from "../components/facility/EnvironmentLogPanel";
+import { createAdminEnvironmentLog, getAdminEnvironmentLogs } from "../api/adminFacilityApi";
 import { CARE_LOG_TYPES } from "../constants/careLogTypes";
 import type { FacilityCageMapRoom } from "../api/facilityTypes";
 
@@ -55,10 +58,11 @@ type TabKey =
   | "breeding"
   | "outcomes"
   | "care"
-  | "supplies";
+  | "supplies"
+  | "environment";
 
 const TABS: Array<{ key: TabKey; label: string }> = [
-  { key: "overview", label: "Overview" },
+  { key: "overview", label: "Operations Hub" },
   { key: "dashboards", label: "Dashboards" },
   { key: "rooms", label: "Rooms" },
   { key: "cages", label: "Cages" },
@@ -69,6 +73,7 @@ const TABS: Array<{ key: TabKey; label: string }> = [
   { key: "outcomes", label: "Outcomes" },
   { key: "care", label: "Care Logs" },
   { key: "supplies", label: "Supplies" },
+  { key: "environment", label: "Environment" },
 ];
 
 export function AdminFacilityPage() {
@@ -393,20 +398,7 @@ export function AdminFacilityPage() {
         ))}
       </nav>
 
-      {activeTab === "overview" && summary ? (
-        <PageSection title="Inventory Snapshot">
-          <div className="summary-grid">
-            <div className="summary-card"><strong>{summary.total_animals}</strong><span>Total animals</span></div>
-            <div className="summary-card"><strong>{summary.available_animals}</strong><span>Available</span></div>
-            <div className="summary-card"><strong>{summary.quarantine_animals}</strong><span>Quarantine</span></div>
-            <div className="summary-card"><strong>{summary.allocated_animals}</strong><span>Allocated / in use</span></div>
-            <div className="summary-card"><strong>{summary.deceased_animals}</strong><span>Deceased</span></div>
-            <div className="summary-card"><strong>{summary.rehabilitated_animals}</strong><span>Rehabilitated</span></div>
-            <div className="summary-card"><strong>{summary.total_rooms}</strong><span>Rooms</span></div>
-            <div className="summary-card"><strong>{summary.total_cages}</strong><span>Cages</span></div>
-          </div>
-        </PageSection>
-      ) : null}
+      {activeTab === "overview" ? <FacilityOperationsHub mode="admin" /> : null}
 
       {activeTab === "dashboards" ? (
         <PageSection title="Facility Dashboard">
@@ -674,6 +666,10 @@ export function AdminFacilityPage() {
       ) : null}
 
       {activeTab === "supplies" ? <SupplyInventoryPanel mode="admin" /> : null}
+
+      {activeTab === "environment" ? (
+        <EnvironmentLogPanel createLog={createAdminEnvironmentLog} fetchLogs={getAdminEnvironmentLogs} />
+      ) : null}
     </div>
   );
 }

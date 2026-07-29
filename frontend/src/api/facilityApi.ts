@@ -12,6 +12,8 @@ import type {
   StrainDashboard,
   SupplyItem,
   SupplyTransaction,
+  FacilityEnvironmentLog,
+  FacilityOperationsSummary,
 } from "./facilityTypes";
 
 export async function getStaffFacilitySummary(): Promise<FacilitySummary> {
@@ -100,6 +102,35 @@ export async function recordSupplyUsage(payload: {
   room_id?: number | null;
 }): Promise<SupplyTransaction> {
   const { data } = await apiClient.post<SupplyTransaction>("/facility/supplies/transactions", payload);
+  return data;
+}
+
+export async function getOperationsSummary(staleDays = 7): Promise<FacilityOperationsSummary> {
+  const { data } = await apiClient.get<FacilityOperationsSummary>("/facility/operations-summary", {
+    params: { stale_days: staleDays },
+  });
+  return data;
+}
+
+export async function getEnvironmentLogs(params?: {
+  room_id?: number;
+  date?: string;
+}): Promise<FacilityEnvironmentLog[]> {
+  const { data } = await apiClient.get<FacilityEnvironmentLog[]>("/facility/environment-logs", { params });
+  return data;
+}
+
+export async function createEnvironmentLog(payload: {
+  room_id: number;
+  date: string;
+  temperature_c?: number | null;
+  humidity_pct?: number | null;
+  hvac_status?: string;
+  light_cycle?: string;
+  notes?: string;
+  performed_by_name?: string;
+}): Promise<FacilityEnvironmentLog> {
+  const { data } = await apiClient.post<FacilityEnvironmentLog>("/facility/environment-logs", payload);
   return data;
 }
 

@@ -2,9 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from datetime import date
+
 from crud import admin_facility as facility_crud
 from crud import cage_labels as cage_label_crud
 from crud import facility_dashboard as dashboard_crud
+from crud import facility_environment as environment_crud
+from crud import facility_operations as operations_crud
 from crud import supply_inventory as supply_crud
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError
 from crud.formb_membership import user_can_view_project
@@ -23,6 +27,9 @@ from schemas.schemas_admin_facility import (
     CageRead,
     FacilityCareLogCreate,
     FacilityCareLogRead,
+    FacilityEnvironmentLogCreate,
+    FacilityEnvironmentLogRead,
+    FacilityOperationsSummaryRead,
     FacilityRoomRead,
     FacilitySummaryRead,
     PiDashboardRead,
@@ -324,6 +331,39 @@ def record_supply_usage(
 ):
     try:
         return supply_crud.record_staff_supply_usage(db, current_user, payload)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/operations-summary", response_model=FacilityOperationsSummaryRead)
+def read_operations_summary(
+    stale_days: int = Query(7, ge=1, le=90),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    return operations_crud.get_operations_summary(db, stale_days=stale_days)
+
+
+@router.get("/environment-logs", response_model=list[FacilityEnvironmentLogRead])
+def list_environment_logs(
+    room_id: int | None = Query(None),
+    log_date: date | None = Query(None, alias="date"),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    return environment_crud.list_environment_logs(db, room_id=room_id, log_date=log_date)
+
+
+@router.post("/environment-logs", response_model=FacilityEnvironmentLogRead)
+def create_environment_log(
+    payload: FacilityEnvironmentLogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    try:
+        return environment_crud.create_environment_log(db, current_user, payload)
     except CRUDNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except CRUDValidationError as exc:

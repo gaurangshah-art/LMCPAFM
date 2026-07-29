@@ -620,6 +620,16 @@ input[type="number"] {
   font-weight: 600;
 }
 
+.operations-alerts {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.operations-hub .nested-tab-nav {
+  margin-top: 0.5rem;
+}
+
 .table-action-group {
   display: flex;
   flex-wrap: wrap;

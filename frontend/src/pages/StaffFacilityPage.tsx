@@ -15,13 +15,15 @@ import { CageMapView } from "../components/facility/CageMapView";
 import { CageLabelBulkActions } from "../components/facility/CageLabelBulkActions";
 import { CareLogPanel } from "../components/facility/CareLogPanel";
 import { FacilityDashboardPanel } from "../components/facility/FacilityDashboardPanel";
+import { FacilityOperationsHub } from "../components/facility/FacilityOperationsHub";
+import { EnvironmentLogPanel } from "../components/facility/EnvironmentLogPanel";
 import { SupplyInventoryPanel } from "../components/facility/SupplyInventoryPanel";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
 import { DataTable } from "../components/tables/DataTable";
 
-type TabKey = "overview" | "dashboards" | "care" | "supplies" | "map" | "animals";
+type TabKey = "overview" | "dashboards" | "care" | "supplies" | "environment" | "map" | "animals";
 
 export function StaffFacilityPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
@@ -110,10 +112,11 @@ export function StaffFacilityPage() {
       <nav className="tab-nav">
         {(
           [
-            ["overview", "Overview"],
+            ["overview", "Operations Hub"],
             ["dashboards", "Dashboards"],
             ["care", "Care Logs"],
             ["supplies", "Supplies"],
+            ["environment", "Environment"],
             ["map", "Cage Map"],
             ["animals", "Animals & Timeline"],
           ] as const
@@ -129,17 +132,7 @@ export function StaffFacilityPage() {
         ))}
       </nav>
 
-      {activeTab === "overview" && summary ? (
-        <PageSection title="Inventory snapshot">
-          <div className="summary-grid">
-            <div className="summary-card"><strong>{summary.available_animals}</strong><span>Available to issue</span></div>
-            <div className="summary-card"><strong>{summary.quarantine_animals}</strong><span>Quarantine</span></div>
-            <div className="summary-card"><strong>{summary.allocated_animals}</strong><span>Allocated / in use</span></div>
-            <div className="summary-card"><strong>{summary.total_rooms}</strong><span>Rooms</span></div>
-            <div className="summary-card"><strong>{summary.total_cages}</strong><span>Cages</span></div>
-          </div>
-        </PageSection>
-      ) : null}
+      {activeTab === "overview" ? <FacilityOperationsHub mode="staff" /> : null}
 
       {activeTab === "dashboards" ? (
         <PageSection title="Facility dashboards">
@@ -150,6 +143,8 @@ export function StaffFacilityPage() {
       {activeTab === "care" ? <CareLogPanel /> : null}
 
       {activeTab === "supplies" ? <SupplyInventoryPanel mode="staff" /> : null}
+
+      {activeTab === "environment" ? <EnvironmentLogPanel /> : null}
 
       {activeTab === "map" ? (
         <PageSection title="Cage map">

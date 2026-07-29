@@ -230,6 +230,25 @@ class FacilityCareLogRead(FacilityCareLogCreate):
     model_config = ConfigDict(from_attributes=True)
 
 
+class FacilityEnvironmentLogCreate(BaseModel):
+    room_id: int
+    date: date
+    temperature_c: float | None = None
+    humidity_pct: float | None = Field(default=None, ge=0, le=100)
+    hvac_status: str = Field(default="normal", max_length=50)
+    light_cycle: str | None = Field(default=None, max_length=100)
+    notes: str | None = None
+    performed_by_name: str | None = Field(default=None, max_length=200)
+
+
+class FacilityEnvironmentLogRead(FacilityEnvironmentLogCreate):
+    id: int
+    room_code: str | None = None
+    room_name: str | None = None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
 class FacilitySummaryRead(BaseModel):
     total_animals: int
     available_animals: int
@@ -370,3 +389,24 @@ class StrainDashboardRowRead(BaseModel):
 
 class StrainDashboardRead(BaseModel):
     strains: list[StrainDashboardRowRead] = Field(default_factory=list)
+
+
+class FacilityOperationsActivityRead(BaseModel):
+    kind: str
+    date: date
+    title: str
+    subtitle: str
+    details: str
+
+
+class FacilityOperationsSummaryRead(BaseModel):
+    as_of_date: date
+    facility_summary: FacilitySummaryRead
+    stale_care_room_count: int
+    stale_care_rooms: list[RoomDashboardRowRead] = Field(default_factory=list)
+    low_stock_count: int
+    low_stock_items: list[dict] = Field(default_factory=list)
+    rooms_logged_today: int
+    rooms_missing_env_today: int
+    total_rooms: int
+    recent_activity: list[FacilityOperationsActivityRead] = Field(default_factory=list)

@@ -32,6 +32,7 @@ class FacilityRoom(Base):
 
     cages: Mapped[list["Cage"]] = relationship(back_populates="room")
     care_logs: Mapped[list["FacilityCareLog"]] = relationship(back_populates="room")
+    environment_logs: Mapped[list["FacilityEnvironmentLog"]] = relationship(back_populates="room")
 
 
 class Cage(Base):
@@ -194,6 +195,28 @@ class SupplyTransaction(Base):
 
     item: Mapped["SupplyItem"] = relationship(back_populates="transactions")
     room: Mapped["FacilityRoom | None"] = relationship()
+
+
+class FacilityEnvironmentLog(Base):
+    __tablename__ = "facility_environment_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("facility_room.id"), nullable=False)
+    date: Mapped[Date] = mapped_column(Date, nullable=False)
+    temperature_c: Mapped[float | None] = mapped_column(nullable=True)
+    humidity_pct: Mapped[float | None] = mapped_column(nullable=True)
+    hvac_status: Mapped[str] = mapped_column(String(50), nullable=False, default="normal")
+    light_cycle: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    performed_by_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    recorded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    room: Mapped["FacilityRoom"] = relationship(back_populates="environment_logs")
 
 
 # =========================================================

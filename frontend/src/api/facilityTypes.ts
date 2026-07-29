@@ -180,6 +180,42 @@ export interface SupplyTransaction {
   created_at: string;
 }
 
+export interface FacilityEnvironmentLog {
+  id: number;
+  room_id: number;
+  room_code?: string | null;
+  room_name?: string | null;
+  date: string;
+  temperature_c?: number | null;
+  humidity_pct?: number | null;
+  hvac_status: string;
+  light_cycle?: string | null;
+  notes?: string | null;
+  performed_by_name: string;
+  created_at: string;
+}
+
+export interface FacilityOperationsActivity {
+  kind: string;
+  date: string;
+  title: string;
+  subtitle: string;
+  details: string;
+}
+
+export interface FacilityOperationsSummary {
+  as_of_date: string;
+  facility_summary: FacilitySummary;
+  stale_care_room_count: number;
+  stale_care_rooms: RoomDashboardRow[];
+  low_stock_count: number;
+  low_stock_items: SupplyItem[];
+  rooms_logged_today: number;
+  rooms_missing_env_today: number;
+  total_rooms: number;
+  recent_activity: FacilityOperationsActivity[];
+}
+
 export interface FormCBreedingRow {
   date: string;
   number_born: number;

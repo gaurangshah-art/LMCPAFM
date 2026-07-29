@@ -262,3 +262,29 @@ export async function recordAdminSupplyTransaction(payload: {
   const { data } = await apiClient.post<AdminSupplyTransaction>("/admin/facility/supplies/transactions", payload);
   return data;
 }
+
+export async function getAdminOperationsSummary(staleDays = 7) {
+  const { data } = await apiClient.get("/admin/facility/operations-summary", {
+    params: { stale_days: staleDays },
+  });
+  return data;
+}
+
+export async function getAdminEnvironmentLogs(params?: { room_id?: number; date?: string }) {
+  const { data } = await apiClient.get("/admin/facility/environment-logs", { params });
+  return data;
+}
+
+export async function createAdminEnvironmentLog(payload: {
+  room_id: number;
+  date: string;
+  temperature_c?: number | null;
+  humidity_pct?: number | null;
+  hvac_status?: string;
+  light_cycle?: string;
+  notes?: string;
+  performed_by_name?: string;
+}) {
+  const { data } = await apiClient.post("/admin/facility/environment-logs", payload);
+  return data;
+}
