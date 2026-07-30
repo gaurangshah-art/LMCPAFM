@@ -11,7 +11,6 @@ import {
   getFacilityAnimals,
   getFacilityCages,
   getFacilityRooms,
-  getFacilitySummary,
   getFacilityCageMap,
   getProcurements,
   moveAnimal,
@@ -20,7 +19,6 @@ import {
   type FacilityAnimal,
   type FacilityCage,
   type FacilityRoom,
-  type FacilitySummary,
   downloadAdminBulkCageLabels,
   downloadAdminCageLabel,
   type CageLabelCategory,
@@ -80,7 +78,6 @@ export function AdminFacilityPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<FacilitySummary | null>(null);
   const [rooms, setRooms] = useState<FacilityRoom[]>([]);
   const [cages, setCages] = useState<FacilityCage[]>([]);
   const [animals, setAnimals] = useState<FacilityAnimal[]>([]);
@@ -143,7 +140,6 @@ export function AdminFacilityPage() {
     try {
       setError(null);
       const [
-        summaryData,
         roomData,
         cageData,
         animalData,
@@ -153,7 +149,6 @@ export function AdminFacilityPage() {
         speciesData,
         mapData,
       ] = await Promise.all([
-        getFacilitySummary(),
         getFacilityRooms(),
         getFacilityCages(),
         getFacilityAnimals(),
@@ -163,7 +158,6 @@ export function AdminFacilityPage() {
         getApprovedSpeciesOptions(),
         getFacilityCageMap(),
       ]);
-      setSummary(summaryData);
       setRooms(roomData);
       setCages(cageData);
       setAnimals(animalData);

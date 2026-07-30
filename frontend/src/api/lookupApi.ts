@@ -44,8 +44,10 @@ export function getApprovedAllocationOptions() {
   return fetchLookup("/lookup/approved-allocations");
 }
 
-export function getApprovedAnimalOptions() {
-  return fetchLookup("/lookup/approved-animals");
+export async function getApprovedAnimalOptions(allocationId?: number) {
+  const query =
+    allocationId && allocationId > 0 ? `?allocation_id=${allocationId}` : "";
+  return fetchLookup(`/lookup/approved-animals${query}`);
 }
 
 export function getApprovedExperimentOptions() {

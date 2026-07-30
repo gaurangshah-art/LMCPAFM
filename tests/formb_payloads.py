@@ -134,7 +134,186 @@ def step2_body(form_b_id: int) -> dict:
         "summary": "Study summary",
         "objectives": "Study objectives",
         "expected_outcomes": "Expected outcomes",
-        "study_plan_annexure_reference": "Annexure I attached",
+        "study_plan_annexure_reference": "Annexure I generated in Step 2b",
+    }
+
+
+def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: int | None = None) -> dict:
+    return {
+        "form_b_id": form_b_id,
+        "design_rationale": "Pilot informs pivotal design.",
+        "phases": [
+            {
+                "phase_code": "pilot",
+                "phase_name": "Pilot phase",
+                "sequence_order": 1,
+                "objective": "Feasibility",
+                "planned_start_date": "2026-08-01",
+                "planned_duration_weeks": 4,
+                "animal_cap": 10,
+                "contingency_note": "",
+                "depends_on_sequence_order": None,
+                "reuse_animals_allowed": False,
+                "groups": [
+                    {
+                        "group_code": "P1",
+                        "group_name": "Pilot control",
+                        "role": "control",
+                        "animal_count": 5,
+                        "species_id": species_id,
+                        "strain_id": strain_id,
+                        "sex": "Both",
+                        "age": "8-10 weeks",
+                        "weight_range": "200-250 g",
+                        "feeding_diet": "Standard pellet diet",
+                        "housing_notes": "",
+                        "treatment_summary": "Vehicle",
+                        "dosing": [],
+                        "endpoints": [
+                            {
+                                "parameter_code": "body_weight",
+                                "parameter_name": "Body weight",
+                                "schedule_type": "recurring",
+                                "schedule_detail": "Weekly",
+                            }
+                        ],
+                        "fates": [
+                            {
+                                "fate_type": "sacrifice",
+                                "count": 5,
+                                "method_or_destination": "CO2",
+                                "timing": "Week 4",
+                            }
+                        ],
+                    },
+                    {
+                        "group_code": "P2",
+                        "group_name": "Pilot treatment",
+                        "role": "treatment",
+                        "animal_count": 5,
+                        "species_id": species_id,
+                        "strain_id": strain_id,
+                        "sex": "Both",
+                        "age": "8-10 weeks",
+                        "weight_range": "200-250 g",
+                        "feeding_diet": "Standard pellet diet",
+                        "housing_notes": "",
+                        "treatment_summary": "Test compound 10 mg/kg",
+                        "dosing": [
+                            {
+                                "agent_name": "Test compound",
+                                "dose": "10 mg/kg",
+                                "route": "IP",
+                                "frequency": "Daily",
+                                "start_day": 1,
+                                "end_day": 28,
+                            }
+                        ],
+                        "endpoints": [
+                            {
+                                "parameter_code": "body_weight",
+                                "parameter_name": "Body weight",
+                                "schedule_type": "recurring",
+                                "schedule_detail": "Weekly",
+                            }
+                        ],
+                        "fates": [
+                            {
+                                "fate_type": "sacrifice",
+                                "count": 5,
+                                "method_or_destination": "CO2",
+                                "timing": "Week 4",
+                            }
+                        ],
+                    },
+                ],
+            },
+            {
+                "phase_code": "pivotal",
+                "phase_name": "Pivotal phase",
+                "sequence_order": 2,
+                "objective": "Confirm efficacy",
+                "planned_start_date": "2026-10-01",
+                "planned_duration_weeks": 8,
+                "animal_cap": 10,
+                "contingency_note": "Proceed only if pilot succeeds",
+                "depends_on_sequence_order": 1,
+                "reuse_animals_allowed": False,
+                "groups": [
+                    {
+                        "group_code": "V1",
+                        "group_name": "Pivotal control",
+                        "role": "control",
+                        "animal_count": 5,
+                        "species_id": species_id,
+                        "strain_id": strain_id,
+                        "sex": "Both",
+                        "age": "8-10 weeks",
+                        "weight_range": "200-250 g",
+                        "feeding_diet": "Standard pellet diet",
+                        "housing_notes": "",
+                        "treatment_summary": "Vehicle",
+                        "dosing": [],
+                        "endpoints": [
+                            {
+                                "parameter_code": "body_weight",
+                                "parameter_name": "Body weight",
+                                "schedule_type": "recurring",
+                                "schedule_detail": "Weekly",
+                            }
+                        ],
+                        "fates": [
+                            {
+                                "fate_type": "sacrifice",
+                                "count": 5,
+                                "method_or_destination": "CO2",
+                                "timing": "Week 8",
+                            }
+                        ],
+                    },
+                    {
+                        "group_code": "V2",
+                        "group_name": "Pivotal treatment",
+                        "role": "treatment",
+                        "animal_count": 5,
+                        "species_id": species_id,
+                        "strain_id": strain_id,
+                        "sex": "Both",
+                        "age": "8-10 weeks",
+                        "weight_range": "200-250 g",
+                        "feeding_diet": "Standard pellet diet",
+                        "housing_notes": "",
+                        "treatment_summary": "Test compound 10 mg/kg",
+                        "dosing": [
+                            {
+                                "agent_name": "Test compound",
+                                "dose": "10 mg/kg",
+                                "route": "IP",
+                                "frequency": "Daily",
+                                "start_day": 1,
+                                "end_day": 56,
+                            }
+                        ],
+                        "endpoints": [
+                            {
+                                "parameter_code": "body_weight",
+                                "parameter_name": "Body weight",
+                                "schedule_type": "recurring",
+                                "schedule_detail": "Weekly",
+                            }
+                        ],
+                        "fates": [
+                            {
+                                "fate_type": "sacrifice",
+                                "count": 5,
+                                "method_or_destination": "CO2",
+                                "timing": "Week 8",
+                            }
+                        ],
+                    },
+                ],
+            },
+        ],
     }
 
 
@@ -150,13 +329,9 @@ def wizard_steps_after_step1(form_b_id: int) -> list[tuple[str, dict]]:
 
 
 def upload_required_form_b_attachments(client, headers, form_b_id: int) -> None:
-    for category, filename in (
-        ("funding_proof", "funding-proof.pdf"),
-        ("study_plan_annexure", "study-plan.pdf"),
-    ):
-        res = client.post(
-            f"/formb/{form_b_id}/attachments?category={category}",
-            files={"file": (filename, b"%PDF-1.4 test content", "application/pdf")},
-            headers=headers,
-        )
-        assert res.status_code == 200, res.text
+    res = client.post(
+        f"/formb/{form_b_id}/attachments?category=funding_proof",
+        files={"file": ("funding-proof.pdf", b"%PDF-1.4 test content", "application/pdf")},
+        headers=headers,
+    )
+    assert res.status_code == 200, res.text

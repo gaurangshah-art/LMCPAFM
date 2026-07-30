@@ -10,6 +10,8 @@ from __future__ import annotations
 import sqlalchemy as sa
 from alembic import op
 
+from migration_helpers import table_exists
+
 revision = "q7r8s9t0u1v2"
 down_revision = "p6q7r8s9t0u1"
 branch_labels = None
@@ -17,6 +19,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    if table_exists("project_signed_certificate"):
+        return
+
     op.create_table(
         "project_signed_certificate",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -35,4 +40,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    if not table_exists("project_signed_certificate"):
+        return
     op.drop_table("project_signed_certificate")

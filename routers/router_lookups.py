@@ -5,7 +5,13 @@ from sqlalchemy import func
 
 from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain, IAECProject, ExperimentGroup, Animal
-from database.lmcpafm_requisition_allocation import AnimalRequisition, AnimalRequisitionItem, AnimalAllocation
+from database.lmcpafm_requisition_allocation import (
+    AnimalRequisition,
+    AnimalRequisitionItem,
+    AnimalAllocation,
+    AnimalAllocationItem,
+    allocation_item_animals,
+)
 from database.lmcpafm_experiments import Experiment
 
 
@@ -238,18 +244,34 @@ def approved_allocations(db: Session = Depends(get_db)):
 
 
 @lookup_router.get("/approved-animals", response_model=list[LookupOption])
-def approved_animals(db: Session = Depends(get_db)):
+def approved_animals(
+    db: Session = Depends(get_db),
+    allocation_id: int | None = Query(None, gt=0),
+):
     approved_ids = _approved_protocol_ids(db)
     if not approved_ids:
         return []
 
-    rows = (
-        db.query(Animal)
-        .filter(Animal.protocol_id.in_(approved_ids))
-        .order_by(Animal.id.asc())
-        .all()
-    )
-    return [LookupOption(id=row.id, name=f"Animal {row.id}") for row in rows]
+    query = db.query(Animal).filter(Animal.protocol_id.in_(approved_ids))
+
+    if allocation_id is not None:
+        query = (
+            query.join(allocation_item_animals, allocation_item_animals.c.animal_id == Animal.id)
+            .join(
+                AnimalAllocationItem,
+                AnimalAllocationItem.id == allocation_item_animals.c.allocation_item_id,
+            )
+            .filter(AnimalAllocationItem.allocation_id == allocation_id)
+        )
+
+    rows = query.order_by(Animal.animal_number.asc(), Animal.id.asc()).all()
+    return [
+        LookupOption(
+            id=row.id,
+            name=row.animal_number or f"Animal {row.id}",
+        )
+        for row in rows
+    ]
 
 
 @lookup_router.get("/approved-experiments", response_model=list[LookupOption])

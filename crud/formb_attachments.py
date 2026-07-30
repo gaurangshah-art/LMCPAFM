@@ -13,6 +13,7 @@ from utils.formb_attachment_storage import (
     delete_attachment_file,
     resolve_attachment_path,
     write_attachment_file,
+    write_system_attachment_file,
 )
 
 
@@ -136,3 +137,43 @@ def delete_form_b_attachment(
 def read_attachment_bytes(attachment: FormBAttachment) -> tuple[bytes, str, str | None]:
     path = resolve_attachment_path(attachment.form_b_id, attachment.stored_filename)
     return path.read_bytes(), attachment.original_filename, attachment.content_type
+
+
+def save_system_form_b_attachment(
+    db: Session,
+    form_b_id: int,
+    category: str,
+    original_filename: str,
+    content: bytes,
+    uploaded_by_user_id: int | None = None,
+) -> dict:
+    normalized_category = _normalize_category(category)
+
+    existing = (
+        db.query(FormBAttachment)
+        .filter(
+            FormBAttachment.form_b_id == form_b_id,
+            FormBAttachment.category == normalized_category,
+        )
+        .first()
+    )
+    if existing is not None:
+        delete_attachment_file(form_b_id, existing.stored_filename)
+        db.delete(existing)
+        db.flush()
+
+    stored_filename, _path = write_system_attachment_file(form_b_id, original_filename, content)
+    attachment = FormBAttachment(
+        form_b_id=form_b_id,
+        category=normalized_category,
+        original_filename=original_filename,
+        stored_filename=stored_filename,
+        content_type="application/pdf",
+        file_size=len(content),
+        uploaded_by_user_id=uploaded_by_user_id,
+        uploaded_at=datetime.now(timezone.utc),
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    return attachment_to_read(attachment)

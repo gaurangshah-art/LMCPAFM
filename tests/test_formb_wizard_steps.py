@@ -7,6 +7,7 @@ from tests.formb_payloads import (
     STEP3_REQUIREMENT,
     step1_body,
     step2_body,
+    study_plan_body,
     upload_required_form_b_attachments,
     wizard_steps_after_step1,
 )
@@ -74,9 +75,26 @@ def _save_steps_2_to_7(client, headers, form_b_id, species_name="Rat", strain_na
         },
     )
 
+    species_id = None
+    strain_id = None
+    with SessionLocal() as db:
+        species = db.query(Species).filter(Species.name == species_name).first()
+        if species:
+            species_id = species.id
+            strain = db.query(Strain).filter(Strain.name == strain_name, Strain.species_id == species.id).first()
+            if strain:
+                strain_id = strain.id
+
     for path, body in steps:
         res = client.post(path, json=body, headers=headers)
         assert res.status_code == 200, res.text
+        if path == "/formb/step-2":
+            plan_res = client.put(
+                f"/formb/{form_b_id}/study-plan",
+                json=study_plan_body(form_b_id, species_id=species_id, strain_id=strain_id),
+                headers=headers,
+            )
+            assert plan_res.status_code == 200, plan_res.text
 
 
 def test_form_b_wizard_steps_review_and_submit(client, monkeypatch):

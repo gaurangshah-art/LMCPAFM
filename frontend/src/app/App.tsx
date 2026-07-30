@@ -31,6 +31,7 @@ import { InvestigatorProfileGate } from "../components/common/InvestigatorProfil
 import { getMyInvestigatorProfile } from "../api/investigatorProfileApi";
 import { FormBStep1 } from "../pages/formB/FormBStep1";
 import { FormBStep2 } from "../pages/formB/FormBStep2";
+import { FormBStep2b } from "../pages/formB/FormBStep2b";
 import { FormBStep3 } from "../pages/formB/FormBStep3";
 import { FormBStep4 } from "../pages/formB/FormBStep4";
 import { FormBStep5 } from "../pages/formB/FormBStep5";
@@ -441,6 +442,19 @@ export default function App() {
                   allowedRoles={["investigator"]}
                 >
                   <FormBStep2 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-2b"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep2b />
                 </ProtectedRoute>
               }
             />

@@ -85,9 +85,6 @@ export function FormBStep2() {
     if (!(await formBHasAttachment(formBId, "funding_proof"))) {
       return "Upload funding proof before continuing.";
     }
-    if (!(await formBHasAttachment(formBId, "study_plan_annexure"))) {
-      return "Upload the study plan annexure before continuing.";
-    }
     return null;
   }
 
@@ -127,7 +124,7 @@ export function FormBStep2() {
         study_plan_annexure_reference: form.annexureReference.trim(),
       });
 
-      navigate("/form-b/step-3");
+      navigate("/form-b/step-2b");
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));
     } finally {
@@ -249,22 +246,12 @@ export function FormBStep2() {
               />
             </label>
             <label className="full-width">
-              Study plan annexure reference (optional note)
+              Study plan note (optional — detailed plan is entered in the next step)
               <input
                 value={form.annexureReference}
                 onChange={(e) => updateField("annexureReference", e.target.value)}
               />
             </label>
-
-            {formBId ? (
-              <FormBAttachmentField
-                formBId={formBId}
-                category="study_plan_annexure"
-                label="Study plan annexure attachment"
-                helpText="Upload the detailed study plan annexure."
-                required
-              />
-            ) : null}
           </div>
 
           <div className="wizard-actions">

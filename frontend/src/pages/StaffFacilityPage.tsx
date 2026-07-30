@@ -3,12 +3,11 @@ import { Link } from "react-router-dom";
 import {
   getStaffCageMap,
   getStaffFacilityAnimals,
-  getStaffFacilitySummary,
   downloadBulkCageLabels,
   downloadCageLabel,
   type CageLabelCategory,
 } from "../api/facilityApi";
-import type { FacilityAnimal, FacilityCageMapRoom, FacilitySummary } from "../api/facilityTypes";
+import type { FacilityAnimal, FacilityCageMapRoom } from "../api/facilityTypes";
 import { getApiErrorMessage } from "../api/errors";
 import { AnimalTimelinePanel } from "../components/facility/AnimalTimelinePanel";
 import { CageMapView } from "../components/facility/CageMapView";
@@ -29,7 +28,6 @@ export function StaffFacilityPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<FacilitySummary | null>(null);
   const [cageMap, setCageMap] = useState<FacilityCageMapRoom[]>([]);
   const [animals, setAnimals] = useState<FacilityAnimal[]>([]);
   const [selectedAnimalId, setSelectedAnimalId] = useState<number | null>(null);
@@ -42,12 +40,10 @@ export function StaffFacilityPage() {
   const loadAll = useCallback(async () => {
     try {
       setError(null);
-      const [summaryData, mapData, animalData] = await Promise.all([
-        getStaffFacilitySummary(),
+      const [mapData, animalData] = await Promise.all([
         getStaffCageMap(),
         getStaffFacilityAnimals(),
       ]);
-      setSummary(summaryData);
       setCageMap(mapData);
       setAnimals(animalData);
     } catch (loadError) {

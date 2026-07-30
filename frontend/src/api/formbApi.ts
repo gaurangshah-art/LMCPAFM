@@ -257,11 +257,111 @@ export interface FormBReviewData {
   submitted: boolean;
   step1?: Record<string, unknown> | null;
   step2?: Record<string, unknown> | null;
+  step2b?: Record<string, unknown> | null;
   step3?: Record<string, unknown> | null;
   step4?: Record<string, unknown> | null;
   step5?: Record<string, unknown> | null;
   step6?: Record<string, unknown> | null;
   step7?: Record<string, unknown> | null;
+}
+
+export interface FormBGroupDosingEntry {
+  agent_name: string;
+  dose: string;
+  route: string;
+  frequency: string;
+  start_day?: number | null;
+  end_day?: number | null;
+  volume?: string | null;
+  notes?: string | null;
+}
+
+export interface FormBGroupEndpointEntry {
+  parameter_code: string;
+  parameter_name: string;
+  schedule_type: string;
+  schedule_detail: string;
+  method?: string | null;
+  notes?: string | null;
+}
+
+export interface FormBGroupFateEntry {
+  fate_type: string;
+  count: number;
+  method_or_destination?: string | null;
+  timing?: string | null;
+}
+
+export interface FormBStudyGroupEntry {
+  group_code: string;
+  group_name: string;
+  role: string;
+  animal_count: number;
+  species_id?: number | null;
+  strain_id?: number | null;
+  sex?: string | null;
+  age?: string | null;
+  weight_range?: string | null;
+  feeding_diet?: string | null;
+  housing_notes?: string | null;
+  treatment_summary?: string | null;
+  dosing: FormBGroupDosingEntry[];
+  endpoints: FormBGroupEndpointEntry[];
+  fates: FormBGroupFateEntry[];
+}
+
+export interface FormBStudyPhaseEntry {
+  phase_code: string;
+  phase_name: string;
+  sequence_order: number;
+  objective?: string | null;
+  planned_start_date?: string | null;
+  planned_duration_weeks?: number | null;
+  animal_cap: number;
+  contingency_note?: string | null;
+  depends_on_sequence_order?: number | null;
+  reuse_animals_allowed: boolean;
+  groups: FormBStudyGroupEntry[];
+}
+
+export interface FormBStudyPlanPayload {
+  form_b_id: number;
+  design_rationale: string;
+  phases: FormBStudyPhaseEntry[];
+}
+
+export interface FormBStudyPlanRead {
+  form_b_id: number;
+  design_rationale: string;
+  phases: FormBStudyPhaseEntry[];
+  total_animals: number;
+  phase_count: number;
+  group_count: number;
+}
+
+export async function getFormBStudyPlan(formBId: number): Promise<FormBStudyPlanRead> {
+  const { data } = await apiClient.get<FormBStudyPlanRead>(`/formb/${formBId}/study-plan`);
+  return data;
+}
+
+export async function saveFormBStudyPlan(payload: FormBStudyPlanPayload): Promise<FormBStudyPlanRead> {
+  const { data } = await apiClient.put<FormBStudyPlanRead>(
+    `/formb/${payload.form_b_id}/study-plan`,
+    payload,
+  );
+  return data;
+}
+
+export async function previewStudyPlanAnnexurePdf(formBId: number): Promise<void> {
+  const response = await apiClient.get(`/formb/${formBId}/study-plan/annexure.pdf`, {
+    responseType: "blob",
+  });
+  const blobUrl = window.URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = `form_b_${formBId}_annexure_i.pdf`;
+  link.click();
+  window.URL.revokeObjectURL(blobUrl);
 }
 
 export async function getFormBStep1Autofill(): Promise<FormBStep1Autofill> {

@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
+
+# Allow migration scripts to import alembic/migration_helpers.py
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool

@@ -63,6 +63,24 @@ def resolve_attachment_path(form_b_id: int, stored_filename: str) -> Path:
     return target_path
 
 
+def write_system_attachment_file(
+    form_b_id: int,
+    original_filename: str,
+    content: bytes,
+) -> tuple[str, Path]:
+    if not content:
+        raise CRUDValidationError("Generated attachment is empty.")
+    if len(content) > MAX_ATTACHMENT_BYTES:
+        raise CRUDValidationError("Generated attachment exceeds the 10 MB size limit.")
+    safe_name = _sanitize_filename(original_filename)
+    stored_filename = f"{uuid.uuid4().hex}_{safe_name}"
+    target_dir = attachment_root() / str(form_b_id)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_path = target_dir / stored_filename
+    target_path.write_bytes(content)
+    return stored_filename, target_path
+
+
 def delete_attachment_file(form_b_id: int, stored_filename: str) -> None:
     target_path = attachment_root() / str(form_b_id) / stored_filename
     if target_path.is_file():

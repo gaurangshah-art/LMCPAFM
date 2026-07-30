@@ -20,7 +20,10 @@ from database.lmcpafm_models import (
     Species,
     Strain,
 )
-from crud.formb_attachments import has_form_b_attachment
+from crud.formb_attachments import has_form_b_attachment, save_system_form_b_attachment
+from crud.formb_documents import render_study_plan_annexure_pdf
+from crud.formb_study_plan import STEP2B_KEY, validate_study_plan_exists
+from models.user import User
 from utils.institution import get_institutional_form_b_defaults
 
 STEP_KEYS = ("step1", "step2", "step3", "step4", "step5", "step6", "step7")
@@ -219,6 +222,7 @@ def get_form_b_review(db: Session, user: User, form_b_id: int) -> dict:
         "submitted": form_b.submitted_at is not None,
         "step1": application_data.get("step1"),
         "step2": application_data.get("step2"),
+        "step2b": application_data.get(STEP2B_KEY),
         "step3": application_data.get("step3"),
         "step4": application_data.get("step4"),
         "step5": application_data.get("step5"),
@@ -244,8 +248,17 @@ def submit_form_b(db: Session, user: User, form_b_id: int) -> FormB:
 
     if not has_form_b_attachment(db, form_b.id, "funding_proof"):
         raise CRUDValidationError("Upload funding proof before submitting Form B.")
-    if not has_form_b_attachment(db, form_b.id, "study_plan_annexure"):
-        raise CRUDValidationError("Upload the study plan annexure before submitting Form B.")
+
+    validate_study_plan_exists(db, form_b.id)
+    annexure_pdf = render_study_plan_annexure_pdf(db, form_b.id)
+    save_system_form_b_attachment(
+        db,
+        form_b.id,
+        "study_plan_annexure",
+        "annexure-i-study-plan.pdf",
+        annexure_pdf,
+        uploaded_by_user_id=user.id,
+    )
 
     step7 = application_data.get("step7") or {}
     if step7.get("hazardous_agents_used") == "Yes":

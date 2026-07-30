@@ -357,6 +357,7 @@ class FormBReviewRead(BaseModel):
     submitted: bool
     step1: Optional[dict] = None
     step2: Optional[dict] = None
+    step2b: Optional[dict] = None
     step3: Optional[dict] = None
     step4: Optional[dict] = None
     step5: Optional[dict] = None

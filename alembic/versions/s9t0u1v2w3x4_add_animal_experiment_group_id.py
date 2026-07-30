@@ -10,6 +10,8 @@ from __future__ import annotations
 import sqlalchemy as sa
 from alembic import op
 
+from migration_helpers import column_exists, fk_exists
+
 revision = "s9t0u1v2w3x4"
 down_revision = "r8s9t0u1v2w3"
 branch_labels = None
@@ -17,6 +19,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    if column_exists("animal", "experiment_group_id"):
+        return
+
     with op.batch_alter_table("animal", schema=None) as batch_op:
         batch_op.add_column(sa.Column("experiment_group_id", sa.Integer(), nullable=True))
         batch_op.create_foreign_key(

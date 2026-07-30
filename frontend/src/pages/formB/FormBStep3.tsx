@@ -508,7 +508,7 @@ export function FormBStep3() {
           ))}
 
           <div className="wizard-actions">
-            <button className="btn-secondary" onClick={() => navigate("/form-b/step-2")}>
+            <button className="btn-secondary" onClick={() => navigate("/form-b/step-2b")}>
               ← Back
             </button>
             <button className="btn" onClick={handleNext} disabled={loading}>

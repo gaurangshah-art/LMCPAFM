@@ -18,6 +18,7 @@ from crud.formb_wizard import (
     start_form_b,
     submit_form_b,
 )
+from crud.formb_study_plan import get_study_plan, save_study_plan
 from database.database import get_db
 from crud.formb_investigator import (
     add_form_b_investigator,
@@ -48,6 +49,7 @@ from schemas.schemas_formb import (
     FormBStep7Save,
     FormBSubmitRequest,
 )
+from schemas.schemas_formb_study_plan import FormBStudyPlanRead, FormBStudyPlanSave
 
 router = APIRouter(prefix="/formb", tags=["Form-B Internal"])
 
@@ -102,6 +104,56 @@ def save_form_b_step2_details(
     current_user: User = Depends(require_investigator),
 ):
     return _save_step_endpoint("step2", payload, db, current_user)
+
+
+@router.get("/{form_b_id}/study-plan", response_model=FormBStudyPlanRead)
+def read_form_b_study_plan(
+    form_b_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    try:
+        return get_study_plan(db, current_user, form_b_id)
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put("/{form_b_id}/study-plan", response_model=FormBStudyPlanRead)
+def save_form_b_study_plan(
+    form_b_id: int,
+    payload: FormBStudyPlanSave,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    if payload.form_b_id != form_b_id:
+        raise HTTPException(status_code=400, detail="Form B ID mismatch.")
+    try:
+        return save_study_plan(db, current_user, payload)
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/{form_b_id}/study-plan/annexure.pdf")
+def download_study_plan_annexure_pdf(
+    form_b_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    from fastapi.responses import Response
+
+    from crud.formb_documents import render_study_plan_annexure_pdf
+    from crud.formb_membership import get_member_form_b
+
+    try:
+        get_member_form_b(db, current_user, form_b_id)
+        pdf_bytes = render_study_plan_annexure_pdf(db, form_b_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="form_b_{form_b_id}_annexure_i.pdf"'},
+        )
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/step-3")

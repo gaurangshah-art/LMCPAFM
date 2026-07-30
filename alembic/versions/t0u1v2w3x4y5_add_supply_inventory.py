@@ -10,6 +10,8 @@ from __future__ import annotations
 import sqlalchemy as sa
 from alembic import op
 
+from migration_helpers import table_exists
+
 revision = "t0u1v2w3x4y5"
 down_revision = "s9t0u1v2w3x4"
 branch_labels = None
@@ -17,6 +19,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    if table_exists("supply_item"):
+        return
+
     op.create_table(
         "supply_item",
         sa.Column("id", sa.Integer(), nullable=False),

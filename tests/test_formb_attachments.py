@@ -4,6 +4,8 @@ from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain
 from tests.formb_payloads import (
     step1_body,
+    step2_body,
+    study_plan_body,
     upload_required_form_b_attachments,
     wizard_steps_after_step1,
 )
@@ -48,14 +50,30 @@ def _complete_wizard_steps(client, headers, form_b_id: int) -> None:
     suffix = uuid4().hex[:4]
     species_name = f"Rat-{suffix}"
     strain_name = f"Wistar-{suffix}"
+    species_id = None
+    strain_id = None
     with SessionLocal() as db:
         species = Species(name=species_name)
         db.add(species)
         db.flush()
-        db.add(Strain(name=strain_name, species_id=species.id))
+        strain = Strain(name=strain_name, species_id=species.id)
+        db.add(strain)
         db.commit()
+        species_id = species.id
+        strain_id = strain.id
+
+    client.post("/formb/step-2", json=step2_body(form_b_id), headers=headers)
+
+    study_plan_res = client.put(
+        f"/formb/{form_b_id}/study-plan",
+        json=study_plan_body(form_b_id, species_id=species_id, strain_id=strain_id),
+        headers=headers,
+    )
+    assert study_plan_res.status_code == 200, study_plan_res.text
 
     for path, body in wizard_steps_after_step1(form_b_id):
+        if path == "/formb/step-2":
+            continue
         if path == "/formb/step-3":
             body = {
                 **body,
@@ -125,10 +143,5 @@ def test_form_b_submit_requires_mandatory_attachments(client, monkeypatch):
     )
     assert upload_res.status_code == 200, upload_res.text
 
-    submit_res = client.post("/formb/submit", json={"form_b_id": form_b_id}, headers=headers)
-    assert submit_res.status_code == 400
-    assert "study plan annexure" in submit_res.json()["detail"].lower()
-
-    upload_required_form_b_attachments(client, headers, form_b_id)
     submit_res = client.post("/formb/submit", json={"form_b_id": form_b_id}, headers=headers)
     assert submit_res.status_code == 200, submit_res.text

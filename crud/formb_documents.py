@@ -7,12 +7,13 @@ from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDNotFoundError
 from crud.formb_internal import get_meeting_form_b_summary
+from crud.formb_study_plan import load_study_plan_for_pdf
 from crud.project_certificate import (
     FINAL_ATTESTATION,
     PROVISIONAL_DISCLAIMER,
     build_project_certificate_data,
 )
-from database.lmcpafm_models import FormB, FormBMeetingDecision, IAECMeeting, IAECProject
+from database.lmcpafm_models import FormB, IAECMeeting, IAECProject
 from utils.institution import get_cpcsea_registration_number, get_establishment_name
 
 
@@ -27,6 +28,20 @@ def _safe_text(value) -> str:
     if value is None:
         return ""
     return str(value).encode("latin-1", errors="replace").decode("latin-1")
+
+
+def _write_multiline(pdf: FPDF, text: str, height: float = 6) -> None:
+    pdf.set_x(pdf.l_margin)
+    pdf.multi_cell(pdf.epw, height, _safe_text(text))
+
+
+def _pdf_output_bytes(pdf: FPDF) -> bytes:
+    output = pdf.output()
+    if isinstance(output, bytearray):
+        return bytes(output)
+    if isinstance(output, str):
+        return output.encode("latin-1")
+    return output
 
 
 def render_form_b_application_pdf(db: Session, project_id: int) -> bytes:
@@ -51,22 +66,133 @@ def render_form_b_application_pdf(db: Session, project_id: int) -> bytes:
     pdf.ln(4)
 
     application_data = form_b.application_data or {}
-    for step_key in ("step1", "step2", "step3", "step4", "step5", "step6", "step7"):
+    for step_key in ("step1", "step2", "step2b", "step3", "step4", "step5", "step6", "step7"):
         step_data = application_data.get(step_key)
         if not step_data:
             continue
         pdf.set_font("Helvetica", "B", 11)
         pdf.cell(0, 8, step_key.upper(), ln=True)
         pdf.set_font("Helvetica", "", 10)
-        pdf.multi_cell(0, 6, _safe_text(json.dumps(step_data, indent=2)))
+        _write_multiline(pdf, json.dumps(step_data, indent=2), 6)
         pdf.ln(2)
 
-    output = pdf.output()
-    if isinstance(output, bytearray):
-        return bytes(output)
-    if isinstance(output, str):
-        return output.encode("latin-1")
-    return output
+    return _pdf_output_bytes(pdf)
+
+
+def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
+    plan = load_study_plan_for_pdf(db, form_b_id)
+    pdf = _SimplePDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, "Annexure I - Experimental Study Plan", ln=True, align="C")
+    pdf.ln(2)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.cell(0, 7, _safe_text(f"Project: {plan['project_title']}"), ln=True)
+    pdf.cell(0, 7, _safe_text(f"Principal Investigator: {plan['principal_investigator']}"), ln=True)
+    if plan.get("proposed_start_date"):
+        pdf.cell(
+            0,
+            7,
+            _safe_text(
+                f"Proposed period: {plan['proposed_start_date']} to {plan.get('proposed_completion_date') or '-'}"
+            ),
+            ln=True,
+        )
+    pdf.cell(0, 7, _safe_text(f"Total animals across phases: {plan['total_animals']}"), ln=True)
+    if plan.get("design_rationale"):
+        pdf.ln(2)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 7, "Design rationale", ln=True)
+        pdf.set_font("Helvetica", "", 10)
+        _write_multiline(pdf, plan["design_rationale"], 6)
+
+    for phase in plan["phases"]:
+        pdf.ln(4)
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.cell(
+            0,
+            8,
+            _safe_text(
+                f"Phase {phase['sequence_order']}: {phase['phase_name']} ({phase['phase_code']})"
+            ),
+            ln=True,
+        )
+        pdf.set_font("Helvetica", "", 10)
+        pdf.cell(0, 6, _safe_text(f"Animal cap: {phase['animal_cap']}"), ln=True)
+        if phase.get("planned_start_date"):
+            pdf.cell(0, 6, _safe_text(f"Planned start: {phase['planned_start_date']}"), ln=True)
+        if phase.get("planned_duration_weeks"):
+            pdf.cell(0, 6, _safe_text(f"Duration (weeks): {phase['planned_duration_weeks']}"), ln=True)
+        if phase.get("objective"):
+            _write_multiline(pdf, f"Objective: {phase['objective']}", 6)
+        if phase.get("contingency_note"):
+            _write_multiline(pdf, f"Contingency: {phase['contingency_note']}", 6)
+
+        for group in phase.get("groups", []):
+            pdf.ln(2)
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(
+                0,
+                6,
+                _safe_text(
+                    f"Group {group['group_code']}: {group['group_name']} "
+                    f"({group['role']}, n={group['animal_count']})"
+                ),
+                ln=True,
+            )
+            pdf.set_font("Helvetica", "", 9)
+            species = group.get("species_name") or "-"
+            strain = group.get("strain_name") or "-"
+            pdf.cell(0, 5, _safe_text(f"Species/Strain: {species} / {strain}"), ln=True)
+            if group.get("sex") or group.get("age") or group.get("weight_range"):
+                pdf.cell(
+                    0,
+                    5,
+                    _safe_text(
+                        f"Sex/Age/Weight: {group.get('sex') or '-'} / "
+                        f"{group.get('age') or '-'} / {group.get('weight_range') or '-'}"
+                    ),
+                    ln=True,
+                )
+            if group.get("feeding_diet"):
+                pdf.cell(0, 5, _safe_text(f"Diet: {group['feeding_diet']}"), ln=True)
+            if group.get("treatment_summary"):
+                _write_multiline(pdf, f"Treatment: {group['treatment_summary']}", 5)
+
+            if group.get("dosing"):
+                pdf.cell(0, 5, _safe_text("Dosing schedule:"), ln=True)
+                for dose in group["dosing"]:
+                    line = (
+                        f"  - {dose['agent_name']} {dose['dose']} "
+                        f"({dose['route']}, {dose['frequency']})"
+                    )
+                    if dose.get("start_day") is not None:
+                        line += f" from day {dose['start_day']}"
+                    _write_multiline(pdf, line, 5)
+
+            if group.get("endpoints"):
+                pdf.cell(0, 5, _safe_text("Parameters / timelines:"), ln=True)
+                for endpoint in group["endpoints"]:
+                    _write_multiline(
+                        pdf,
+                        f"  - {endpoint['parameter_name']} ({endpoint['schedule_type']}): "
+                        f"{endpoint['schedule_detail']}",
+                        5,
+                    )
+
+            if group.get("fates"):
+                pdf.cell(0, 5, _safe_text("Animal disposition:"), ln=True)
+                for fate in group["fates"]:
+                    _write_multiline(
+                        pdf,
+                        f"  - {fate['fate_type']}: {fate['count']} "
+                        f"({fate.get('method_or_destination') or '-'}, "
+                        f"{fate.get('timing') or '-'})",
+                        5,
+                    )
+
+    return _pdf_output_bytes(pdf)
 
 
 def render_meeting_summary_pdf(db: Session, meeting_id: int) -> bytes:
@@ -93,12 +219,7 @@ def render_meeting_summary_pdf(db: Session, meeting_id: int) -> bytes:
         pdf.cell(0, 6, _safe_text(f"Decision: {row.get('decision') or 'Pending'}"), ln=True)
         pdf.ln(2)
 
-    output = pdf.output()
-    if isinstance(output, bytearray):
-        return bytes(output)
-    if isinstance(output, str):
-        return output.encode("latin-1")
-    return output
+    return _pdf_output_bytes(pdf)
 
 
 def render_project_certificate_pdf(db: Session, project_id: int) -> bytes:
@@ -200,9 +321,4 @@ def render_project_certificate_pdf(db: Session, project_id: int) -> bytes:
     pdf.ln(8)
     pdf.cell(0, 8, _safe_text(f"IAEC Chairperson: {certificate.get('chairperson_name', 'IAEC Chairperson')}"), ln=True)
 
-    output = pdf.output()
-    if isinstance(output, bytearray):
-        return bytes(output)
-    if isinstance(output, str):
-        return output.encode("latin-1")
-    return output
+    return _pdf_output_bytes(pdf)

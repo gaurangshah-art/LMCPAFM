@@ -273,6 +273,9 @@ def generate_form_b_protocol_number(db: Session, form_b_id: int) -> tuple[FormB,
         project.approval_date = meeting.date
         if not project.status:
             project.status = "approved"
+        from crud.formb_study_plan import sync_experiment_groups_from_study_plan
+
+        sync_experiment_groups_from_study_plan(db, project.id)
         db.commit()
         db.refresh(form_b)
         db.refresh(project)

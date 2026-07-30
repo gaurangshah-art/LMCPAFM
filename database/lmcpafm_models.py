@@ -327,10 +327,16 @@ class ExperimentGroup(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("iaec_project.id"), nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     planned_animal_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    form_b_study_group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("form_b_study_group.id"), nullable=True
+    )
 
     project: Mapped["IAECProject"] = relationship(back_populates="experiment_groups")
     experiments: Mapped[list["AnimalExperiment"]] = relationship(back_populates="group")
     animals: Mapped[list["Animal"]] = relationship(back_populates="experiment_group")
+    form_b_study_group: Mapped["FormBStudyGroup | None"] = relationship(
+        back_populates="experiment_groups"
+    )
 
 
 class AnimalExperiment(Base):
@@ -432,6 +438,126 @@ class FormB(Base):
     investigators: Mapped[list["FormBInvestigator"]] = relationship(back_populates="form_b")
     meeting_decisions: Mapped[list["FormBMeetingDecision"]] = relationship(back_populates="form_b")
     attachments: Mapped[list["FormBAttachment"]] = relationship(back_populates="form_b")
+    study_phases: Mapped[list["FormBStudyPhase"]] = relationship(
+        back_populates="form_b",
+        cascade="all, delete-orphan",
+        order_by="FormBStudyPhase.sequence_order",
+    )
+
+
+class FormBStudyPhase(Base):
+    __tablename__ = "form_b_study_phase"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    form_b_id: Mapped[int] = mapped_column(ForeignKey("form_b.id"), nullable=False)
+    phase_code: Mapped[str] = mapped_column(String(50), nullable=False, default="main")
+    phase_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    sequence_order: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    objective: Mapped[str | None] = mapped_column(Text, nullable=True)
+    planned_start_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    planned_duration_weeks: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    animal_cap: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    contingency_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    depends_on_phase_id: Mapped[int | None] = mapped_column(
+        ForeignKey("form_b_study_phase.id"), nullable=True
+    )
+    reuse_animals_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    form_b: Mapped["FormB"] = relationship(back_populates="study_phases")
+    depends_on_phase: Mapped["FormBStudyPhase | None"] = relationship(
+        remote_side="FormBStudyPhase.id",
+    )
+    groups: Mapped[list["FormBStudyGroup"]] = relationship(
+        back_populates="phase",
+        cascade="all, delete-orphan",
+        order_by="FormBStudyGroup.id",
+    )
+
+
+class FormBStudyGroup(Base):
+    __tablename__ = "form_b_study_group"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    phase_id: Mapped[int] = mapped_column(ForeignKey("form_b_study_phase.id"), nullable=False)
+    group_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    group_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    role: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    animal_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    species_id: Mapped[int | None] = mapped_column(ForeignKey("species.id"), nullable=True)
+    strain_id: Mapped[int | None] = mapped_column(ForeignKey("strain.id"), nullable=True)
+    sex: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    age: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    weight_range: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    feeding_diet: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    housing_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    treatment_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    phase: Mapped["FormBStudyPhase"] = relationship(back_populates="groups")
+    species: Mapped["Species | None"] = relationship()
+    strain: Mapped["Strain | None"] = relationship()
+    dosing_entries: Mapped[list["FormBGroupDosing"]] = relationship(
+        back_populates="study_group",
+        cascade="all, delete-orphan",
+        order_by="FormBGroupDosing.id",
+    )
+    endpoints: Mapped[list["FormBGroupEndpoint"]] = relationship(
+        back_populates="study_group",
+        cascade="all, delete-orphan",
+        order_by="FormBGroupEndpoint.id",
+    )
+    fates: Mapped[list["FormBGroupFate"]] = relationship(
+        back_populates="study_group",
+        cascade="all, delete-orphan",
+        order_by="FormBGroupFate.id",
+    )
+    experiment_groups: Mapped[list["ExperimentGroup"]] = relationship(
+        back_populates="form_b_study_group"
+    )
+
+
+class FormBGroupDosing(Base):
+    __tablename__ = "form_b_group_dosing"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    study_group_id: Mapped[int] = mapped_column(ForeignKey("form_b_study_group.id"), nullable=False)
+    agent_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    dose: Mapped[str] = mapped_column(String(200), nullable=False)
+    route: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    frequency: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    start_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    end_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    volume: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    study_group: Mapped["FormBStudyGroup"] = relationship(back_populates="dosing_entries")
+
+
+class FormBGroupEndpoint(Base):
+    __tablename__ = "form_b_group_endpoint"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    study_group_id: Mapped[int] = mapped_column(ForeignKey("form_b_study_group.id"), nullable=False)
+    parameter_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    parameter_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    schedule_type: Mapped[str] = mapped_column(String(50), nullable=False, default="single")
+    schedule_detail: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    method: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    study_group: Mapped["FormBStudyGroup"] = relationship(back_populates="endpoints")
+
+
+class FormBGroupFate(Base):
+    __tablename__ = "form_b_group_fate"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    study_group_id: Mapped[int] = mapped_column(ForeignKey("form_b_study_group.id"), nullable=False)
+    fate_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    method_or_destination: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    timing: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    study_group: Mapped["FormBStudyGroup"] = relationship(back_populates="fates")
 
 
 class FormBAttachment(Base):

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -98,9 +98,19 @@ export function ExperimentForm({ onCreated, defaultProtocolId }: ExperimentFormP
   const [allocationDate, setAllocationDate] = useState<string | null>(null);
   const [dateValidationError, setDateValidationError] = useState<string | null>(null);
 
+  const selectedProtocolId = watch("protocol_id");
+  const selectedAllocationId = watch("allocation_id");
+  const watchedDate = watch("date");
+
   const protocolLookup = useLookupOptions(getApprovedProtocolOptions);
   const allocationLookup = useLookupOptions(getApprovedAllocationOptions);
-  const animalLookup = useLookupOptions(getApprovedAnimalOptions);
+  const loadAnimalOptions = useCallback(async () => {
+    if (!selectedAllocationId || selectedAllocationId <= 0) {
+      return [];
+    }
+    return getApprovedAnimalOptions(selectedAllocationId);
+  }, [selectedAllocationId]);
+  const animalLookup = useLookupOptions(loadAnimalOptions);
 
   const {
     isSubmitting,
@@ -110,10 +120,6 @@ export function ExperimentForm({ onCreated, defaultProtocolId }: ExperimentFormP
     fail,
     succeed,
   } = useSubmitState();
-
-  const selectedProtocolId = watch("protocol_id");
-  const selectedAllocationId = watch("allocation_id");
-  const watchedDate = watch("date");
 
   const minExperimentDate = latestIsoDate(
     protocolDetails?.approval_date,

@@ -29,6 +29,7 @@ from crud.formb_email import (
     validate_form_b_meeting_invitation_ready,
 )
 from crud.experiment_group_assignment import assign_animals_to_group, get_group_assignment_summary
+from crud.experiment_group_planning import get_experiment_planning_status
 from crud.project_signed_certificate import (
     read_signed_certificate_bytes,
     upload_signed_certificate,
