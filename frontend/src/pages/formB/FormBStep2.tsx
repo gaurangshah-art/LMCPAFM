@@ -74,6 +74,7 @@ export function FormBStep2() {
     if (dateError) return dateError;
     if (!form.fundingAgency) return "Funding agency is required.";
     if (!form.fundingAddress.trim()) return "Funding agency address is required.";
+    if (!form.fundingProofReference.trim()) return "Funding proof reference is required.";
     if (!form.summary.trim()) return "Project summary is required.";
     if (!form.objectives.trim()) return "Objectives are required.";
     if (!form.expectedOutcomes.trim()) return "Expected outcomes are required.";

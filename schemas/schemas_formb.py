@@ -195,14 +195,14 @@ class FormBStartRead(BaseModel):
 
 class FormBStep1Save(BaseModel):
     form_b_id: int
-    principal_investigator: str = Field(..., max_length=200)
-    designation: str = Field(..., max_length=200)
-    department: str = Field(..., max_length=200)
-    contact_email: str = Field(..., max_length=255)
-    contact_phone: str = Field(..., max_length=50)
-    qualifications: str = Field(..., max_length=255)
-    experience: str = Field("", max_length=5000)
-    research_type: str = Field(..., max_length=100)
+    principal_investigator: str = Field(..., min_length=1, max_length=200)
+    designation: str = Field(..., min_length=1, max_length=200)
+    department: str = Field(..., min_length=1, max_length=200)
+    contact_email: str = Field(..., min_length=1, max_length=255)
+    contact_phone: str = Field(..., min_length=1, max_length=50)
+    qualifications: str = Field(..., min_length=1, max_length=255)
+    experience: str = Field(..., min_length=1, max_length=5000)
+    research_type: str = Field(..., min_length=1, max_length=100)
 
 
 class FormBStep2Save(BaseModel):
@@ -211,9 +211,9 @@ class FormBStep2Save(BaseModel):
     duration_months: int = Field(..., ge=1, le=60)
     proposed_start_date: str = Field(..., max_length=20)
     proposed_completion_date: str = Field(..., max_length=20)
-    funding_agency: str = Field(..., max_length=200)
-    funding_address: str = Field(..., max_length=1000)
-    funding_proof_reference: str = Field("", max_length=500)
+    funding_agency: str = Field(..., min_length=1, max_length=200)
+    funding_address: str = Field(..., min_length=1, max_length=1000)
+    funding_proof_reference: str = Field(..., min_length=1, max_length=500)
     summary: str = Field(..., max_length=5000)
     objectives: str = Field(..., max_length=5000)
     expected_outcomes: str = Field(..., max_length=5000)
@@ -231,24 +231,24 @@ class FormBStep2Save(BaseModel):
 
 
 class FormBYearWiseCountEntry(BaseModel):
-    year: str = Field(..., max_length=20)
-    count: int = Field(..., ge=0)
+    year: str = Field(..., min_length=1, max_length=20)
+    count: int = Field(..., ge=1)
 
 
 class FormBAnimalRequirementEntry(BaseModel):
-    species: str = Field(..., max_length=200)
-    strain: str = Field(..., max_length=200)
-    sex: str = Field(..., max_length=50)
-    age: str = Field(..., max_length=100)
-    weight: str = Field(..., max_length=100)
+    species: str = Field(..., min_length=1, max_length=200)
+    strain: str = Field(..., min_length=1, max_length=200)
+    sex: str = Field(..., min_length=1, max_length=50)
+    age: str = Field(..., min_length=1, max_length=100)
+    weight: str = Field(..., min_length=1, max_length=100)
     number_required: int = Field(..., ge=1)
-    source: str = Field(..., max_length=200)
-    justification: str = Field(..., max_length=5000)
-    year_wise_breakup: list[FormBYearWiseCountEntry] = Field(default_factory=list)
+    source: str = Field(..., min_length=1, max_length=200)
+    justification: str = Field(..., min_length=1, max_length=5000)
+    year_wise_breakup: list[FormBYearWiseCountEntry] = Field(..., min_length=1)
     days_housed: int = Field(..., ge=1)
-    breeder_name: str = Field(..., max_length=500)
-    breeder_address: str = Field(..., max_length=1000)
-    breeder_registration_number: str = Field(..., max_length=200)
+    breeder_name: str = Field(..., min_length=1, max_length=500)
+    breeder_address: str = Field(..., min_length=1, max_length=1000)
+    breeder_registration_number: str = Field(..., min_length=1, max_length=200)
 
     @field_validator("weight")
     @classmethod
@@ -258,22 +258,41 @@ class FormBAnimalRequirementEntry(BaseModel):
         except ValueError as exc:
             raise ValueError(str(exc)) from exc
 
+    @model_validator(mode="after")
+    def validate_year_wise_breakup(self):
+        breakup_total = sum(entry.count for entry in self.year_wise_breakup)
+        if breakup_total != self.number_required:
+            raise ValueError(
+                "Year-wise animal counts must sum to the total number required "
+                f"({self.number_required})."
+            )
+        return self
+
 
 class FormBStep3Save(BaseModel):
     form_b_id: int
-    why_animal_necessary: str = Field(..., max_length=5000)
-    in_vitro_study_details: str = Field(..., max_length=5000)
-    why_species_selected: str = Field(..., max_length=5000)
-    why_number_essential: str = Field(..., max_length=5000)
-    similar_experiments_in_establishment: str = Field(..., max_length=5000)
-    justify_new_experiment: str = Field(..., max_length=5000)
-    similar_experiments_elsewhere: str = Field(..., max_length=5000)
+    why_animal_necessary: str = Field(..., min_length=1, max_length=5000)
+    in_vitro_study_details: str = Field(..., min_length=1, max_length=5000)
+    why_species_selected: str = Field(..., min_length=1, max_length=5000)
+    why_number_essential: str = Field(..., min_length=1, max_length=5000)
+    similar_experiments_in_establishment: str = Field(..., min_length=1, max_length=5000)
+    justify_new_experiment: str = Field("", max_length=5000)
+    similar_experiments_elsewhere: str = Field(..., min_length=1, max_length=5000)
     requirements: list[FormBAnimalRequirementEntry] = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def validate_conditional_justification(self):
+        prior = self.similar_experiments_in_establishment.strip().lower()
+        if prior.startswith("yes") and not self.justify_new_experiment.strip():
+            raise ValueError(
+                "Justify why a new experiment is required when similar work was done in your establishment."
+            )
+        return self
 
 
 class FormBStep4Save(BaseModel):
     form_b_id: int
-    procedure_description: str = Field(..., max_length=5000)
+    procedure_description: str = Field(..., min_length=1, max_length=5000)
     injection_substances: str = Field("", max_length=5000)
     injection_doses: str = Field("", max_length=5000)
     injection_sites: str = Field("", max_length=5000)
@@ -282,31 +301,76 @@ class FormBStep4Save(BaseModel):
     blood_withdrawal_sites: str = Field("", max_length=5000)
     radiation_dosage_schedule: str = Field("", max_length=5000)
     compound_nce_details: str = Field("", max_length=5000)
-    pain_category: str = Field(..., max_length=50)
-    anaesthesia: str = Field(..., max_length=200)
-    analgesia: str = Field(..., max_length=200)
-    prohibit_analgesic_anesthetic: str = Field(..., max_length=10)
+    pain_category: str = Field(..., min_length=1, max_length=50)
+    anaesthesia: str = Field(..., min_length=1, max_length=200)
+    analgesia: str = Field(..., min_length=1, max_length=200)
+    prohibit_analgesic_anesthetic: str = Field(..., min_length=1, max_length=10)
     prohibit_analgesic_justification: str = Field("", max_length=5000)
-    survival_surgery: str = Field(..., max_length=10)
+    survival_surgery: str = Field(..., min_length=1, max_length=10)
     surgical_procedures: str = Field("", max_length=5000)
     surgical_personnel: str = Field("", max_length=5000)
     post_operative_care: str = Field("", max_length=5000)
     repeat_surgery_justification: str = Field("", max_length=5000)
-    euthanasia_method: str = Field(..., max_length=200)
-    alternatives_considered: str = Field(..., max_length=5000)
-    rationale_3rs: str = Field(..., max_length=5000)
+    euthanasia_method: str = Field(..., min_length=1, max_length=200)
+    alternatives_considered: str = Field(..., min_length=1, max_length=5000)
+    rationale_3rs: str = Field(..., min_length=1, max_length=5000)
+
+    @model_validator(mode="after")
+    def validate_conditional_procedure_fields(self):
+        if self.prohibit_analgesic_anesthetic == "Yes" and not self.prohibit_analgesic_justification.strip():
+            raise ValueError(
+                "Justification is required when analgesic or anesthetic use is prohibited."
+            )
+        if self.survival_surgery == "Yes":
+            if not self.surgical_procedures.strip():
+                raise ValueError("Describe surgical procedures when survival surgery is planned.")
+            if not self.surgical_personnel.strip():
+                raise ValueError("List surgical personnel when survival surgery is planned.")
+            if not self.post_operative_care.strip():
+                raise ValueError("Describe post-operative care when survival surgery is planned.")
+        injection_fields = (
+            self.injection_substances,
+            self.injection_doses,
+            self.injection_sites,
+            self.injection_volumes,
+        )
+        if any(field.strip() for field in injection_fields) and not all(
+            field.strip() for field in injection_fields
+        ):
+            raise ValueError(
+                "When injections are used, substances, doses, sites, and volumes are all required."
+            )
+        blood_fields = (self.blood_withdrawal_volumes, self.blood_withdrawal_sites)
+        if any(field.strip() for field in blood_fields) and not all(
+            field.strip() for field in blood_fields
+        ):
+            raise ValueError(
+                "When blood withdrawal is described, both volume and site details are required."
+            )
+        return self
 
 
 class FormBStep5Save(BaseModel):
     form_b_id: int
-    housing_conditions: str = Field(..., max_length=200)
+    housing_conditions: str = Field(..., min_length=1, max_length=200)
     special_requirements: str = Field("", max_length=5000)
-    feeding: str = Field(..., max_length=200)
-    environmental_enrichment: str = Field(..., max_length=200)
-    animal_transportation_methods: str = Field(..., max_length=5000)
-    scope_for_reuse: str = Field(..., max_length=5000)
-    rehabilitation_details: str = Field(..., max_length=5000)
-    carcass_disposal_method: str = Field(..., max_length=5000)
+    feeding: str = Field(..., min_length=1, max_length=200)
+    environmental_enrichment: str = Field(..., min_length=1, max_length=200)
+    animal_transportation_methods: str = Field(..., min_length=1, max_length=5000)
+    scope_for_reuse: str = Field(..., min_length=1, max_length=5000)
+    rehabilitation_details: str = Field(..., min_length=1, max_length=5000)
+    carcass_disposal_method: str = Field(..., min_length=1, max_length=5000)
+
+    @model_validator(mode="after")
+    def validate_special_housing(self):
+        if self.housing_conditions in {
+            "Special cages (IAEC-approved)",
+            "Other",
+        } and not self.special_requirements.strip():
+            raise ValueError(
+                "Describe special housing requirements when special or other housing is selected."
+            )
+        return self
 
 
 class FormBAuthorizedPersonnelEntry(BaseModel):
@@ -328,16 +392,16 @@ class FormBStep6Save(BaseModel):
 
 class FormBStep7Save(BaseModel):
     form_b_id: int
-    hazardous_agents_used: str = Field(..., max_length=10)
+    hazardous_agents_used: str = Field(..., min_length=1, max_length=10)
     hazardous_agent_details: str = Field("", max_length=5000)
     aerb_approval_reference: str = Field("", max_length=500)
     ibsc_approval_reference: str = Field("", max_length=500)
     rcgm_approval_reference: str = Field("", max_length=500)
     other_hazardous_reference: str = Field("", max_length=500)
-    cpcsea_adherence: str = Field(..., max_length=200)
-    iaec_history: str = Field(..., max_length=5000)
-    safety_measures: str = Field(..., max_length=200)
-    endpoint_criteria: str = Field(..., max_length=200)
+    cpcsea_adherence: str = Field(..., min_length=1, max_length=200)
+    iaec_history: str = Field(..., min_length=1, max_length=5000)
+    safety_measures: str = Field(..., min_length=1, max_length=200)
+    endpoint_criteria: str = Field(..., min_length=1, max_length=200)
     declaration_not_duplicative: bool
     declaration_qualified: bool
     declaration_no_alternative: bool
@@ -347,9 +411,30 @@ class FormBStep7Save(BaseModel):
     declaration_form_d_records: bool
     declaration_no_start_before_approval: bool
     declaration_rehabilitation: bool
-    declaration_signature_name: str = Field(..., max_length=200)
-    declaration_date: str = Field(..., max_length=20)
-    declaration_place: str = Field(..., max_length=200)
+    declaration_signature_name: str = Field(..., min_length=1, max_length=200)
+    declaration_date: str = Field(..., min_length=1, max_length=20)
+    declaration_place: str = Field(..., min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def validate_hazardous_and_declarations(self):
+        declaration_fields = (
+            "declaration_not_duplicative",
+            "declaration_qualified",
+            "declaration_no_alternative",
+            "declaration_iaec_approval_for_changes",
+            "declaration_scientific_review",
+            "declaration_hazardous_certificates",
+            "declaration_form_d_records",
+            "declaration_no_start_before_approval",
+            "declaration_rehabilitation",
+        )
+        for field_name in declaration_fields:
+            if not getattr(self, field_name):
+                raise ValueError("All investigator declarations must be accepted.")
+
+        if self.hazardous_agents_used == "Yes" and not self.hazardous_agent_details.strip():
+            raise ValueError("Describe hazardous agents when hazardous agents are used.")
+        return self
 
 
 class FormBReviewRead(BaseModel):

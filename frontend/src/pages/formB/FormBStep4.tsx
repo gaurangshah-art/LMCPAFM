@@ -96,6 +96,22 @@ export function FormBStep4() {
     if (!form.euthanasiaMethod) return "Euthanasia method is required.";
     if (!form.alternativesConsidered.trim()) return "Alternatives considered is required.";
     if (!form.rationale3Rs.trim()) return "3Rs justification is required.";
+
+    const injectionFields = [
+      form.injectionSubstances,
+      form.injectionDoses,
+      form.injectionSites,
+      form.injectionVolumes,
+    ];
+    if (injectionFields.some((value) => value.trim()) && !injectionFields.every((value) => value.trim())) {
+      return "When injections are used, substances, doses, sites, and volumes are all required.";
+    }
+
+    const bloodFields = [form.bloodWithdrawalVolumes, form.bloodWithdrawalSites];
+    if (bloodFields.some((value) => value.trim()) && !bloodFields.every((value) => value.trim())) {
+      return "When blood withdrawal is described, both volume and site details are required.";
+    }
+
     return null;
   }
 

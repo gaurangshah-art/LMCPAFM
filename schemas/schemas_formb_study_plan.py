@@ -11,11 +11,14 @@ FATE_TYPES = frozenset({"sacrifice", "euthanasia", "rehabilitation", "reuse", "o
 SCHEDULE_TYPES = frozenset({"single", "recurring", "window"})
 
 
+TREATMENT_GROUP_ROLES = frozenset({"treatment", "sham"})
+
+
 class FormBGroupDosingEntry(BaseModel):
-    agent_name: str = Field(..., max_length=200)
-    dose: str = Field(..., max_length=200)
-    route: str = Field("", max_length=100)
-    frequency: str = Field("", max_length=100)
+    agent_name: str = Field(..., min_length=1, max_length=200)
+    dose: str = Field(..., min_length=1, max_length=200)
+    route: str = Field(..., min_length=1, max_length=100)
+    frequency: str = Field(..., min_length=1, max_length=100)
     start_day: int | None = Field(None, ge=0)
     end_day: int | None = Field(None, ge=0)
     volume: str | None = Field(None, max_length=100)
@@ -39,30 +42,45 @@ class FormBGroupFateEntry(BaseModel):
 
 
 class FormBStudyGroupEntry(BaseModel):
-    group_code: str = Field(..., max_length=50)
-    group_name: str = Field(..., max_length=200)
+    group_code: str = Field(..., min_length=1, max_length=50)
+    group_name: str = Field(..., min_length=1, max_length=200)
     role: str = Field("other", max_length=50)
     animal_count: int = Field(..., ge=1)
-    species_id: int | None = Field(None, ge=1)
-    strain_id: int | None = Field(None, ge=1)
-    sex: str | None = Field(None, max_length=50)
-    age: str | None = Field(None, max_length=100)
-    weight_range: str | None = Field(None, max_length=100)
-    feeding_diet: str | None = Field(None, max_length=200)
+    species_id: int = Field(..., ge=1)
+    strain_id: int = Field(..., ge=1)
+    sex: str = Field(..., min_length=1, max_length=50)
+    age: str = Field(..., min_length=1, max_length=100)
+    weight_range: str = Field(..., min_length=1, max_length=100)
+    feeding_diet: str = Field(..., min_length=1, max_length=200)
     housing_notes: str | None = Field(None, max_length=5000)
     treatment_summary: str | None = Field(None, max_length=5000)
     dosing: list[FormBGroupDosingEntry] = Field(default_factory=list)
-    endpoints: list[FormBGroupEndpointEntry] = Field(default_factory=list)
-    fates: list[FormBGroupFateEntry] = Field(default_factory=list)
+    endpoints: list[FormBGroupEndpointEntry] = Field(..., min_length=1)
+    fates: list[FormBGroupFateEntry] = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def validate_treatment_group_details(self):
+        if self.role not in GROUP_ROLES:
+            raise ValueError(f"Invalid group role '{self.role}'.")
+        if self.role in TREATMENT_GROUP_ROLES:
+            if not (self.treatment_summary or "").strip():
+                raise ValueError(
+                    f"Group '{self.group_name}' requires a treatment summary."
+                )
+            if not self.dosing:
+                raise ValueError(
+                    f"Group '{self.group_name}' requires at least one dosing entry."
+                )
+        return self
 
 
 class FormBStudyPhaseEntry(BaseModel):
     phase_code: str = Field("main", max_length=50)
-    phase_name: str = Field(..., max_length=200)
+    phase_name: str = Field(..., min_length=1, max_length=200)
     sequence_order: int = Field(..., ge=1)
-    objective: str | None = Field(None, max_length=5000)
-    planned_start_date: date | None = None
-    planned_duration_weeks: int | None = Field(None, ge=1)
+    objective: str = Field(..., min_length=1, max_length=5000)
+    planned_start_date: date
+    planned_duration_weeks: int = Field(..., ge=1)
     animal_cap: int = Field(..., ge=1)
     contingency_note: str | None = Field(None, max_length=5000)
     depends_on_sequence_order: int | None = Field(None, ge=1)
@@ -72,7 +90,7 @@ class FormBStudyPhaseEntry(BaseModel):
 
 class FormBStudyPlanSave(BaseModel):
     form_b_id: int
-    design_rationale: str = Field("", max_length=5000)
+    design_rationale: str = Field(..., min_length=1, max_length=5000)
     phases: list[FormBStudyPhaseEntry] = Field(..., min_length=1)
 
     @model_validator(mode="after")

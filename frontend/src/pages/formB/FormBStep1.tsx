@@ -114,6 +114,7 @@ export function FormBStep1() {
     if (!contactEmail.trim()) return "Contact email is required.";
     if (!contactPhone.trim()) return "Contact phone is required.";
     if (!qualifications.trim()) return "Qualifications are required.";
+    if (!experience.trim()) return "Experience in laboratory animal experimentation is required.";
     return null;
   }
 

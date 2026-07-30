@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from crud.activity_log import list_activity_logs, record_activity
+from crud.admin_users import delete_user as delete_user_record
+from crud.exceptions import CRUDValidationError
 from database.database import get_db
 from database.lmcpafm_models import IAECProject
 from database.lmcpafm_requisition_allocation import AnimalRequisition
 from database.lmcpafm_experiments import Experiment
-from dependencies.auth import require_admin_or_staff
+from dependencies.auth import require_admin, require_admin_or_staff
 from models.user import User
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -106,3 +108,30 @@ def update_user_roles(
         "roles": [r.name for r in user.roles],
         "status": user.status,
     }
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_admin_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    email = user.email
+    try:
+        delete_user_record(db, actor=current_user, user_id=user_id)
+        db.commit()
+    except CRUDValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    record_activity(
+        db,
+        user=current_user,
+        action="user.deleted",
+        details=f"Deleted user {email}",
+    )
+    db.commit()

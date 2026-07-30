@@ -317,7 +317,7 @@ export default function App() {
           />
 
           <Route
-            path="/iaec/projects/:id"
+            path="/iaec-projects/:id"
             element={
               <ProtectedRoute
                 currentUser={currentUser}
@@ -330,7 +330,7 @@ export default function App() {
           />
 
           <Route
-            path="/iaec/projects/:id/edit"
+            path="/iaec-projects/:id/edit"
             element={
               <ProtectedRoute
                 currentUser={currentUser}

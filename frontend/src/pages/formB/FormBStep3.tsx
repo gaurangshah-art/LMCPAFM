@@ -174,7 +174,12 @@ export function FormBStep3() {
     if (!form.similarExperimentsInEstablishment.trim()) {
       return "State whether similar experiments were conducted in your establishment.";
     }
-    if (!form.justifyNewExperiment.trim()) return "Justify the new experiment.";
+    if (
+      form.similarExperimentsInEstablishment.trim().toLowerCase().startsWith("yes") &&
+      !form.justifyNewExperiment.trim()
+    ) {
+      return "Justify why a new experiment is required when similar work was done in your establishment.";
+    }
     if (!form.similarExperimentsElsewhere.trim()) {
       return "Provide references for similar experiments elsewhere.";
     }
@@ -199,6 +204,25 @@ export function FormBStep3() {
       if (!row.breeder_address.trim()) return `${label}: breeder address is required.`;
       if (!row.breeder_registration_number.trim()) {
         return `${label}: breeder registration number is required.`;
+      }
+      if (!row.year_wise_breakup.length) {
+        return `${label}: add at least one year-wise animal count.`;
+      }
+      for (let yearIndex = 0; yearIndex < row.year_wise_breakup.length; yearIndex += 1) {
+        const yearRow = row.year_wise_breakup[yearIndex];
+        if (!yearRow.year.trim()) {
+          return `${label}: year ${yearIndex + 1} is required in the year-wise breakup.`;
+        }
+        if (!yearRow.count || yearRow.count <= 0) {
+          return `${label}: year ${yearIndex + 1} must have a positive animal count.`;
+        }
+      }
+      const breakupTotal = row.year_wise_breakup.reduce(
+        (sum, yearRow) => sum + Number(yearRow.count),
+        0,
+      );
+      if (breakupTotal !== Number(row.number_required)) {
+        return `${label}: year-wise counts (${breakupTotal}) must equal the total number required (${row.number_required}).`;
       }
     }
 

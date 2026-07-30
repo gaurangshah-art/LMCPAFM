@@ -77,7 +77,18 @@ def test_form_b_study_plan_rejects_mismatched_fate_counts(client, monkeypatch):
     form_b_id = client.post("/formb/start", headers=headers).json()["id"]
     client.post("/formb/step-1", json=step1_body(form_b_id, payload), headers=headers)
 
-    invalid = study_plan_body(form_b_id)
+    suffix = uuid4().hex[:4]
+    with SessionLocal() as db:
+        species = Species(name=f"RatSP-{suffix}")
+        db.add(species)
+        db.flush()
+        strain = Strain(name=f"WistarSP-{suffix}", species_id=species.id)
+        db.add(strain)
+        db.commit()
+        species_id = species.id
+        strain_id = strain.id
+
+    invalid = study_plan_body(form_b_id, species_id=species_id, strain_id=strain_id)
     invalid["phases"][0]["groups"][0]["fates"][0]["count"] = 1
 
     save_res = client.put(f"/formb/{form_b_id}/study-plan", json=invalid, headers=headers)

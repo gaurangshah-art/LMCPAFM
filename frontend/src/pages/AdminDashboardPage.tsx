@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  deleteUser,
   getAllUsers,
   getSystemActivityLogs,
   getSystemSummary,
@@ -39,6 +40,8 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [roleSaveError, setRoleSaveError] = useState<string | null>(null);
   const [isSavingRoles, setIsSavingRoles] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     try {
@@ -87,6 +90,29 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
       setRoleSaveError(getApiErrorMessage(error));
     } finally {
       setIsSavingRoles(false);
+    }
+  }
+
+  async function handleDeleteUser(user: User) {
+    const confirmed = window.confirm(
+      `Delete ${user.name} (${user.email})? This cannot be undone.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingUserId(user.id);
+    setDeleteError(null);
+    try {
+      await deleteUser(user.id);
+      setUsers((prev) => prev.filter((row) => row.id !== user.id));
+      if (editingUser?.id === user.id) {
+        setEditingUser(null);
+      }
+    } catch (error) {
+      setDeleteError(getApiErrorMessage(error));
+    } finally {
+      setDeletingUserId(null);
     }
   }
 
@@ -189,7 +215,7 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
         <CreateStaffUserForm onCreated={handleUserCreated} />
       </PageSection>
 
-      <PageSection title="User Directory" subtitle="Manage roles for institutional accounts">
+      <PageSection title="User Directory" subtitle="Manage roles and remove institutional accounts">
         <div className="user-directory-header">
           <label>
             Filter by role
@@ -206,6 +232,8 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
           </button>
         </div>
 
+        {deleteError ? <ErrorAlert message={deleteError} /> : null}
+
         <DataTable
           rows={filteredUsers}
           emptyText="No users match this filter."
@@ -217,21 +245,42 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
             { header: "Status", cell: (row) => (row.status ? "Active" : "Inactive") },
             {
               header: "Actions",
-              cell: (row) =>
-                userHasInvestigatorRole(row.roles) ? (
-                  <span className="muted-text">Self-registered</span>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small"
-                    onClick={() => {
-                      setRoleSaveError(null);
-                      setEditingUser(row);
-                    }}
-                  >
-                    Edit Roles
-                  </button>
-                ),
+              cell: (row) => {
+                if (row.id === currentUser.id) {
+                  return <span className="muted-text">Current account</span>;
+                }
+
+                const isInvestigatorAccount = userHasInvestigatorRole(row.roles);
+                const isDeleting = deletingUserId === row.id;
+
+                return (
+                  <div className="table-action-group">
+                    {isInvestigatorAccount ? (
+                      <span className="muted-text">Self-registered</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-secondary btn-small"
+                        onClick={() => {
+                          setRoleSaveError(null);
+                          setEditingUser(row);
+                        }}
+                        disabled={isDeleting}
+                      >
+                        Edit Roles
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn-danger btn-small"
+                      onClick={() => void handleDeleteUser(row)}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                );
+              },
             },
           ]}
         />

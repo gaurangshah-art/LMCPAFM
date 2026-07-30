@@ -207,9 +207,17 @@ export function FormBStep2b() {
   }
 
   function validateLocally(): string | null {
+    if (!designRationale.trim()) return "Design rationale is required.";
     if (!phases.length) return "Add at least one study phase.";
     for (const phase of phases) {
       if (!phase.phase_name.trim()) return "Every phase needs a name.";
+      if (!phase.objective?.trim()) return `Phase "${phase.phase_name}" needs an objective.`;
+      if (!phase.planned_start_date) {
+        return `Phase "${phase.phase_name}" needs a planned start date.`;
+      }
+      if (!phase.planned_duration_weeks || phase.planned_duration_weeks <= 0) {
+        return `Phase "${phase.phase_name}" needs a planned duration in weeks.`;
+      }
       if (phase.animal_cap <= 0) return `Phase "${phase.phase_name}" needs a positive animal cap.`;
       if (!phase.groups.length) return `Phase "${phase.phase_name}" needs at least one group.`;
       const groupTotal = phase.groups.reduce((sum, group) => sum + group.animal_count, 0);
@@ -219,6 +227,33 @@ export function FormBStep2b() {
       for (const group of phase.groups) {
         if (!group.group_code.trim() || !group.group_name.trim()) {
           return "Every group needs a code and name.";
+        }
+        if (!group.species_id || !group.strain_id) {
+          return `Group "${group.group_name}": species and strain are required.`;
+        }
+        if (!group.sex?.trim()) return `Group "${group.group_name}": sex is required.`;
+        if (!group.age?.trim()) return `Group "${group.group_name}": age is required.`;
+        if (!group.weight_range?.trim()) {
+          return `Group "${group.group_name}": weight range is required.`;
+        }
+        if (!group.feeding_diet?.trim()) {
+          return `Group "${group.group_name}": feeding diet is required.`;
+        }
+        if (!group.endpoints.length) {
+          return `Group "${group.group_name}": add at least one endpoint.`;
+        }
+        if (group.role === "treatment" || group.role === "sham") {
+          if (!group.treatment_summary?.trim()) {
+            return `Group "${group.group_name}": treatment summary is required.`;
+          }
+          if (!group.dosing.length) {
+            return `Group "${group.group_name}": add at least one dosing entry.`;
+          }
+        }
+        for (const dose of group.dosing) {
+          if (!dose.agent_name.trim() || !dose.dose.trim() || !dose.route.trim() || !dose.frequency.trim()) {
+            return `Group "${group.group_name}": complete all dosing fields.`;
+          }
         }
         const fateTotal = group.fates.reduce((sum, fate) => sum + fate.count, 0);
         if (fateTotal !== group.animal_count) {
@@ -295,7 +330,7 @@ export function FormBStep2b() {
           </p>
 
           <label className="full-width">
-            Design rationale (optional)
+            Design rationale
             <textarea
               value={designRationale}
               onChange={(e) => setDesignRationale(e.target.value)}

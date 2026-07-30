@@ -143,10 +143,8 @@ def get_study_plan(db: Session, user: User, form_b_id: int) -> dict:
 
 
 def _validate_species_strain(db: Session, species_id: int | None, strain_id: int | None) -> None:
-    if species_id is None and strain_id is None:
-        return
     if species_id is None or strain_id is None:
-        raise CRUDValidationError("Each study group must specify both species and strain, or neither.")
+        raise CRUDValidationError("Each study group must specify both species and strain.")
     species = db.query(Species).filter(Species.id == species_id).first()
     strain = db.query(Strain).filter(Strain.id == strain_id).first()
     if species is None or strain is None:
@@ -347,10 +345,16 @@ def has_complete_study_plan(db: Session, form_b_id: int) -> bool:
 
 
 def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
+    form_b = db.query(FormB).filter(FormB.id == form_b_id).first()
+    if form_b is None:
+        raise CRUDValidationError("Form B not found.")
+
     phases = (
         db.query(FormBStudyPhase)
         .options(
             joinedload(FormBStudyPhase.groups).joinedload(FormBStudyGroup.fates),
+            joinedload(FormBStudyPhase.groups).joinedload(FormBStudyGroup.dosing_entries),
+            joinedload(FormBStudyPhase.groups).joinedload(FormBStudyGroup.endpoints),
         )
         .filter(FormBStudyPhase.form_b_id == form_b_id)
         .order_by(FormBStudyPhase.sequence_order.asc())
@@ -361,8 +365,18 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
             "Complete the experimental study plan (Annexure I) before continuing."
         )
 
+    application_data = form_b.application_data or {}
+    step2b = application_data.get(STEP2B_KEY) or {}
+    design_rationale = (step2b.get("design_rationale") or "").strip()
+    if not design_rationale:
+        raise CRUDValidationError(
+            "Complete the experimental study plan (Annexure I) before continuing."
+        )
+
     payload_phases = []
     from schemas.schemas_formb_study_plan import (
+        FormBGroupDosingEntry,
+        FormBGroupEndpointEntry,
         FormBGroupFateEntry,
         FormBStudyGroupEntry,
         FormBStudyPhaseEntry,
@@ -402,6 +416,30 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
                         feeding_diet=group.feeding_diet,
                         housing_notes=group.housing_notes,
                         treatment_summary=group.treatment_summary,
+                        dosing=[
+                            FormBGroupDosingEntry(
+                                agent_name=row.agent_name,
+                                dose=row.dose,
+                                route=row.route,
+                                frequency=row.frequency,
+                                start_day=row.start_day,
+                                end_day=row.end_day,
+                                volume=row.volume,
+                                notes=row.notes,
+                            )
+                            for row in group.dosing_entries
+                        ],
+                        endpoints=[
+                            FormBGroupEndpointEntry(
+                                parameter_code=row.parameter_code,
+                                parameter_name=row.parameter_name,
+                                schedule_type=row.schedule_type,
+                                schedule_detail=row.schedule_detail,
+                                method=row.method,
+                                notes=row.notes,
+                            )
+                            for row in group.endpoints
+                        ],
                         fates=[
                             FormBGroupFateEntry(
                                 fate_type=fate.fate_type,
@@ -420,7 +458,11 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
     validate_study_plan_payload(
         db,
         form_b_id,
-        FormBStudyPlanSave(form_b_id=form_b_id, phases=payload_phases),
+        FormBStudyPlanSave(
+            form_b_id=form_b_id,
+            design_rationale=design_rationale,
+            phases=payload_phases,
+        ),
     )
 
 

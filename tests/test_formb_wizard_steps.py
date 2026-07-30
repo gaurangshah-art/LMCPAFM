@@ -59,7 +59,10 @@ def _start_form_b(client, headers, payload):
     return form_b_id
 
 
-def _save_steps_2_to_7(client, headers, form_b_id, species_name="Rat", strain_name="Wistar"):
+def _save_steps_2_to_7(client, headers, form_b_id, species_name=None, strain_name=None):
+    suffix = uuid4().hex[:4]
+    species_name = species_name or f"Rat-{suffix}"
+    strain_name = strain_name or f"Wistar-{suffix}"
     requirement = {
         **STEP3_REQUIREMENT,
         "species": species_name,
@@ -75,15 +78,23 @@ def _save_steps_2_to_7(client, headers, form_b_id, species_name="Rat", strain_na
         },
     )
 
-    species_id = None
-    strain_id = None
     with SessionLocal() as db:
         species = db.query(Species).filter(Species.name == species_name).first()
-        if species:
-            species_id = species.id
-            strain = db.query(Strain).filter(Strain.name == strain_name, Strain.species_id == species.id).first()
-            if strain:
-                strain_id = strain.id
+        if species is None:
+            species = Species(name=species_name)
+            db.add(species)
+            db.flush()
+        strain = (
+            db.query(Strain)
+            .filter(Strain.name == strain_name, Strain.species_id == species.id)
+            .first()
+        )
+        if strain is None:
+            strain = Strain(name=strain_name, species_id=species.id)
+            db.add(strain)
+        db.commit()
+        species_id = species.id
+        strain_id = strain.id
 
     for path, body in steps:
         res = client.post(path, json=body, headers=headers)
@@ -174,8 +185,22 @@ def test_form_b_step3_supports_multiple_animal_requirements(client, monkeypatch)
             "form_b_id": form_b_id,
             **STEP3_BODY,
             "requirements": [
-                {**STEP3_REQUIREMENT, "species": rat_name, "strain": wistar_name, "number_required": 12, "justification": "Group A"},
-                {**STEP3_REQUIREMENT, "species": mouse_name, "strain": balbc_name, "number_required": 8, "justification": "Group B"},
+                {
+                    **STEP3_REQUIREMENT,
+                    "species": rat_name,
+                    "strain": wistar_name,
+                    "number_required": 12,
+                    "justification": "Group A",
+                    "year_wise_breakup": [{"year": "2026", "count": 12}],
+                },
+                {
+                    **STEP3_REQUIREMENT,
+                    "species": mouse_name,
+                    "strain": balbc_name,
+                    "number_required": 8,
+                    "justification": "Group B",
+                    "year_wise_breakup": [{"year": "2026", "count": 8}],
+                },
             ],
         },
         headers=headers,

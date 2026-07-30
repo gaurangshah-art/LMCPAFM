@@ -49,6 +49,13 @@ export function FormBStep5() {
 
   function validateStep5() {
     if (!form.housingConditions) return "Housing type is required.";
+    if (
+      (form.housingConditions === "Special cages (IAEC-approved)" ||
+        form.housingConditions === "Other") &&
+      !form.specialRequirements.trim()
+    ) {
+      return "Describe special housing requirements when special or other housing is selected.";
+    }
     if (!form.feeding) return "Feeding type is required.";
     if (!form.environmentalEnrichment) return "Environmental enrichment is required.";
     if (!form.animalTransportationMethods.trim()) return "Animal transportation methods are required.";
