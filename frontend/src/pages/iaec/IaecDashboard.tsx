@@ -14,10 +14,15 @@ import type {
   FormBWithMeeting,
   IAECMeetingRecord,
 } from "../../api/types";
+import { getApiErrorMessage } from "../../api/errors";
 import { DataTable, type TableColumn } from "../../components/tables/DataTable";
 import { formatDisplayDate } from "../../utils/dateFormat";
 
 const APPROVED_DECISIONS = ["approved", "approved_with_revisions", "animal_count_amended"];
+
+function isApprovedDecision(decision: string | null | undefined): decision is string {
+  return Boolean(decision && APPROVED_DECISIONS.includes(decision));
+}
 
 export function IaecDashboard() {
   const navigate = useNavigate();
@@ -25,10 +30,12 @@ export function IaecDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [formBRows, setFormBRows] = useState<FormBWithMeeting[]>([]);
   const [meetings, setMeetings] = useState<IAECMeetingRecord[]>([]);
-  const [decisionFormBId, setDecisionFormBId] = useState<number | null>(null);
+  const [decisionRow, setDecisionRow] = useState<FormBWithMeeting | null>(null);
   const [decisionValue, setDecisionValue] = useState<FormBMeetingDecisionValue>("approved");
   const [approvedAnimalCount, setApprovedAnimalCount] = useState("");
   const [decisionRemarks, setDecisionRemarks] = useState("");
+  const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [isSavingDecision, setIsSavingDecision] = useState(false);
   const [sendingInvitationId, setSendingInvitationId] = useState<number | null>(null);
   const [downloadingMeetingId, setDownloadingMeetingId] = useState<number | null>(null);
 
@@ -39,8 +46,8 @@ export function IaecDashboard() {
       const [forms, meetingRows] = await Promise.all([getFormBWithMeeting(), getMeetings()]);
       setFormBRows(forms);
       setMeetings(meetingRows);
-    } catch {
-      setError("Failed to load IAEC Form B records.");
+    } catch (err) {
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -50,13 +57,32 @@ export function IaecDashboard() {
     void loadDashboard();
   }, [loadDashboard]);
 
+  function openDecisionPanel(row: FormBWithMeeting) {
+    setDecisionError(null);
+    setDecisionRow(row);
+    setDecisionValue(
+      (row.decision as FormBMeetingDecisionValue | null) ?? "approved",
+    );
+    setApprovedAnimalCount(
+      row.approved_animal_count != null ? String(row.approved_animal_count) : "",
+    );
+    setDecisionRemarks(row.decision_remarks ?? "");
+  }
+
+  function closeDecisionPanel() {
+    setDecisionRow(null);
+    setDecisionError(null);
+    setApprovedAnimalCount("");
+    setDecisionRemarks("");
+  }
+
   async function handleAssignMeeting(row: FormBWithMeeting, meetingId: string) {
     if (!meetingId) return;
     try {
       await assignFormBMeeting(row.form_b_id, Number(meetingId));
       await loadDashboard();
-    } catch {
-      alert("Failed to assign meeting.");
+    } catch (err) {
+      alert(getApiErrorMessage(err));
     }
   }
 
@@ -66,8 +92,8 @@ export function IaecDashboard() {
       const result = await generateFormBProtocolNumber(formBId);
       alert(`Protocol number generated: ${result.protocol_number}`);
       await loadDashboard();
-    } catch {
-      alert("Failed to generate protocol number. Ensure meeting, decision, and meeting number are set.");
+    } catch (err) {
+      alert(getApiErrorMessage(err));
     }
   }
 
@@ -78,8 +104,8 @@ export function IaecDashboard() {
     try {
       await sendFormBMeetingInvitation(formBId);
       alert("Meeting invitation queued for delivery.");
-    } catch {
-      alert("Failed to queue meeting invitation. Ensure Step 1 email, meeting, and protocol number are set.");
+    } catch (err) {
+      alert(getApiErrorMessage(err));
     } finally {
       setSendingInvitationId(null);
     }
@@ -97,29 +123,40 @@ export function IaecDashboard() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch {
-      alert("Failed to download meeting summary PDF.");
+    } catch (err) {
+      alert(getApiErrorMessage(err));
     } finally {
       setDownloadingMeetingId(null);
     }
   }
 
-  async function handleSaveDecision(row: FormBWithMeeting) {
-    if (row.meeting_id == null) return;
+  async function handleSaveDecision() {
+    if (!decisionRow || decisionRow.meeting_id == null) return;
+
+    if (decisionValue === "animal_count_amended") {
+      const count = Number(approvedAnimalCount);
+      if (!Number.isFinite(count) || count <= 0) {
+        setDecisionError("Enter a valid approved animal count.");
+        return;
+      }
+    }
+
+    setIsSavingDecision(true);
+    setDecisionError(null);
     try {
-      await upsertFormBMeetingDecision(row.form_b_id, {
-        meeting_id: row.meeting_id,
+      await upsertFormBMeetingDecision(decisionRow.form_b_id, {
+        meeting_id: decisionRow.meeting_id,
         decision: decisionValue,
         approved_animal_count:
           decisionValue === "animal_count_amended" ? Number(approvedAnimalCount) : null,
         remarks: decisionRemarks.trim() || null,
       });
-      setDecisionFormBId(null);
-      setApprovedAnimalCount("");
-      setDecisionRemarks("");
+      closeDecisionPanel();
       await loadDashboard();
-    } catch {
-      alert("Failed to save meeting decision.");
+    } catch (err) {
+      setDecisionError(getApiErrorMessage(err));
+    } finally {
+      setIsSavingDecision(false);
     }
   }
 
@@ -158,14 +195,11 @@ export function IaecDashboard() {
               </select>
             ) : null}
             {row.meeting_id ? (
-              <button type="button" className="btn btn-sm" onClick={() => setDecisionFormBId(row.form_b_id)}>
-                Record decision
+              <button type="button" className="btn btn-sm" onClick={() => openDecisionPanel(row)}>
+                {row.decision ? "Edit decision" : "Record decision"}
               </button>
             ) : null}
-            {row.meeting_id &&
-            !row.protocol_number &&
-            row.decision &&
-            APPROVED_DECISIONS.includes(row.decision) ? (
+            {row.meeting_id && !row.protocol_number && isApprovedDecision(row.decision) ? (
               <button
                 type="button"
                 className="btn btn-sm"
@@ -174,7 +208,7 @@ export function IaecDashboard() {
                 Generate protocol
               </button>
             ) : null}
-            {row.meeting_id && row.protocol_number && row.decision && APPROVED_DECISIONS.includes(row.decision) ? (
+            {row.meeting_id && row.protocol_number && isApprovedDecision(row.decision) ? (
               <button
                 type="button"
                 className="btn btn-sm"
@@ -191,13 +225,14 @@ export function IaecDashboard() {
     [meetings, sendingInvitationId],
   );
 
-  const decisionRow = formBRows.find((row) => row.form_b_id === decisionFormBId) ?? null;
-
   return (
     <div className="page-card">
       <header className="section-header">
         <h2>IAEC Dashboard</h2>
-        <p>Assign Form B submissions to meetings, record decisions, generate protocol numbers, and send invitations.</p>
+        <p>
+          Assign Form B submissions to meetings, record decisions, generate protocol numbers, and
+          send invitations.
+        </p>
       </header>
 
       {loading && <p>Loading…</p>}
@@ -215,53 +250,6 @@ export function IaecDashboard() {
             <DataTable columns={columns} rows={formBRows} emptyText="No Form B records found." />
           </section>
 
-          {decisionRow ? (
-            <section className="dashboard-section dashboard-card">
-              <h3>Record decision — Form B #{decisionRow.form_b_id}</h3>
-              <div className="form-grid">
-                <label>
-                  Decision
-                  <select
-                    value={decisionValue}
-                    onChange={(e) => setDecisionValue(e.target.value as FormBMeetingDecisionValue)}
-                  >
-                    <option value="approved">Approved</option>
-                    <option value="approved_with_revisions">Approved with revisions</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="animal_count_amended">Animal count amended</option>
-                  </select>
-                </label>
-                {decisionValue === "animal_count_amended" ? (
-                  <label>
-                    Approved animal count
-                    <input
-                      type="number"
-                      min={1}
-                      value={approvedAnimalCount}
-                      onChange={(e) => setApprovedAnimalCount(e.target.value)}
-                    />
-                  </label>
-                ) : null}
-                <label className="full-width">
-                  Remarks
-                  <textarea
-                    rows={3}
-                    value={decisionRemarks}
-                    onChange={(e) => setDecisionRemarks(e.target.value)}
-                  />
-                </label>
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn" onClick={() => void handleSaveDecision(decisionRow)}>
-                  Save decision
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={() => setDecisionFormBId(null)}>
-                  Cancel
-                </button>
-              </div>
-            </section>
-          ) : null}
-
           <section className="dashboard-section">
             <h3>IAEC meetings</h3>
             {meetings.length === 0 ? (
@@ -273,7 +261,11 @@ export function IaecDashboard() {
                     <strong>Meeting #{m.meeting_number ?? m.id}</strong> — {formatDisplayDate(m.date)}
                   </p>
                   <div className="table-actions">
-                    <button type="button" className="btn btn-sm" onClick={() => navigate(`/iaec/meetings/${m.id}`)}>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => navigate(`/iaec/meetings/${m.id}`)}
+                    >
                       View meeting
                     </button>
                     <button
@@ -296,6 +288,88 @@ export function IaecDashboard() {
           </section>
         </>
       )}
+
+      {decisionRow ? (
+        <div className="modal-overlay" onClick={closeDecisionPanel}>
+          <div
+            className="modal-panel"
+            role="dialog"
+            aria-labelledby="record-decision-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="modal-header">
+              <div>
+                <h3 id="record-decision-title">
+                  {decisionRow.decision ? "Edit decision" : "Record decision"} — Form B #
+                  {decisionRow.form_b_id}
+                </h3>
+                <p>
+                  {decisionRow.project_title} · Meeting{" "}
+                  {decisionRow.meeting_number ?? decisionRow.meeting_id}
+                </p>
+              </div>
+              <button type="button" className="btn-secondary btn-small" onClick={closeDecisionPanel}>
+                Close
+              </button>
+            </header>
+
+            <div className="modal-body form-grid">
+              <label>
+                Decision
+                <select
+                  value={decisionValue}
+                  onChange={(e) => setDecisionValue(e.target.value as FormBMeetingDecisionValue)}
+                >
+                  <option value="approved">Approved</option>
+                  <option value="approved_with_revisions">Approved with revisions</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="animal_count_amended">Animal count amended</option>
+                </select>
+              </label>
+              {decisionValue === "animal_count_amended" ? (
+                <label>
+                  Approved animal count
+                  <input
+                    type="number"
+                    min={1}
+                    value={approvedAnimalCount}
+                    onChange={(e) => setApprovedAnimalCount(e.target.value)}
+                  />
+                </label>
+              ) : null}
+              <label className="full-width">
+                Remarks
+                <textarea
+                  rows={3}
+                  value={decisionRemarks}
+                  onChange={(e) => setDecisionRemarks(e.target.value)}
+                />
+              </label>
+              {decisionError ? (
+                <p className="error-text full-width">{decisionError}</p>
+              ) : null}
+              <div className="modal-actions full-width">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={closeDecisionPanel}
+                  disabled={isSavingDecision}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void handleSaveDecision()}
+                  disabled={isSavingDecision}
+                >
+                  {isSavingDecision ? "Saving…" : "Save decision"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

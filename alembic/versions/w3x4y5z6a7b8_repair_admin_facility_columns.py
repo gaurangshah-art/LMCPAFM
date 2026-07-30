@@ -28,13 +28,13 @@ def upgrade() -> None:
         if not column_exists("procurement", column_name):
             op.add_column("procurement", sa.Column(column_name, column_type, nullable=True))
     if not fk_exists("procurement", "fk_procurement_recorded_by_user_id"):
-        op.create_foreign_key(
-            "fk_procurement_recorded_by_user_id",
-            "procurement",
-            "users",
-            ["recorded_by_user_id"],
-            ["id"],
-        )
+        with op.batch_alter_table("procurement", schema=None) as batch_op:
+            batch_op.create_foreign_key(
+                "fk_procurement_recorded_by_user_id",
+                "users",
+                ["recorded_by_user_id"],
+                ["id"],
+            )
 
     for column_name, column_type in [
         ("animal_number", sa.String(length=100)),
@@ -49,16 +49,28 @@ def upgrade() -> None:
     ]:
         if not column_exists("animal", column_name):
             op.add_column("animal", sa.Column(column_name, column_type, nullable=True))
-    if not fk_exists("animal", "fk_animal_procurement_id"):
-        op.create_foreign_key("fk_animal_procurement_id", "animal", "procurement", ["procurement_id"], ["id"])
-    if not fk_exists("animal", "fk_animal_breeding_record_id"):
-        op.create_foreign_key(
-            "fk_animal_breeding_record_id",
-            "animal",
-            "breeding_record",
-            ["breeding_record_id"],
-            ["id"],
-        )
+
+    animal_fk_missing = (
+        not fk_exists("animal", "fk_animal_procurement_id")
+        or not fk_exists("animal", "fk_animal_breeding_record_id")
+    )
+    if animal_fk_missing:
+        with op.batch_alter_table("animal", schema=None) as batch_op:
+            if not fk_exists("animal", "fk_animal_procurement_id"):
+                batch_op.create_foreign_key(
+                    "fk_animal_procurement_id",
+                    "procurement",
+                    ["procurement_id"],
+                    ["id"],
+                )
+            if not fk_exists("animal", "fk_animal_breeding_record_id"):
+                batch_op.create_foreign_key(
+                    "fk_animal_breeding_record_id",
+                    "breeding_record",
+                    ["breeding_record_id"],
+                    ["id"],
+                )
+
     if not index_exists("animal", "ix_animal_animal_number"):
         op.create_index("ix_animal_animal_number", "animal", ["animal_number"], unique=True)
 
@@ -70,54 +82,80 @@ def upgrade() -> None:
     ]:
         if not column_exists("animal_movement", column_name):
             op.add_column("animal_movement", sa.Column(column_name, column_type, nullable=True))
-    if column_exists("animal_movement", "from_cage_id"):
-        op.alter_column("animal_movement", "from_cage_id", existing_type=sa.Integer(), nullable=True)
-    if column_exists("animal_movement", "to_cage_id"):
-        op.alter_column("animal_movement", "to_cage_id", existing_type=sa.Integer(), nullable=True)
-    if table_exists("facility_room"):
-        if not fk_exists("animal_movement", "fk_animal_movement_from_room_id"):
-            op.create_foreign_key(
-                "fk_animal_movement_from_room_id",
-                "animal_movement",
-                "facility_room",
-                ["from_room_id"],
-                ["id"],
-            )
-        if not fk_exists("animal_movement", "fk_animal_movement_to_room_id"):
-            op.create_foreign_key(
-                "fk_animal_movement_to_room_id",
-                "animal_movement",
-                "facility_room",
-                ["to_room_id"],
-                ["id"],
-            )
-    if not fk_exists("animal_movement", "fk_animal_movement_recorded_by_user_id"):
-        op.create_foreign_key(
-            "fk_animal_movement_recorded_by_user_id",
-            "animal_movement",
-            "users",
-            ["recorded_by_user_id"],
-            ["id"],
-        )
+
+    movement_fk_missing = (
+        (table_exists("facility_room") and not fk_exists("animal_movement", "fk_animal_movement_from_room_id"))
+        or (table_exists("facility_room") and not fk_exists("animal_movement", "fk_animal_movement_to_room_id"))
+        or not fk_exists("animal_movement", "fk_animal_movement_recorded_by_user_id")
+    )
+    movement_alter_needed = column_exists("animal_movement", "from_cage_id") or column_exists(
+        "animal_movement", "to_cage_id"
+    )
+    if movement_fk_missing or movement_alter_needed:
+        with op.batch_alter_table("animal_movement", schema=None) as batch_op:
+            if column_exists("animal_movement", "from_cage_id"):
+                batch_op.alter_column("from_cage_id", existing_type=sa.Integer(), nullable=True)
+            if column_exists("animal_movement", "to_cage_id"):
+                batch_op.alter_column("to_cage_id", existing_type=sa.Integer(), nullable=True)
+            if table_exists("facility_room") and not fk_exists(
+                "animal_movement", "fk_animal_movement_from_room_id"
+            ):
+                batch_op.create_foreign_key(
+                    "fk_animal_movement_from_room_id",
+                    "facility_room",
+                    ["from_room_id"],
+                    ["id"],
+                )
+            if table_exists("facility_room") and not fk_exists(
+                "animal_movement", "fk_animal_movement_to_room_id"
+            ):
+                batch_op.create_foreign_key(
+                    "fk_animal_movement_to_room_id",
+                    "facility_room",
+                    ["to_room_id"],
+                    ["id"],
+                )
+            if not fk_exists("animal_movement", "fk_animal_movement_recorded_by_user_id"):
+                batch_op.create_foreign_key(
+                    "fk_animal_movement_recorded_by_user_id",
+                    "users",
+                    ["recorded_by_user_id"],
+                    ["id"],
+                )
 
 
 def downgrade() -> None:
-    if fk_exists("animal_movement", "fk_animal_movement_recorded_by_user_id"):
-        op.drop_constraint("fk_animal_movement_recorded_by_user_id", "animal_movement", type_="foreignkey")
-    if fk_exists("animal_movement", "fk_animal_movement_to_room_id"):
-        op.drop_constraint("fk_animal_movement_to_room_id", "animal_movement", type_="foreignkey")
-    if fk_exists("animal_movement", "fk_animal_movement_from_room_id"):
-        op.drop_constraint("fk_animal_movement_from_room_id", "animal_movement", type_="foreignkey")
+    movement_fk_present = (
+        fk_exists("animal_movement", "fk_animal_movement_recorded_by_user_id")
+        or fk_exists("animal_movement", "fk_animal_movement_to_room_id")
+        or fk_exists("animal_movement", "fk_animal_movement_from_room_id")
+    )
+    if movement_fk_present:
+        with op.batch_alter_table("animal_movement", schema=None) as batch_op:
+            if fk_exists("animal_movement", "fk_animal_movement_recorded_by_user_id"):
+                batch_op.drop_constraint(
+                    "fk_animal_movement_recorded_by_user_id", type_="foreignkey"
+                )
+            if fk_exists("animal_movement", "fk_animal_movement_to_room_id"):
+                batch_op.drop_constraint("fk_animal_movement_to_room_id", type_="foreignkey")
+            if fk_exists("animal_movement", "fk_animal_movement_from_room_id"):
+                batch_op.drop_constraint("fk_animal_movement_from_room_id", type_="foreignkey")
     for column_name in ("recorded_by_user_id", "reason", "to_room_id", "from_room_id"):
         if column_exists("animal_movement", column_name):
             op.drop_column("animal_movement", column_name)
 
     if index_exists("animal", "ix_animal_animal_number"):
         op.drop_index("ix_animal_animal_number", table_name="animal")
-    if fk_exists("animal", "fk_animal_breeding_record_id"):
-        op.drop_constraint("fk_animal_breeding_record_id", "animal", type_="foreignkey")
-    if fk_exists("animal", "fk_animal_procurement_id"):
-        op.drop_constraint("fk_animal_procurement_id", "animal", type_="foreignkey")
+
+    animal_fk_present = fk_exists("animal", "fk_animal_breeding_record_id") or fk_exists(
+        "animal", "fk_animal_procurement_id"
+    )
+    if animal_fk_present:
+        with op.batch_alter_table("animal", schema=None) as batch_op:
+            if fk_exists("animal", "fk_animal_breeding_record_id"):
+                batch_op.drop_constraint("fk_animal_breeding_record_id", type_="foreignkey")
+            if fk_exists("animal", "fk_animal_procurement_id"):
+                batch_op.drop_constraint("fk_animal_procurement_id", type_="foreignkey")
     for column_name in (
         "notes",
         "rehabilitation_date",
@@ -133,7 +171,8 @@ def downgrade() -> None:
             op.drop_column("animal", column_name)
 
     if fk_exists("procurement", "fk_procurement_recorded_by_user_id"):
-        op.drop_constraint("fk_procurement_recorded_by_user_id", "procurement", type_="foreignkey")
+        with op.batch_alter_table("procurement", schema=None) as batch_op:
+            batch_op.drop_constraint("fk_procurement_recorded_by_user_id", type_="foreignkey")
     for column_name in ("recorded_by_user_id", "remarks", "received_by_name", "supplier_registration_number"):
         if column_exists("procurement", column_name):
             op.drop_column("procurement", column_name)

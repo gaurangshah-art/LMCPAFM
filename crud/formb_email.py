@@ -11,7 +11,9 @@ from crud.exceptions import CRUDNotFoundError, CRUDValidationError
 from crud.formb_documents import render_form_b_application_pdf
 from crud.formb_internal import get_form_b_by_id
 from database.database import SessionLocal
-from database.lmcpafm_models import IAECMeeting, IAECProject
+from database.lmcpafm_models import FormBInvestigator, IAECMeeting, IAECProject
+from models.investigator_profile import InvestigatorProfile
+from models.user import User
 from utils.date_format import format_display_date
 
 
@@ -100,6 +102,44 @@ def _send_email_with_attachment(
         server.send_message(msg)
 
 
+def _email_for_user_id(db: Session, user_id: int | None) -> str | None:
+    if not user_id:
+        return None
+
+    profile = db.query(InvestigatorProfile).filter(InvestigatorProfile.user_id == user_id).first()
+    if profile and profile.institutional_email and profile.institutional_email.strip():
+        return profile.institutional_email.strip()
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user and user.email and user.email.strip():
+        return user.email.strip()
+
+    return None
+
+
+def _resolve_principal_investigator_email(db: Session, form_b_id: int, step1: dict) -> str | None:
+    email = (step1.get("contact_email") or "").strip()
+    if email:
+        return email
+
+    investigators = (
+        db.query(FormBInvestigator)
+        .filter(FormBInvestigator.form_b_id == form_b_id)
+        .order_by(FormBInvestigator.id.asc())
+        .all()
+    )
+    pi_rows = [row for row in investigators if row.project_role == "principal_investigator"]
+    for investigator in pi_rows or investigators:
+        resolved = _email_for_user_id(
+            db,
+            investigator.investigator_profile_user_id or investigator.user_id,
+        )
+        if resolved:
+            return resolved
+
+    return None
+
+
 def build_form_b_meeting_invitation_context(db: Session, form_b_id: int):
     form_b = get_form_b_by_id(db, form_b_id)
     project = db.query(IAECProject).filter(IAECProject.id == form_b.project_id).first()
@@ -107,7 +147,7 @@ def build_form_b_meeting_invitation_context(db: Session, form_b_id: int):
         raise CRUDNotFoundError("Linked project not found")
 
     step1 = (form_b.application_data or {}).get("step1") or {}
-    pi_email = (step1.get("contact_email") or "").strip() or None
+    pi_email = _resolve_principal_investigator_email(db, form_b.id, step1)
     protocol_number = (project.protocol_number or "").strip() or None
 
     meeting = None
@@ -133,11 +173,18 @@ def validate_form_b_meeting_invitation_ready(db: Session, form_b_id: int):
     context = build_form_b_meeting_invitation_context(db, form_b_id)
 
     if not context.principal_investigator_email:
-        raise CRUDValidationError("Principal investigator email is missing from Form B Step 1.")
+        raise CRUDValidationError(
+            "Principal investigator email is missing. Save Form B Step 1 with a contact email, "
+            "or link the principal investigator to a user account with an institutional email."
+        )
     if not context.meeting_id:
         raise CRUDValidationError("Form B is not assigned to a meeting.")
     if not context.protocol_number:
         raise CRUDValidationError("Protocol number is not assigned.")
+    if not os.getenv("IAEC_SMTP_HOST") or not os.getenv("IAEC_SENDER_EMAIL"):
+        raise CRUDValidationError(
+            "Email settings are not configured. Set IAEC_SMTP_HOST and IAEC_SENDER_EMAIL in the backend environment."
+        )
 
     return context
 
