@@ -71,7 +71,7 @@ export interface FormBStep2Payload {
   proposed_completion_date: string;
   funding_agency: string;
   funding_address: string;
-  funding_proof_reference: string;
+  funding_proof_references: string[];
   summary: string;
   objectives: string;
   expected_outcomes: string;
@@ -270,6 +270,7 @@ export interface FormBGroupDosingEntry {
   dose: string;
   route: string;
   frequency: string;
+  duration: string;
   start_day?: number | null;
   end_day?: number | null;
   volume?: string | null;

@@ -3,23 +3,18 @@ from uuid import uuid4
 from database.database import SessionLocal
 from database.lmcpafm_models import Animal, Species, Strain
 
-from tests.planning_helpers import create_experiment_group, seed_project_animal_cap
+from tests.planning_helpers import create_experiment_group, create_iaec_project_db, seed_project_animal_cap
 
 
 def _create_approved_project(client, iaec_auth_headers, suffix: str):
-    project_res = client.post(
-        "/iaec/project",
-        json={
-            "title": f"Group Assign Project {suffix}",
-            "investigator_name": "Dr. Assign",
-            "protocol_number": f"GA-{suffix}",
-            "approval_date": "2026-01-01",
-            "status": "approved",
-        },
-        headers=iaec_auth_headers,
+    project = create_iaec_project_db(
+        title=f"Group Assign Project {suffix}",
+        investigator_name="Dr. Assign",
+        protocol_number=f"GA-{suffix}",
+        approval_date="2026-01-01",
+        status="approved",
     )
-    assert project_res.status_code == 200, project_res.text
-    return project_res.json()["id"]
+    return project.id
 
 
 def _seed_group_cage(client, admin_auth_headers, suffix: str, project_id: int, group_id: int, count: int = 2):

@@ -31,6 +31,16 @@ from schemas.schemas_formb_study_plan import (
 STEP2B_KEY = "step2b"
 
 
+def _parse_duration_from_notes(notes: str | None) -> str:
+    if not notes:
+        return ""
+    for part in notes.split(";"):
+        cleaned = part.strip()
+        if cleaned.lower().startswith("duration:"):
+            return cleaned.split(":", 1)[1].strip()
+    return ""
+
+
 def _get_form_b_animal_total(db: Session, form_b_id: int) -> int | None:
     rows = (
         db.query(FormBAnimalRequirement)
@@ -82,6 +92,7 @@ def _group_to_dict(group: FormBStudyGroup) -> dict:
                 "dose": row.dose,
                 "route": row.route,
                 "frequency": row.frequency,
+                "duration": _parse_duration_from_notes(row.notes),
                 "start_day": row.start_day,
                 "end_day": row.end_day,
                 "volume": row.volume,
@@ -199,10 +210,11 @@ def validate_study_plan_payload(db: Session, form_b_id: int, payload: FormBStudy
         phase_total += phase.animal_cap
 
     step3_total = _get_form_b_animal_total(db, form_b_id)
-    if step3_total is not None and phase_total > step3_total:
+    if step3_total is not None and phase_total != step3_total:
         raise CRUDValidationError(
             f"Study plan requires {phase_total} animals across phases but "
-            f"Step 3 requests only {step3_total}. Adjust phases or animal requirements."
+            f"Step 3 requests {step3_total}. Group totals must match the total "
+            f"animals requested in Step 3."
         )
 
     sequence_orders = {phase.sequence_order for phase in payload.phases}
@@ -276,6 +288,10 @@ def save_study_plan(db: Session, user: User, payload: FormBStudyPlanSave) -> dic
             db.flush()
 
             for dosing_entry in group_entry.dosing:
+                duration = dosing_entry.duration.strip()
+                notes = (dosing_entry.notes or "").strip() or None
+                if duration and (not notes or "Duration:" not in notes):
+                    notes = f"Duration: {duration}" + (f"; {notes}" if notes else "")
                 db.add(
                     FormBGroupDosing(
                         study_group_id=group.id,
@@ -286,7 +302,7 @@ def save_study_plan(db: Session, user: User, payload: FormBStudyPlanSave) -> dic
                         start_day=dosing_entry.start_day,
                         end_day=dosing_entry.end_day,
                         volume=(dosing_entry.volume or "").strip() or None,
-                        notes=(dosing_entry.notes or "").strip() or None,
+                        notes=notes,
                     )
                 )
 
@@ -422,6 +438,7 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
                                 dose=row.dose,
                                 route=row.route,
                                 frequency=row.frequency,
+                                duration=_parse_duration_from_notes(row.notes) or "Not specified",
                                 start_day=row.start_day,
                                 end_day=row.end_day,
                                 volume=row.volume,

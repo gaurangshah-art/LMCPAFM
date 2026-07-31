@@ -8,6 +8,10 @@ import {
   formBHasAttachment,
 } from "../../components/forms/FormBAttachmentField";
 import { FormBInvestigatorsSection } from "../../components/forms/FormBInvestigatorsSection";
+import {
+  FUNDING_PROOF_REFERENCE_OPTIONS,
+  parseFundingProofReferences,
+} from "../../constants/formBStep2";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
 import { validateDateOnOrAfter } from "../../utils/businessValidation";
 
@@ -18,7 +22,7 @@ const EMPTY = {
   proposedCompletionDate: "",
   fundingAgency: "",
   fundingAddress: "",
-  fundingProofReference: "",
+  fundingProofReferences: [] as string[],
   summary: "",
   objectives: "",
   expectedOutcomes: "",
@@ -48,7 +52,10 @@ export function FormBStep2() {
       proposedCompletionDate: readString(saved, "proposed_completion_date"),
       fundingAgency: readString(saved, "funding_agency"),
       fundingAddress: readString(saved, "funding_address"),
-      fundingProofReference: readString(saved, "funding_proof_reference"),
+      fundingProofReferences: parseFundingProofReferences(
+        (saved as Record<string, unknown>).funding_proof_references ??
+          (saved as Record<string, unknown>).funding_proof_reference,
+      ),
       summary: readString(saved, "summary"),
       objectives: readString(saved, "objectives"),
       expectedOutcomes: readString(saved, "expected_outcomes"),
@@ -58,6 +65,18 @@ export function FormBStep2() {
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleFundingProof(option: string) {
+    setForm((current) => {
+      const selected = new Set(current.fundingProofReferences);
+      if (selected.has(option)) {
+        selected.delete(option);
+      } else {
+        selected.add(option);
+      }
+      return { ...current, fundingProofReferences: Array.from(selected) };
+    });
   }
 
   function validateStep2() {
@@ -74,10 +93,15 @@ export function FormBStep2() {
     if (dateError) return dateError;
     if (!form.fundingAgency) return "Funding agency is required.";
     if (!form.fundingAddress.trim()) return "Funding agency address is required.";
-    if (!form.fundingProofReference.trim()) return "Funding proof reference is required.";
+    if (!form.fundingProofReferences.length) {
+      return "Select at least one funding proof reference.";
+    }
     if (!form.summary.trim()) return "Project summary is required.";
     if (!form.objectives.trim()) return "Objectives are required.";
     if (!form.expectedOutcomes.trim()) return "Expected outcomes are required.";
+    if (!form.annexureReference.trim()) {
+      return "Study plan note is required (brief about the project in 1–2 lines).";
+    }
     return null;
   }
 
@@ -118,7 +142,7 @@ export function FormBStep2() {
         proposed_completion_date: form.proposedCompletionDate,
         funding_agency: form.fundingAgency,
         funding_address: form.fundingAddress.trim(),
-        funding_proof_reference: form.fundingProofReference.trim(),
+        funding_proof_references: form.fundingProofReferences,
         summary: form.summary.trim(),
         objectives: form.objectives.trim(),
         expected_outcomes: form.expectedOutcomes.trim(),
@@ -211,26 +235,42 @@ export function FormBStep2() {
                 onChange={(e) => updateField("fundingAddress", e.target.value)}
               />
             </label>
-            <label className="full-width">
-              Funding proof reference (optional note)
-              <input
-                value={form.fundingProofReference}
-                onChange={(e) => updateField("fundingProofReference", e.target.value)}
-              />
-            </label>
+
+            <fieldset className="full-width checkbox-group">
+              <legend>Funding proof reference *</legend>
+              <p className="field-help">
+                Select all applicable proof types. Upload the corresponding document(s) below.
+              </p>
+              {FUNDING_PROOF_REFERENCE_OPTIONS.map((option) => (
+                <label key={option} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={form.fundingProofReferences.includes(option)}
+                    onChange={() => toggleFundingProof(option)}
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </fieldset>
 
             {formBId ? (
               <FormBAttachmentField
                 formBId={formBId}
                 category="funding_proof"
                 label="Funding proof attachment"
-                helpText="Upload PDF, Word, JPG, or PNG up to 10 MB."
+                helpText="Upload PDF, Word, JPG, or PNG up to 10 MB for the proof type(s) selected above."
                 required
               />
             ) : null}
+
             <label className="full-width">
               Study plan summary
-              <textarea value={form.summary} onChange={(e) => updateField("summary", e.target.value)} />
+              <span className="field-help">Brief about the project in 1–2 lines.</span>
+              <textarea
+                value={form.summary}
+                onChange={(e) => updateField("summary", e.target.value)}
+                rows={3}
+              />
             </label>
             <label className="full-width">
               Objectives
@@ -247,10 +287,16 @@ export function FormBStep2() {
               />
             </label>
             <label className="full-width">
-              Study plan note (optional — detailed plan is entered in the next step)
-              <input
+              Study plan note *
+              <span className="field-help">
+                Brief about the project in 1–2 lines. Detailed experimental groups are entered in the
+                next step (Step 2b).
+              </span>
+              <textarea
                 value={form.annexureReference}
                 onChange={(e) => updateField("annexureReference", e.target.value)}
+                rows={2}
+                maxLength={500}
               />
             </label>
           </div>

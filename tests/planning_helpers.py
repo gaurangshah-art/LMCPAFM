@@ -2,7 +2,46 @@ from __future__ import annotations
 
 from datetime import date
 
-from database.lmcpafm_models import FormB, FormBAnimalRequirement
+from database.database import SessionLocal
+from database.lmcpafm_models import FormB, FormBAnimalRequirement, IAECProject
+
+
+def create_iaec_project_db(
+    *,
+    title: str = "Test Project",
+    investigator_name: str = "Dr. Test",
+    objective: str | None = "Testing",
+    start_date: date | str | None = "2026-01-01",
+    protocol_number: str | None = None,
+    approval_date: date | str | None = None,
+    status: str | None = "draft",
+    principal_investigator: str | None = None,
+    purpose: str | None = None,
+) -> IAECProject:
+    if isinstance(start_date, str):
+        start_date = date.fromisoformat(start_date)
+    if isinstance(approval_date, str):
+        approval_date = date.fromisoformat(approval_date)
+
+    db = SessionLocal()
+    try:
+        project = IAECProject(
+            title=title,
+            investigator_name=investigator_name,
+            objective=objective,
+            start_date=start_date,
+            protocol_number=protocol_number,
+            approval_date=approval_date,
+            status=status,
+            principal_investigator=principal_investigator or investigator_name,
+            purpose=purpose,
+        )
+        db.add(project)
+        db.commit()
+        db.refresh(project)
+        return project
+    finally:
+        db.close()
 
 
 def seed_project_animal_cap(

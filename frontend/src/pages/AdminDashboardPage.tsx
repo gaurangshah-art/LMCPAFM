@@ -305,6 +305,9 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
           <button type="button" className="btn" onClick={() => navigate("/admin/facility")}>
             Animal Facility Control
           </button>
+          <button type="button" className="btn" onClick={() => navigate("/admin/masters")}>
+            Master Data (Species / Strains)
+          </button>
           <button type="button" className="btn" onClick={() => navigate("/form-c")}>
             Form C Inventory
           </button>

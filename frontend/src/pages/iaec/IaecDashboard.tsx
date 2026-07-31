@@ -160,7 +160,16 @@ export function IaecDashboard() {
     }
   }
 
-  const columns = useMemo<TableColumn<FormBWithMeeting>[]>(
+  const submittedRows = useMemo(
+    () => formBRows.filter((row) => row.is_submitted !== false && row.submitted_at),
+    [formBRows],
+  );
+  const draftRows = useMemo(
+    () => formBRows.filter((row) => !row.is_submitted && !row.submitted_at),
+    [formBRows],
+  );
+
+  const reviewColumns = useMemo<TableColumn<FormBWithMeeting>[]>(
     () => [
       { header: "Form B ID", cell: (row) => row.form_b_id },
       { header: "Project", cell: (row) => row.project_title },
@@ -178,7 +187,9 @@ export function IaecDashboard() {
         header: "Actions",
         cell: (row) => (
           <div className="table-actions">
-            {!row.meeting_id ? (
+            {!row.is_submitted ? (
+              <span className="muted-text">Submit Form B first</span>
+            ) : !row.meeting_id ? (
               <select
                 defaultValue=""
                 onChange={(e) => {
@@ -194,12 +205,12 @@ export function IaecDashboard() {
                 ))}
               </select>
             ) : null}
-            {row.meeting_id ? (
+            {row.is_submitted && row.meeting_id ? (
               <button type="button" className="btn btn-sm" onClick={() => openDecisionPanel(row)}>
                 {row.decision ? "Edit decision" : "Record decision"}
               </button>
             ) : null}
-            {row.meeting_id && !row.protocol_number && isApprovedDecision(row.decision) ? (
+            {row.is_submitted && row.meeting_id && !row.protocol_number && isApprovedDecision(row.decision) ? (
               <button
                 type="button"
                 className="btn btn-sm"
@@ -208,7 +219,7 @@ export function IaecDashboard() {
                 Generate protocol
               </button>
             ) : null}
-            {row.meeting_id && row.protocol_number && isApprovedDecision(row.decision) ? (
+            {row.is_submitted && row.meeting_id && row.protocol_number && isApprovedDecision(row.decision) ? (
               <button
                 type="button"
                 className="btn btn-sm"
@@ -242,12 +253,34 @@ export function IaecDashboard() {
         <>
           <section className="dashboard-section">
             <div className="section-toolbar">
-              <h3>Form B records</h3>
+              <h3>Submitted Form B (IAEC review queue)</h3>
               <button type="button" className="btn" onClick={() => navigate("/iaec/meetings/new")}>
                 + New meeting
               </button>
             </div>
-            <DataTable columns={columns} rows={formBRows} emptyText="No Form B records found." />
+            <DataTable
+              columns={reviewColumns}
+              rows={submittedRows}
+              emptyText="No submitted Form B applications yet."
+            />
+          </section>
+
+          <section className="dashboard-section">
+            <h3>Incomplete drafts (investigator workspace only)</h3>
+            <p className="muted-text">
+              Drafts are visible for reference but cannot be assigned to meetings or receive IAEC
+              decisions until the investigator submits the complete Form B.
+            </p>
+            <DataTable
+              columns={[
+                { header: "Form B ID", cell: (row) => row.form_b_id },
+                { header: "Project", cell: (row) => row.project_title },
+                { header: "Form B date", cell: (row) => formatDisplayDate(row.form_b_date) },
+                { header: "Status", cell: () => "Draft / incomplete" },
+              ]}
+              rows={draftRows}
+              emptyText="No incomplete drafts."
+            />
           </section>
 
           <section className="dashboard-section">

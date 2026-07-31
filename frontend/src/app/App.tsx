@@ -44,6 +44,7 @@ import { IaecMeetingDetails } from "../pages/iaec/IaecMeetingDetails";
 import { IaecProjectReview } from "../pages/iaec/IaecProjectReview";
 import { IaecApprovalCertificate } from "../pages/iaec/IaecApprovalCertificate";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
+import { AdminMasterDataPage } from "../pages/AdminMasterDataPage";
 import { AdminFacilityPage } from "../pages/AdminFacilityPage";
 import { StaffFacilityPage } from "../pages/StaffFacilityPage";
 import { FormCPage } from "../pages/FormCPage";
@@ -665,6 +666,19 @@ export default function App() {
                 allowedRoles={["admin"]}
               >
                 <AdminFacilityPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/masters"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["admin"]}
+              >
+                <AdminMasterDataPage />
               </ProtectedRoute>
             }
           />

@@ -26,6 +26,13 @@ APPROVED_CERTIFICATE_DECISIONS = frozenset(
 PROTOCOL_PREFIX = "LMCP/IAEC"
 
 
+def _assert_form_b_submitted_for_iaec(form_b: FormB) -> None:
+    if form_b.submitted_at is None:
+        raise CRUDValidationError(
+            "Only fully submitted Form B applications can enter the IAEC decision cycle."
+        )
+
+
 def get_formb_by_protocol(db: Session, protocol_number: str) -> IAECProject | None:
     return (
         db.query(IAECProject)
@@ -141,6 +148,8 @@ def list_form_b_with_meeting(db: Session) -> list[dict]:
             "decision": decision.decision if decision else None,
             "approved_animal_count": decision.approved_animal_count if decision else None,
             "decision_remarks": decision.remarks if decision else None,
+            "submitted_at": form_b.submitted_at,
+            "is_submitted": form_b.submitted_at is not None,
         }
         for form_b, project, meeting, decision in rows
     ]
@@ -197,6 +206,8 @@ def assign_form_b_meeting(
     meeting_id: int | None,
 ) -> dict:
     form_b = get_form_b_by_id(db, form_b_id)
+    if meeting_id is not None:
+        _assert_form_b_submitted_for_iaec(form_b)
 
     if meeting_id is not None:
         _get_meeting_or_raise(db, meeting_id)
@@ -243,6 +254,7 @@ def _get_decision_for_form_b_meeting(
 
 def generate_form_b_protocol_number(db: Session, form_b_id: int) -> tuple[FormB, str]:
     form_b = get_form_b_by_id(db, form_b_id)
+    _assert_form_b_submitted_for_iaec(form_b)
     project = _get_project_for_form_b(db, form_b)
     if project is None:
         raise CRUDNotFoundError("Linked IAEC project not found")
@@ -295,6 +307,7 @@ def upsert_form_b_meeting_decision(
     remarks: str | None = None,
 ) -> FormBMeetingDecision:
     form_b = get_form_b_by_id(db, form_b_id)
+    _assert_form_b_submitted_for_iaec(form_b)
     _get_meeting_or_raise(db, meeting_id)
 
     if form_b.meeting_id != meeting_id:

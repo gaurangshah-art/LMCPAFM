@@ -3,22 +3,19 @@ from uuid import uuid4
 from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain, Animal
 
-from tests.planning_helpers import create_experiment_group, seed_project_animal_cap
+from tests.planning_helpers import create_iaec_project_db, create_experiment_group, seed_project_animal_cap
 
 
 def test_integration_project_requisition_allocation_experiment(client, staff_auth_headers, iaec_auth_headers):
     # 1) Create IAEC project (protocol)
-    proj_payload = {
-        "title": "Integration Project",
-        "investigator_name": "Dr. Integrate",
-        "protocol_number": "INT-001",
-        "approval_date": "2026-02-01",
-        "status": "approved",
-    }
-    resp = client.post("/iaec/project", json=proj_payload, headers=iaec_auth_headers)
-    assert resp.status_code == 200
-    project = resp.json()
-    project_id = project["id"]
+    project = create_iaec_project_db(
+        title="Integration Project",
+        investigator_name="Dr. Integrate",
+        protocol_number="INT-001",
+        approval_date="2026-02-01",
+        status="approved",
+    )
+    project_id = project.id
 
     # 2) Insert species, strain, and animals directly into DB
     db = SessionLocal()

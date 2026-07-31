@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from utils.business_validation import assert_iso_date_on_or_after, validate_weight_grams
+from utils.formb_funding_proof import FUNDING_PROOF_REFERENCE_SET
 
 
 class FormBBase(BaseModel):
@@ -63,6 +64,8 @@ class FormBWithMeetingRead(BaseModel):
     decision: Optional[str] = None
     approved_animal_count: Optional[int] = None
     decision_remarks: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+    is_submitted: bool = False
 
     class Config:
         orm_mode = True
@@ -213,11 +216,22 @@ class FormBStep2Save(BaseModel):
     proposed_completion_date: str = Field(..., max_length=20)
     funding_agency: str = Field(..., min_length=1, max_length=200)
     funding_address: str = Field(..., min_length=1, max_length=1000)
-    funding_proof_reference: str = Field(..., min_length=1, max_length=500)
-    summary: str = Field(..., max_length=5000)
-    objectives: str = Field(..., max_length=5000)
-    expected_outcomes: str = Field(..., max_length=5000)
-    study_plan_annexure_reference: str = Field("", max_length=500)
+    funding_proof_references: list[str] = Field(..., min_length=1)
+    summary: str = Field(..., min_length=1, max_length=5000)
+    objectives: str = Field(..., min_length=1, max_length=5000)
+    expected_outcomes: str = Field(..., min_length=1, max_length=5000)
+    study_plan_annexure_reference: str = Field(..., min_length=1, max_length=500)
+
+    @field_validator("funding_proof_references")
+    @classmethod
+    def validate_funding_proof_references(cls, values: list[str]) -> list[str]:
+        cleaned = [value.strip() for value in values if value and value.strip()]
+        if not cleaned:
+            raise ValueError("Select at least one funding proof reference.")
+        invalid = [value for value in cleaned if value not in FUNDING_PROOF_REFERENCE_SET]
+        if invalid:
+            raise ValueError(f"Invalid funding proof reference: {invalid[0]}")
+        return list(dict.fromkeys(cleaned))
 
     @model_validator(mode="after")
     def validate_project_dates(self):

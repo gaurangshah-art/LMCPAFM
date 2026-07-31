@@ -157,6 +157,8 @@ export interface FormBWithMeeting {
   decision: string | null;
   approved_animal_count: number | null;
   decision_remarks: string | null;
+  submitted_at?: string | null;
+  is_submitted?: boolean;
 }
 
 export type FormBMeetingDecisionValue =

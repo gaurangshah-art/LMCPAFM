@@ -130,11 +130,13 @@ def step2_body(form_b_id: int) -> dict:
         "proposed_completion_date": "2027-07-31",
         "funding_agency": "DST",
         "funding_address": "Department of Science and Technology, New Delhi",
-        "funding_proof_reference": "Sanction letter attached",
+        "funding_proof_references": [
+            "Funding from Research Grants (GSBTM, GUJCOST, DBT, SSIP etc.)",
+        ],
         "summary": "Study summary",
         "objectives": "Study objectives",
         "expected_outcomes": "Expected outcomes",
-        "study_plan_annexure_reference": "Annexure I generated in Step 2b",
+        "study_plan_annexure_reference": "Brief preclinical pain model study in rats.",
     }
 
 
@@ -205,6 +207,7 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                                 "dose": "10 mg/kg",
                                 "route": "IP",
                                 "frequency": "Daily",
+                                "duration": "4 weeks",
                                 "start_day": 1,
                                 "end_day": 28,
                             }
@@ -290,6 +293,7 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                                 "dose": "10 mg/kg",
                                 "route": "IP",
                                 "frequency": "Daily",
+                                "duration": "8 weeks",
                                 "start_day": 1,
                                 "end_day": 56,
                             }

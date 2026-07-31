@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from database.database import SessionLocal
 from database.lmcpafm_models import ExperimentGroup, FormBStudyPhase, Species, Strain
-from tests.formb_payloads import step1_body, step2_body, study_plan_body
+from tests.formb_payloads import step1_body, step2_body, study_plan_body, upload_required_form_b_attachments, wizard_steps_after_step1
 
 
 def _register_and_login(client, monkeypatch):
@@ -114,11 +114,20 @@ def test_experiment_groups_seeded_on_protocol_generation(client, monkeypatch, ia
         species_id = species.id
         strain_id = strain.id
 
-    client.put(
-        f"/formb/{form_b_id}/study-plan",
-        json=study_plan_body(form_b_id, species_id=species_id, strain_id=strain_id),
-        headers=inv_headers,
-    )
+    upload_required_form_b_attachments(client, inv_headers, form_b_id)
+    for path, body in wizard_steps_after_step1(form_b_id):
+        res = client.post(path, json=body, headers=inv_headers)
+        assert res.status_code == 200, res.text
+        if path == "/formb/step-2":
+            plan_res = client.put(
+                f"/formb/{form_b_id}/study-plan",
+                json=study_plan_body(form_b_id, species_id=species_id, strain_id=strain_id),
+                headers=inv_headers,
+            )
+            assert plan_res.status_code == 200, plan_res.text
+
+    submit_res = client.post("/formb/submit", json={"form_b_id": form_b_id}, headers=inv_headers)
+    assert submit_res.status_code == 200, submit_res.text
 
     meeting_res = client.post(
         "/iaec/meeting",

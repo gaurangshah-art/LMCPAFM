@@ -3,7 +3,7 @@ from uuid import uuid4
 from database.database import SessionLocal
 from database.lmcpafm_models import Animal, Species, Strain
 
-from tests.planning_helpers import create_experiment_group, seed_project_animal_cap
+from tests.planning_helpers import create_iaec_project_db, create_experiment_group, seed_project_animal_cap
 
 
 def _seed_facility_room(client, admin_auth_headers, suffix: str):
@@ -92,18 +92,14 @@ def test_room_dashboard_marks_stale_care(client, staff_auth_headers, admin_auth_
 
 def test_pi_dashboard_groups_by_protocol(client, staff_auth_headers, iaec_auth_headers, admin_auth_headers):
     suffix = uuid4().hex[:6]
-    project_res = client.post(
-        "/iaec/project",
-        json={
-            "title": f"Dash Project {suffix}",
-            "investigator_name": "Dr. Dash",
-            "protocol_number": f"PD-{suffix}",
-            "approval_date": "2026-01-01",
-            "status": "approved",
-        },
-        headers=iaec_auth_headers,
+    project = create_iaec_project_db(
+        title=f"Dash Project {suffix}",
+        investigator_name="Dr. Dash",
+        protocol_number=f"PD-{suffix}",
+        approval_date="2026-01-01",
+        status="approved",
     )
-    project_id = project_res.json()["id"]
+    project_id = project.id
 
     db = SessionLocal()
     try:

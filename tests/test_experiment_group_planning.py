@@ -3,23 +3,18 @@ from uuid import uuid4
 from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain
 
-from tests.planning_helpers import create_experiment_group, seed_project_animal_cap
+from tests.planning_helpers import create_experiment_group, create_iaec_project_db, seed_project_animal_cap
 
 
 def _create_approved_project(client, iaec_auth_headers):
-    project_res = client.post(
-        "/iaec/project",
-        json={
-            "title": "Planning Test Project",
-            "investigator_name": "Dr. Plan",
-            "protocol_number": "PLAN-001",
-            "approval_date": "2026-01-01",
-            "status": "approved",
-        },
-        headers=iaec_auth_headers,
+    project = create_iaec_project_db(
+        title="Planning Test Project",
+        investigator_name="Dr. Plan",
+        protocol_number="PLAN-001",
+        approval_date="2026-01-01",
+        status="approved",
     )
-    assert project_res.status_code == 200, project_res.text
-    return project_res.json()["id"]
+    return project.id
 
 
 def _create_species_strain():

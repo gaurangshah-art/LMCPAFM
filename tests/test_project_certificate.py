@@ -3,23 +3,18 @@ from uuid import uuid4
 from database.database import SessionLocal
 from database.lmcpafm_models import Animal, Species, Strain
 
-from tests.planning_helpers import create_experiment_group, seed_project_animal_cap
+from tests.planning_helpers import create_experiment_group, create_iaec_project_db, seed_project_animal_cap
 
 
 def _create_approved_project(client, iaec_auth_headers, protocol_number: str):
-    response = client.post(
-        "/iaec/project",
-        json={
-            "title": "Certificate Test Project",
-            "investigator_name": "Dr. Cert",
-            "protocol_number": protocol_number,
-            "approval_date": "2026-01-01",
-            "status": "approved",
-        },
-        headers=iaec_auth_headers,
+    project = create_iaec_project_db(
+        title="Certificate Test Project",
+        investigator_name="Dr. Cert",
+        protocol_number=protocol_number,
+        approval_date="2026-01-01",
+        status="approved",
     )
-    assert response.status_code == 200, response.text
-    return response.json()["id"]
+    return project.id
 
 
 def test_signed_certificate_upload_requires_digital_final(client, iaec_auth_headers):

@@ -31,6 +31,7 @@ from routers.router_investigator_profile import router as investigator_profile_r
 from routers.formb_internal import router as formb_internal_router
 from routers.router_admin import router as admin_router
 from routers.router_admin_facility import router as admin_facility_router
+from routers.router_admin_masters import router as admin_masters_router
 from routers.router_facility import router as facility_router
 
 def _cors_origins() -> list[str]:
@@ -93,6 +94,7 @@ app.include_router(formd_router)
 app.include_router(formb_internal_router)
 app.include_router(admin_router)
 app.include_router(admin_facility_router)
+app.include_router(admin_masters_router)
 app.include_router(facility_router)
 app.include_router(disposal_router)
 app.include_router(experiments_router)

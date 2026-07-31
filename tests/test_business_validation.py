@@ -6,7 +6,7 @@ import pytest
 from database.database import SessionLocal
 from database.lmcpafm_models import Animal, FormB, IAECMeeting, Species, Strain
 
-from tests.planning_helpers import create_experiment_group, seed_project_animal_cap
+from tests.planning_helpers import create_experiment_group, create_iaec_project_db, seed_project_animal_cap
 from utils.business_validation import parse_weight_grams, validate_weight_grams
 
 
@@ -21,20 +21,18 @@ def test_validate_weight_grams_rejects_non_numeric():
         validate_weight_grams("heavy")
 
 
+from tests.planning_helpers import create_experiment_group, create_iaec_project_db, seed_project_animal_cap
+
+
 def _create_approved_project(client, iaec_auth_headers, protocol_number: str, approval_date: str):
-    response = client.post(
-        "/iaec/project",
-        json={
-            "title": "Validation Test Project",
-            "investigator_name": "Dr. Validate",
-            "protocol_number": protocol_number,
-            "approval_date": approval_date,
-            "status": "approved",
-        },
-        headers=iaec_auth_headers,
+    project = create_iaec_project_db(
+        title="Validation Test Project",
+        investigator_name="Dr. Validate",
+        protocol_number=protocol_number,
+        approval_date=approval_date,
+        status="approved",
     )
-    assert response.status_code == 200, response.text
-    return response.json()["id"]
+    return project.id
 
 
 def _seed_inventory(project_id: int, cap: int = 5):

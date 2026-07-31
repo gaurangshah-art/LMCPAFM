@@ -103,14 +103,13 @@ def create_project(
     db: Session = Depends(get_db),
     _current_user: User = Depends(require_any_role("iaec", "admin")),
 ):
-    try:
-        return crud_iaec.create_project(db, project)
-    except CRUDValidationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except CRUDDatabaseError:
-        raise HTTPException(status_code=500, detail="Database error")
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+    raise HTTPException(
+        status_code=403,
+        detail=(
+            "Manual IAEC project creation is disabled. Investigators must submit "
+            "Form B; projects are created automatically from the wizard."
+        ),
+    )
 
 
 @router.get("/project", response_model=list[IAECProject])
@@ -390,8 +389,10 @@ def assign_form_b_meeting(
 ):
     try:
         return assign_form_b_meeting_crud(db, form_b_id, payload.meeting_id)
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except CRUDNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except CRUDDatabaseError:
         raise HTTPException(status_code=500, detail="Database error")
 

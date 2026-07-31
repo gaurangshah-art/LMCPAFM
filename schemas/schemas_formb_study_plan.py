@@ -19,6 +19,7 @@ class FormBGroupDosingEntry(BaseModel):
     dose: str = Field(..., min_length=1, max_length=200)
     route: str = Field(..., min_length=1, max_length=100)
     frequency: str = Field(..., min_length=1, max_length=100)
+    duration: str = Field(..., min_length=1, max_length=200)
     start_day: int | None = Field(None, ge=0)
     end_day: int | None = Field(None, ge=0)
     volume: str | None = Field(None, max_length=100)
@@ -55,22 +56,41 @@ class FormBStudyGroupEntry(BaseModel):
     housing_notes: str | None = Field(None, max_length=5000)
     treatment_summary: str | None = Field(None, max_length=5000)
     dosing: list[FormBGroupDosingEntry] = Field(default_factory=list)
-    endpoints: list[FormBGroupEndpointEntry] = Field(..., min_length=1)
-    fates: list[FormBGroupFateEntry] = Field(..., min_length=1)
+    endpoints: list[FormBGroupEndpointEntry] = Field(default_factory=list)
+    fates: list[FormBGroupFateEntry] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_treatment_group_details(self):
         if self.role not in GROUP_ROLES:
             raise ValueError(f"Invalid group role '{self.role}'.")
-        if self.role in TREATMENT_GROUP_ROLES:
-            if not (self.treatment_summary or "").strip():
+        if self.role in TREATMENT_GROUP_ROLES or self.role == "control":
+            if self.role in TREATMENT_GROUP_ROLES and not self.dosing:
                 raise ValueError(
-                    f"Group '{self.group_name}' requires a treatment summary."
+                    f"Group '{self.group_name}' requires treatment details (drug, dose, route, frequency, duration)."
                 )
-            if not self.dosing:
-                raise ValueError(
-                    f"Group '{self.group_name}' requires at least one dosing entry."
+            for dose in self.dosing:
+                if not dose.duration.strip():
+                    raise ValueError(
+                        f"Group '{self.group_name}': treatment duration is required."
+                    )
+        if not self.endpoints:
+            self.endpoints = [
+                FormBGroupEndpointEntry(
+                    parameter_code="study_end",
+                    parameter_name="Study completion",
+                    schedule_type="single",
+                    schedule_detail="End of phase",
                 )
+            ]
+        if not self.fates:
+            self.fates = [
+                FormBGroupFateEntry(
+                    fate_type="sacrifice",
+                    count=self.animal_count,
+                    method_or_destination="As per IAEC-approved protocol",
+                    timing="End of phase",
+                )
+            ]
         return self
 
 

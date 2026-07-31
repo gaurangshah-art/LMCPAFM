@@ -206,6 +206,9 @@ def save_form_b_step(db: Session, user: User, form_b_id: int, step_key: str, dat
             project.title = data["title"]
             project.objective = data["objectives"]
             project.purpose = data["summary"]
+        references = data.get("funding_proof_references") or []
+        if isinstance(references, list):
+            data["funding_proof_reference"] = "; ".join(references)
 
     if step_key == "step3":
         _sync_animal_requirements(db, form_b, data)
