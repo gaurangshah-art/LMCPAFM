@@ -1,5 +1,5 @@
 export const INSTITUTIONAL_DEFAULTS = {
-  establishmentName: "L.M. College of Pharmacy (LMCP)",
+  establishmentName: "L. M. College of Pharmacy, Ahmedabad",
   establishmentAddress:
     "L.M. College of Pharmacy, Navrangpura, Ahmedabad - 380009, Gujarat, India",
   registrationNumber: "228/PO/ReBi/S/2000/CPCSEA",

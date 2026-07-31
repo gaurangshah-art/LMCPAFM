@@ -1,6 +1,8 @@
-import type { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import type { User, UserRole } from "../../api/types";
+import { COLLEGE_NAME, SYSTEM_TAGLINE } from "../../constants/branding";
+import { CollegeLogo } from "../common/CollegeLogo";
 
 type NavItem = {
   to: string;
@@ -43,22 +45,58 @@ interface NavbarProps {
 }
 
 export function Navbar({ currentUser, isAuthLoading, onLogout, children }: NavbarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
   const items = currentUser ? visibleNavItems(currentUser) : [];
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.classList.toggle("nav-menu-open", menuOpen);
+    return () => document.body.classList.remove("nav-menu-open");
+  }, [menuOpen]);
 
   return (
     <header className="top-nav">
-      <div className="brand">
-        <span className="brand-mark">LMCPAFM</span>
-        <small>Animal Facility Workflow</small>
+      <div className="nav-primary">
+        <div className="brand">
+          <CollegeLogo size="sm" className="brand-logo" />
+          <div className="brand-text">
+            <span className="brand-mark">{COLLEGE_NAME}</span>
+            <small>{SYSTEM_TAGLINE}</small>
+          </div>
+        </div>
+
+        {currentUser ? (
+          <button
+            type="button"
+            className="nav-toggle"
+            aria-expanded={menuOpen}
+            aria-controls="primary-navigation"
+            aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span className="nav-toggle-bar" />
+            <span className="nav-toggle-bar" />
+            <span className="nav-toggle-bar" />
+          </button>
+        ) : null}
       </div>
 
       {currentUser ? (
-        <nav className="nav-links" aria-label="Primary">
+        <nav
+          id="primary-navigation"
+          className={`nav-links ${menuOpen ? "is-open" : ""}`}
+          aria-label="Primary"
+        >
           {items.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+              onClick={() => setMenuOpen(false)}
             >
               {item.label}
             </NavLink>

@@ -1,6 +1,6 @@
 import os
 
-DEFAULT_ESTABLISHMENT_NAME = "L.M. College of Pharmacy (LMCP)"
+DEFAULT_ESTABLISHMENT_NAME = "L. M. College of Pharmacy, Ahmedabad"
 DEFAULT_ESTABLISHMENT_ADDRESS = (
     "L.M. College of Pharmacy, Navrangpura, Ahmedabad - 380009, Gujarat, India"
 )

@@ -11,6 +11,7 @@ import {
 import type { User } from "../api/types";
 
 import { Navbar } from "../components/layout/Navbar";
+import { InstitutionBanner } from "../components/common/InstitutionBanner";
 import { ProtectedRoute } from "../components/common/ProtectedRoute";
 
 import { DashboardPage } from "../pages/DashboardPage";
@@ -161,6 +162,7 @@ export default function App() {
       />
 
       <main className="page-container">
+        <InstitutionBanner />
         <InvestigatorProfileGate currentUser={currentUser}>
         <Routes>
           {/* LOGIN */}

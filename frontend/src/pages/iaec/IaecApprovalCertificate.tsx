@@ -9,6 +9,8 @@ import type { IAECApprovalCertificate, User } from "../../api/types";
 import { formatDisplayDate } from "../../utils/dateFormat";
 import { getApiErrorMessage } from "../../api/errors";
 import { apiClient } from "../../api/client";
+import { COLLEGE_NAME } from "../../constants/branding";
+import { CollegeLogo } from "../../components/common/CollegeLogo";
 
 interface IaecApprovalCertificateProps {
   currentUser: User;
@@ -183,8 +185,13 @@ export function IaecApprovalCertificate({ currentUser }: IaecApprovalCertificate
       ) : null}
 
       <div className={`certificate-box ${publicationReady ? "certificate-box-final" : isFinal ? "certificate-box-final" : "certificate-box-provisional"}`}>
-        <h3 className="certificate-title">{certificate.establishment_name || "L. M. College of Pharmacy"}</h3>
-        <p className="certificate-subtitle">Institutional Animal Ethics Committee (IAEC)</p>
+        <div className="certificate-brand">
+          <CollegeLogo size="lg" />
+          <div>
+            <h3 className="certificate-title">{certificate.establishment_name || COLLEGE_NAME}</h3>
+            <p className="certificate-subtitle">Institutional Animal Ethics Committee (IAEC)</p>
+          </div>
+        </div>
         {certificate.cpcsea_registration_number ? (
           <p className="certificate-subtitle">CPCSEA Reg. No. {certificate.cpcsea_registration_number}</p>
         ) : null}

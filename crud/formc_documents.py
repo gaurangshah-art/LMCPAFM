@@ -5,16 +5,11 @@ from fpdf import FPDF
 from crud.crud_inventory import get_form_c_data
 from crud.formb_documents import _safe_text
 from sqlalchemy.orm import Session
-from utils.institution import get_cpcsea_registration_number, get_establishment_name
+from utils.pdf_branding import BrandedPDF
 
 
-class _FormCPDF(FPDF):
-    def header(self):
-        self.set_font("Helvetica", "B", 11)
-        self.cell(0, 7, _safe_text(get_establishment_name()), ln=True, align="C")
-        self.set_font("Helvetica", "", 9)
-        self.cell(0, 6, _safe_text(f"CPCSEA Reg. No.: {get_cpcsea_registration_number()}"), ln=True, align="C")
-        self.ln(2)
+class _FormCPDF(BrandedPDF):
+    pass
 
 
 def render_form_c_pdf(db: Session) -> bytes:

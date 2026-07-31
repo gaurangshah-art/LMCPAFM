@@ -14,20 +14,17 @@ from crud.project_certificate import (
     build_project_certificate_data,
 )
 from database.lmcpafm_models import FormB, IAECMeeting, IAECProject
+from utils.branding import get_college_display_name
 from utils.institution import get_cpcsea_registration_number, get_establishment_name
+from utils.pdf_branding import BrandedPDF, _safe_text
 
 
-class _SimplePDF(FPDF):
+class _SimplePDF(BrandedPDF):
     def header(self):
-        self.set_font("Helvetica", "B", 12)
-        self.cell(0, 8, "LMCP Institutional Animal Ethics Committee", ln=True, align="C")
-        self.ln(2)
-
-
-def _safe_text(value) -> str:
-    if value is None:
-        return ""
-    return str(value).encode("latin-1", errors="replace").decode("latin-1")
+        super().header()
+        self.set_font("Helvetica", "B", 10)
+        self.cell(0, 6, "LMCP Institutional Animal Ethics Committee", ln=True, align="C")
+        self.ln(1)
 
 
 def _write_multiline(pdf: FPDF, text: str, height: float = 6) -> None:
@@ -247,7 +244,7 @@ def render_project_certificate_pdf(db: Session, project_id: int) -> bytes:
         pdf.ln(4)
 
     pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 8, _safe_text(get_establishment_name()), ln=True)
+    pdf.cell(0, 8, _safe_text(get_establishment_name() or get_college_display_name()), ln=True)
     pdf.cell(0, 8, _safe_text(f"CPCSEA Reg. No.: {get_cpcsea_registration_number()}"), ln=True)
     pdf.cell(0, 8, _safe_text(f"Protocol: {certificate['lmcp_iaec_id'] or 'Pending'}"), ln=True)
     pdf.cell(0, 8, _safe_text(f"Project: {certificate['title']}"), ln=True)

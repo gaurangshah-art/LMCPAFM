@@ -6,6 +6,7 @@ import { getMyInvestigatorProfile, type InvestigatorProfile } from "../api/inves
 import type { InvestigatorProjectSummary, User } from "../api/types";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
+import { PageHeader } from "../components/common/PageHeader";
 import { PageSection } from "../components/common/PageSection";
 import { DataTable } from "../components/tables/DataTable";
 import { formatDisplayDate } from "../utils/dateFormat";
@@ -78,37 +79,36 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
 
   return (
     <div className="page-grid">
-      <section className="hero-panel hero-panel-wide">
-        <p className="eyebrow">Investigator dashboard</p>
-        <h1>Welcome back, {currentUser.name}</h1>
-        <p>
-          Track Form B applications, IAEC project IDs, approval status, and certificates from one
-          place.
+      <PageHeader
+        eyebrow="Investigator dashboard"
+        title={`Welcome back, ${currentUser.name}`}
+        subtitle="Track Form B applications, IAEC project IDs, approval status, and certificates from one place."
+        actions={
+          <div className="quick-nav-grid dashboard-quick-actions">
+            <button type="button" className="btn" onClick={() => navigate("/form-b/step-1")}>
+              New Form B
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => navigate("/requisitions")}>
+              Requisitions
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => navigate("/experiment-groups")}>
+              Experiment Groups
+            </button>
+          </div>
+        }
+      />
+      {profile ? (
+        <p className="page-meta-line">
+          {profile.department ? `${profile.department}` : "Investigator"}
+          {profile.designation ? ` · ${profile.designation}` : ""}
+          {!profile.is_complete ? (
+            <>
+              {" "}
+              · <Link to="/investigator-profile?complete=1">Complete your profile</Link>
+            </>
+          ) : null}
         </p>
-        {profile ? (
-          <p>
-            {profile.department ? `${profile.department}` : "Investigator"}
-            {profile.designation ? ` · ${profile.designation}` : ""}
-            {!profile.is_complete ? (
-              <>
-                {" "}
-                · <Link to="/investigator-profile?complete=1">Complete your profile</Link>
-              </>
-            ) : null}
-          </p>
-        ) : null}
-        <div className="quick-nav-grid dashboard-quick-actions">
-          <button type="button" className="btn" onClick={() => navigate("/form-b/step-1")}>
-            New Form B
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate("/requisitions")}>
-            Requisitions
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate("/experiment-groups")}>
-            Experiment Groups
-          </button>
-        </div>
-      </section>
+      ) : null}
 
       <PageSection title="Overview" subtitle="Your IAEC workflow at a glance">
         <div className="summary-grid">

@@ -5,6 +5,7 @@ import { getApiErrorMessage } from "../api/errors";
 import type { FormCData } from "../api/types";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
+import { PageHeader } from "../components/common/PageHeader";
 import { PageSection } from "../components/common/PageSection";
 import { formatDisplayDate } from "../utils/dateFormat";
 
@@ -40,21 +41,23 @@ export function FormCPage() {
 
   return (
     <div className="page-grid">
-      <section className="hero-panel hero-panel-wide">
-        <p className="eyebrow">Animal facility register</p>
-        <h1>Form C — Breeding and Stock Register</h1>
-        <p>
-          Read-only register compiled from current inventory, procurement, and allocation
-          records.
-          {formC ? ` Snapshot as of ${formatDisplayDate(formC.as_of_date)}.` : null}
-        </p>
-        <button type="button" className="btn" onClick={() => void loadFormC()} disabled={isLoading}>
-          Refresh register
-        </button>
-        <button type="button" className="btn-secondary" onClick={() => void downloadFormCPdf()} disabled={isLoading}>
-          Download PDF
-        </button>
-      </section>
+      <PageHeader
+        eyebrow="Animal facility register"
+        title="Form C — Breeding and Stock Register"
+        subtitle={`Read-only register compiled from current inventory, procurement, and allocation records.${
+          formC ? ` Snapshot as of ${formatDisplayDate(formC.as_of_date)}.` : ""
+        }`}
+        actions={
+          <>
+            <button type="button" className="btn" onClick={() => void loadFormC()} disabled={isLoading}>
+              Refresh register
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => void downloadFormCPdf()} disabled={isLoading}>
+              Download PDF
+            </button>
+          </>
+        }
+      />
 
       {isLoading ? <LoadingState label="Loading Form C register..." /> : null}
       {error ? <ErrorAlert message={error} /> : null}

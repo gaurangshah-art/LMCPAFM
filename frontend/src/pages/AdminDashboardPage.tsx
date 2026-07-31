@@ -15,6 +15,7 @@ import { CreateStaffUserForm } from "../components/admin/CreateStaffUserForm";
 import { UserRoleEditForm } from "../components/admin/UserRoleEditForm";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
+import { PageHeader } from "../components/common/PageHeader";
 import { PageSection } from "../components/common/PageSection";
 import { DataTable } from "../components/tables/DataTable";
 import {
@@ -126,17 +127,14 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
 
   return (
     <div className="page-grid">
-      <section className="hero-panel hero-panel-wide">
-        <p className="eyebrow">Superadmin console</p>
-        <h1>Institutional account management</h1>
-        <p>
-          Create admin, staff, and IAEC accounts, review the user directory, and monitor
-          system activity from one place.
-        </p>
-        <p>
-          Signed in as <strong>{currentUser.email}</strong> ({currentUser.roles.join(", ")})
-        </p>
-      </section>
+      <PageHeader
+        eyebrow="Superadmin console"
+        title="Institutional account management"
+        subtitle="Create admin, staff, and IAEC accounts, review the user directory, and monitor system activity from one place."
+      />
+      <p className="page-meta-line">
+        Signed in as <strong>{currentUser.email}</strong> ({currentUser.roles.join(", ")})
+      </p>
 
       <PageSection title="System Summary" subtitle="Overview of LMCPAFM">
         {summary ? (
