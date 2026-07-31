@@ -108,6 +108,56 @@ def test_meeting_invitation_uses_linked_investigator_email(client, iaec_auth_hea
     assert res.json()["queued"] is True
 
 
+def test_meeting_invitation_resolves_email_from_pi_name(client, iaec_auth_headers, monkeypatch):
+    from database.database import SessionLocal
+    from models.user import User
+
+    db = SessionLocal()
+    meeting = IAECMeeting(date=date(2026, 7, 23), meeting_number="7", minutes="m")
+    user = User(
+        name="Dr Name Match",
+        email="name.match@lmcp.ac.in",
+        password_hash="hash",
+        status=True,
+    )
+    project = IAECProject(
+        title="Name Match Project",
+        investigator_name="Dr Name Match",
+        principal_investigator="Dr Name Match",
+        protocol_number="LMCP/IAEC/2026/7/001",
+    )
+    db.add_all([meeting, user, project])
+    db.flush()
+    form_b = FormB(
+        project_id=project.id,
+        date=date.today(),
+        meeting_id=meeting.id,
+        application_data={
+            "step1": {
+                "principal_investigator": "Dr Name Match",
+            }
+        },
+    )
+    db.add(form_b)
+    db.commit()
+    db.refresh(form_b)
+    db.close()
+
+    monkeypatch.setenv("IAEC_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("IAEC_SENDER_EMAIL", "iaec@lmcp.ac.in")
+    monkeypatch.setattr(
+        "crud.formb_email._send_email_with_attachment",
+        lambda *args, **kwargs: None,
+    )
+
+    res = client.post(
+        f"/iaec/form-b/{form_b.id}/send-meeting-invitation",
+        headers=iaec_auth_headers,
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["queued"] is True
+
+
 def test_meeting_invitation_queues_when_ready(client, iaec_auth_headers, monkeypatch):
     from database.database import SessionLocal
 

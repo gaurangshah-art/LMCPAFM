@@ -33,6 +33,7 @@ export function FormBStep1() {
   const [qualifications, setQualifications] = useState("");
   const [experience, setExperience] = useState("");
   const [researchType, setResearchType] = useState("");
+  const [contactEmailSaved, setContactEmailSaved] = useState<boolean | null>(null);
 
   function applyAutofill(autofill: FormBStep1Autofill) {
     setInstitutional(autofill);
@@ -67,6 +68,9 @@ export function FormBStep1() {
             setContactPhone(String(step1.contact_phone ?? ""));
             setQualifications(String(step1.qualifications ?? autofill.qualifications ?? ""));
             setExperience(String(step1.experience ?? autofill.experience ?? ""));
+            setContactEmailSaved(Boolean(String(step1.contact_email ?? "").trim()));
+          } else {
+            setContactEmailSaved(false);
           }
         }
       } catch (error) {
@@ -144,6 +148,7 @@ export function FormBStep1() {
         experience: experience.trim(),
         research_type: researchType,
       });
+      setContactEmailSaved(true);
 
       navigate("/form-b/step-2");
     } catch (error) {
@@ -173,6 +178,13 @@ export function FormBStep1() {
       ) : null}
 
       {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
+
+      {formBId && contactEmailSaved === false && contactEmail.trim() ? (
+        <p className="auth-note" role="note">
+          Contact email is prefilled from your profile but not saved on this Form B yet. Click{" "}
+          <strong>Save and continue</strong> so IAEC meeting invitations can use it.
+        </p>
+      ) : null}
 
       {!formBId ? (
         <button type="button" className="btn" onClick={handleStartFormB} disabled={loading}>

@@ -23,6 +23,7 @@ from database.lmcpafm_models import (
 from crud.formb_attachments import has_form_b_attachment, save_system_form_b_attachment
 from crud.formb_documents import render_study_plan_annexure_pdf
 from crud.formb_study_plan import STEP2B_KEY, validate_study_plan_exists
+from crud.formb_email import resolve_principal_investigator_email
 from models.user import User
 from utils.institution import get_institutional_form_b_defaults
 
@@ -240,6 +241,18 @@ def submit_form_b(db: Session, user: User, form_b_id: int) -> FormB:
         raise CRUDValidationError(
             f"Complete all Form B steps before submission (missing: {', '.join(missing)})"
         )
+
+    step1 = dict(application_data.get("step1") or {})
+    if not (step1.get("contact_email") or "").strip():
+        project = db.query(IAECProject).filter(IAECProject.id == form_b.project_id).first()
+        resolved_email = resolve_principal_investigator_email(db, form_b.id, step1, project)
+        if not resolved_email:
+            raise CRUDValidationError(
+                "Step 1 contact email is required before submission."
+            )
+        step1["contact_email"] = resolved_email
+        _set_step_data(form_b, "step1", step1)
+        application_data = dict(form_b.application_data or {})
 
     if not form_b_has_lmcp_faculty(db, form_b):
         raise CRUDValidationError(
