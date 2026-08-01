@@ -329,6 +329,7 @@ export interface FormBStudyPlanPayload {
   form_b_id: number;
   design_rationale: string;
   phases: FormBStudyPhaseEntry[];
+  animal_rationale: Record<string, unknown>;
 }
 
 export interface FormBStudyPlanRead {
@@ -338,6 +339,7 @@ export interface FormBStudyPlanRead {
   total_animals: number;
   phase_count: number;
   group_count: number;
+  animal_rationale?: Record<string, unknown> | null;
 }
 
 export async function getFormBStudyPlan(formBId: number): Promise<FormBStudyPlanRead> {

@@ -74,13 +74,6 @@ def _complete_wizard_steps(client, headers, form_b_id: int) -> None:
     for path, body in wizard_steps_after_step1(form_b_id):
         if path == "/formb/step-2":
             continue
-        if path == "/formb/step-3":
-            body = {
-                **body,
-                "requirements": [
-                    {**body["requirements"][0], "species": species_name, "strain": strain_name},
-                ],
-            }
         res = client.post(path, json=body, headers=headers)
         assert res.status_code == 200, res.text
 

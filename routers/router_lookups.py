@@ -48,8 +48,14 @@ def list_species(db: Session = Depends(get_db)):
 
 
 @router.get("/strain", response_model=list[LookupOption])
-def list_strains(db: Session = Depends(get_db)):
-    rows = db.query(Strain).order_by(Strain.name.asc()).all()
+def list_strains(
+    species_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Strain).order_by(Strain.name.asc())
+    if species_id is not None:
+        query = query.filter(Strain.species_id == species_id)
+    rows = query.all()
     return [LookupOption(id=row.id, name=row.name) for row in rows]
 
 

@@ -1,18 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  getFormBReview,
   getFormBStudyPlan,
   previewStudyPlanAnnexurePdf,
   readStoredFormBId,
   saveFormBStudyPlan,
   type FormBGroupDosingEntry,
+  type FormBGroupEndpointEntry,
   type FormBGroupFateEntry,
   type FormBStudyGroupEntry,
   type FormBStudyPhaseEntry,
 } from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
-import { getApprovedSpeciesOptions, getApprovedStrainsOptions, type LookupOption } from "../../api/lookupApi";
+import { getSpeciesOptions, getStrainsOptions, type LookupOption } from "../../api/lookupApi";
+import {
+  createEmptyAnimalRationale,
+  parseAnimalRationale,
+  serializeAnimalRationale,
+  type FormBAnimalRationaleForm,
+} from "../../constants/formBAnimalRationale";
+import {
+  buildStudyPlanPayloadPhases,
+  computeAnimalSummary,
+  defaultEndpoints,
+  defaultFate,
+  emptyEndpoint,
+  ENDPOINT_SCHEDULE_TYPES,
+  FATE_TYPE_OPTIONS,
+} from "../../constants/formBStudyPlan";
 import { LoadingState } from "../../components/common/LoadingState";
 
 const PHASE_CODES = [
@@ -41,17 +56,6 @@ function emptyDosing(): FormBGroupDosingEntry {
   };
 }
 
-function defaultFate(count: number): FormBGroupFateEntry[] {
-  return [
-    {
-      fate_type: "sacrifice",
-      count,
-      method_or_destination: "As per IAEC-approved protocol",
-      timing: "End of phase",
-    },
-  ];
-}
-
 function emptyGroup(animalCount = 6): FormBStudyGroupEntry {
   return {
     group_code: "G1",
@@ -67,7 +71,7 @@ function emptyGroup(animalCount = 6): FormBStudyGroupEntry {
     housing_notes: "",
     treatment_summary: "",
     dosing: [emptyDosing()],
-    endpoints: [],
+    endpoints: defaultEndpoints(),
     fates: defaultFate(animalCount),
   };
 }
@@ -97,7 +101,7 @@ function normalizePlan(data: FormBStudyPhaseEntry[] | undefined): FormBStudyPhas
       dosing: group.dosing?.length
         ? group.dosing.map((dose) => ({ ...emptyDosing(), ...dose, duration: dose.duration ?? "" }))
         : [emptyDosing()],
-      endpoints: group.endpoints ?? [],
+      endpoints: group.endpoints?.length ? group.endpoints : defaultEndpoints(),
       fates: group.fates?.length ? group.fates : defaultFate(group.animal_count),
     }));
     const animalCap = groups.reduce((sum, group) => sum + group.animal_count, 0);
@@ -110,15 +114,6 @@ function normalizePlan(data: FormBStudyPhaseEntry[] | undefined): FormBStudyPhas
   });
 }
 
-function sumStep3Requested(step3: Record<string, unknown> | null | undefined): number | null {
-  const requirements = step3?.requirements;
-  if (!Array.isArray(requirements) || !requirements.length) return null;
-  return requirements.reduce((sum, row) => {
-    const count = Number((row as { number_required?: number }).number_required ?? 0);
-    return sum + (Number.isFinite(count) ? count : 0);
-  }, 0);
-}
-
 export function FormBStep2b() {
   const navigate = useNavigate();
   const [formBId] = useState<number | null>(readStoredFormBId());
@@ -126,13 +121,15 @@ export function FormBStep2b() {
   const [loadingSaved, setLoadingSaved] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [designRationale, setDesignRationale] = useState("");
+  const [animalRationale, setAnimalRationale] = useState<FormBAnimalRationaleForm>(
+    createEmptyAnimalRationale(),
+  );
   const [phases, setPhases] = useState<FormBStudyPhaseEntry[]>([emptyPhase(1)]);
-  const [step3RequestedTotal, setStep3RequestedTotal] = useState<number | null>(null);
   const [speciesOptions, setSpeciesOptions] = useState<LookupOption[]>([]);
   const [strainCache, setStrainCache] = useState<Record<number, LookupOption[]>>({});
 
   useEffect(() => {
-    getApprovedSpeciesOptions().then(setSpeciesOptions).catch(() => setSpeciesOptions([]));
+    getSpeciesOptions().then(setSpeciesOptions).catch(() => setSpeciesOptions([]));
   }, []);
 
   useEffect(() => {
@@ -143,14 +140,11 @@ export function FormBStep2b() {
     let cancelled = false;
     (async () => {
       try {
-        const [saved, review] = await Promise.all([
-          getFormBStudyPlan(formBId),
-          getFormBReview(formBId).catch(() => null),
-        ]);
+        const saved = await getFormBStudyPlan(formBId);
         if (!cancelled) {
           setDesignRationale(saved.design_rationale ?? "");
           setPhases(normalizePlan(saved.phases as FormBStudyPhaseEntry[]));
-          setStep3RequestedTotal(sumStep3Requested(review?.step3 as Record<string, unknown> | undefined));
+          setAnimalRationale(parseAnimalRationale(saved.animal_rationale ?? undefined));
         }
       } catch {
         if (!cancelled) {
@@ -174,9 +168,27 @@ export function FormBStep2b() {
     [phases],
   );
 
+  const animalSummary = useMemo(() => computeAnimalSummary(phases), [phases]);
+
+  useEffect(() => {
+    if (totalAnimals <= 0) return;
+    setAnimalRationale((current) => {
+      const breakup = current.yearWiseBreakup.length
+        ? current.yearWiseBreakup.map((row, index) =>
+            index === 0 ? { ...row, count: totalAnimals } : { ...row, count: 0 },
+          )
+        : [{ year: "", count: totalAnimals }];
+      return { ...current, yearWiseBreakup: breakup };
+    });
+  }, [totalAnimals]);
+
+  function updateAnimalRationale(patch: Partial<FormBAnimalRationaleForm>) {
+    setAnimalRationale((current) => ({ ...current, ...patch }));
+  }
+
   async function loadStrains(speciesId: number) {
     if (strainCache[speciesId]) return;
-    const strains = await getApprovedStrainsOptions(speciesId);
+    const strains = await getStrainsOptions(speciesId);
     setStrainCache((current) => ({ ...current, [speciesId]: strains }));
   }
 
@@ -198,8 +210,8 @@ export function FormBStep2b() {
         const groups = phase.groups.map((group, gi) => {
           if (gi !== groupIndex) return group;
           const next = { ...group, ...patch };
-          if (patch.animal_count != null) {
-            next.fates = defaultFate(patch.animal_count);
+          if (patch.animal_count != null && next.fates.length === 1) {
+            next.fates = [{ ...next.fates[0], count: patch.animal_count }];
           }
           return next;
         });
@@ -225,6 +237,118 @@ export function FormBStep2b() {
             group_name: `Group ${nextIndex}`,
           },
         ];
+        return syncPhaseCap({ ...phase, groups });
+      }),
+    );
+  }
+
+  function updateEndpoint(
+    phaseIndex: number,
+    groupIndex: number,
+    endpointIndex: number,
+    patch: Partial<FormBGroupEndpointEntry>,
+  ) {
+    setPhases((current) =>
+      current.map((phase, pi) => {
+        if (pi !== phaseIndex) return phase;
+        const groups = phase.groups.map((group, gi) => {
+          if (gi !== groupIndex) return group;
+          const endpoints = group.endpoints.map((endpoint, ei) =>
+            ei === endpointIndex ? { ...endpoint, ...patch } : endpoint,
+          );
+          return { ...group, endpoints };
+        });
+        return syncPhaseCap({ ...phase, groups });
+      }),
+    );
+  }
+
+  function addEndpoint(phaseIndex: number, groupIndex: number) {
+    setPhases((current) =>
+      current.map((phase, pi) => {
+        if (pi !== phaseIndex) return phase;
+        const groups = phase.groups.map((group, gi) =>
+          gi === groupIndex
+            ? { ...group, endpoints: [...group.endpoints, emptyEndpoint()] }
+            : group,
+        );
+        return syncPhaseCap({ ...phase, groups });
+      }),
+    );
+  }
+
+  function removeEndpoint(phaseIndex: number, groupIndex: number, endpointIndex: number) {
+    setPhases((current) =>
+      current.map((phase, pi) => {
+        if (pi !== phaseIndex) return phase;
+        const groups = phase.groups.map((group, gi) => {
+          if (gi !== groupIndex) return group;
+          const endpoints = group.endpoints.filter((_, ei) => ei !== endpointIndex);
+          return { ...group, endpoints: endpoints.length ? endpoints : defaultEndpoints() };
+        });
+        return syncPhaseCap({ ...phase, groups });
+      }),
+    );
+  }
+
+  function updateFate(
+    phaseIndex: number,
+    groupIndex: number,
+    fateIndex: number,
+    patch: Partial<FormBGroupFateEntry>,
+  ) {
+    setPhases((current) =>
+      current.map((phase, pi) => {
+        if (pi !== phaseIndex) return phase;
+        const groups = phase.groups.map((group, gi) => {
+          if (gi !== groupIndex) return group;
+          const fates = group.fates.map((fate, fi) =>
+            fi === fateIndex ? { ...fate, ...patch } : fate,
+          );
+          return { ...group, fates };
+        });
+        return syncPhaseCap({ ...phase, groups });
+      }),
+    );
+  }
+
+  function addFate(phaseIndex: number, groupIndex: number) {
+    setPhases((current) =>
+      current.map((phase, pi) => {
+        if (pi !== phaseIndex) return phase;
+        const groups = phase.groups.map((group, gi) =>
+          gi === groupIndex
+            ? {
+                ...group,
+                fates: [
+                  ...group.fates,
+                  {
+                    fate_type: "rehabilitation",
+                    count: 0,
+                    method_or_destination: "",
+                    timing: "",
+                  },
+                ],
+              }
+            : group,
+        );
+        return syncPhaseCap({ ...phase, groups });
+      }),
+    );
+  }
+
+  function removeFate(phaseIndex: number, groupIndex: number, fateIndex: number) {
+    setPhases((current) =>
+      current.map((phase, pi) => {
+        if (pi !== phaseIndex) return phase;
+        const groups = phase.groups.map((group, gi) => {
+          if (gi !== groupIndex) return group;
+          const fates = group.fates.filter((_, fi) => fi !== fateIndex);
+          return {
+            ...group,
+            fates: fates.length ? fates : defaultFate(group.animal_count),
+          };
+        });
         return syncPhaseCap({ ...phase, groups });
       }),
     );
@@ -261,16 +385,83 @@ export function FormBStep2b() {
             return `Group "${group.group_name}": complete drug, dose, route, frequency, and duration.`;
           }
         }
+
+        if (!group.endpoints.length) {
+          return `Group "${group.group_name}": add at least one study evaluation parameter.`;
+        }
+        for (const endpoint of group.endpoints) {
+          if (!endpoint.parameter_name.trim()) {
+            return `Group "${group.group_name}": every evaluation parameter needs a name.`;
+          }
+          if (!endpoint.schedule_detail.trim()) {
+            return `Group "${group.group_name}": enter frequency/timing for "${endpoint.parameter_name}".`;
+          }
+        }
+
+        if (!group.fates.length) {
+          return `Group "${group.group_name}": specify animal disposition (sacrificed, rehabilitated, etc.).`;
+        }
+        const fateTotal = group.fates.reduce((sum, fate) => sum + (fate.count || 0), 0);
+        if (fateTotal !== group.animal_count) {
+          return `Group "${group.group_name}": disposition counts (${fateTotal}) must equal animals in group (${group.animal_count}).`;
+        }
       }
     }
 
-    if (step3RequestedTotal != null && totalAnimals !== step3RequestedTotal) {
-      return (
-        `Total animals in all groups (${totalAnimals}) must match Step 3 requested total ` +
-        `(${step3RequestedTotal}). Complete Step 3 first or adjust group counts.`
-      );
-    }
+    return null;
+  }
 
+  function validateAnimalRationale(): string | null {
+    if (!animalRationale.whyAnimalNecessary.trim()) {
+      return "Explain why animal usage is necessary.";
+    }
+    if (!animalRationale.inVitroStudyDetails.trim()) {
+      return "Describe in vitro study status.";
+    }
+    if (!animalRationale.whySpeciesSelected.trim()) {
+      return "Explain species selection.";
+    }
+    if (!animalRationale.whyNumberEssential.trim()) {
+      return "Justify the number of animals.";
+    }
+    if (!animalRationale.similarExperimentsInEstablishment.trim()) {
+      return "State whether similar experiments were conducted in your establishment.";
+    }
+    if (
+      animalRationale.similarExperimentsInEstablishment.trim().toLowerCase().startsWith("yes") &&
+      !animalRationale.justifyNewExperiment.trim()
+    ) {
+      return "Justify why a new experiment is required when similar work was done in your establishment.";
+    }
+    if (!animalRationale.similarExperimentsElsewhere.trim()) {
+      return "Provide references for similar experiments elsewhere.";
+    }
+    if (!animalRationale.animalSource.trim()) return "Select the source of animals.";
+    if (!animalRationale.daysHoused || animalRationale.daysHoused <= 0) {
+      return "Enter the number of days each animal will be housed.";
+    }
+    if (!animalRationale.numberJustification.trim()) {
+      return "Provide justification for the number of animals.";
+    }
+    if (!animalRationale.breederName.trim()) return "Breeder name is required.";
+    if (!animalRationale.breederAddress.trim()) return "Breeder address is required.";
+    if (!animalRationale.breederRegistrationNumber.trim()) {
+      return "Breeder registration number is required.";
+    }
+    const breakupTotal = animalRationale.yearWiseBreakup.reduce(
+      (sum, row) => sum + (row.count || 0),
+      0,
+    );
+    if (breakupTotal !== totalAnimals) {
+      return `Year-wise animal counts (${breakupTotal}) must equal the study plan total (${totalAnimals}).`;
+    }
+    for (let index = 0; index < animalRationale.yearWiseBreakup.length; index += 1) {
+      const row = animalRationale.yearWiseBreakup[index];
+      if (!row.year.trim()) return `Year ${index + 1} is required in the year-wise breakup.`;
+      if (!row.count || row.count <= 0) {
+        return `Year ${index + 1} must have a positive animal count.`;
+      }
+    }
     return null;
   }
 
@@ -279,26 +470,18 @@ export function FormBStep2b() {
       alert("Form B ID missing.");
       return;
     }
-    const error = validateLocally();
-    if (error) {
-      alert(error);
+    const planError = validateLocally();
+    if (planError) {
+      alert(planError);
+      return;
+    }
+    const rationaleError = validateAnimalRationale();
+    if (rationaleError) {
+      alert(rationaleError);
       return;
     }
 
-    const payloadPhases = phases.map((phase) =>
-      syncPhaseCap({
-        ...phase,
-        groups: phase.groups.map((group) => ({
-          ...group,
-          dosing:
-            group.role === "control" && !group.dosing[0]?.agent_name.trim()
-              ? []
-              : group.dosing.slice(0, 1),
-          endpoints: [],
-          fates: defaultFate(group.animal_count),
-        })),
-      }),
-    );
+    const payloadPhases = buildStudyPlanPayloadPhases(phases, syncPhaseCap);
 
     setLoading(true);
     setErrorMessage(null);
@@ -307,6 +490,7 @@ export function FormBStep2b() {
         form_b_id: formBId,
         design_rationale: designRationale.trim() || "Preclinical study plan",
         phases: payloadPhases,
+        animal_rationale: serializeAnimalRationale(animalRationale),
       });
       if (nextPath) navigate(nextPath);
     } catch (error) {
@@ -318,32 +502,25 @@ export function FormBStep2b() {
 
   async function handlePreviewPdf() {
     if (!formBId) return;
-    const error = validateLocally();
-    if (error) {
-      alert(error);
+    const planError = validateLocally();
+    if (planError) {
+      alert(planError);
+      return;
+    }
+    const rationaleError = validateAnimalRationale();
+    if (rationaleError) {
+      alert(rationaleError);
       return;
     }
     setLoading(true);
     setErrorMessage(null);
     try {
-      const payloadPhases = phases.map((phase) =>
-        syncPhaseCap({
-          ...phase,
-          groups: phase.groups.map((group) => ({
-            ...group,
-            dosing:
-              group.role === "control" && !group.dosing[0]?.agent_name.trim()
-                ? []
-                : group.dosing.slice(0, 1),
-            endpoints: [],
-            fates: defaultFate(group.animal_count),
-          })),
-        }),
-      );
+      const payloadPhases = buildStudyPlanPayloadPhases(phases, syncPhaseCap);
       await saveFormBStudyPlan({
         form_b_id: formBId,
         design_rationale: designRationale.trim() || "Preclinical study plan",
         phases: payloadPhases,
+        animal_rationale: serializeAnimalRationale(animalRationale),
       });
       await previewStudyPlanAnnexurePdf(formBId);
     } catch (error) {
@@ -362,8 +539,9 @@ export function FormBStep2b() {
       <header className="section-header">
         <h2>Form B – Step 2b</h2>
         <p>
-          Preclinical study plan: define phases and experimental groups (title, treatment, animals
-          per group). Totals must match Step 3 animal requirements when that step is completed.
+          Preclinical study plan and animal requirements: define phases, groups, and the rationale
+          for animal use. Species and counts in each group are used automatically — no separate
+          Step 3 is needed.
         </p>
       </header>
 
@@ -374,12 +552,50 @@ export function FormBStep2b() {
         <>
           <div className="summary-grid">
             <div className="summary-card">
-              <h4>Animals in study plan</h4>
+              <h4>Total animals in study plan</h4>
               <p>{totalAnimals}</p>
+              <p className="field-help">Used for year-wise breakup and Annexure I.</p>
             </div>
             <div className="summary-card">
-              <h4>Step 3 requested total</h4>
-              <p>{step3RequestedTotal ?? "Complete Step 3 to compare"}</p>
+              <h4>Annexure I animal summary</h4>
+              <table className="data-table compact-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Total used</td>
+                    <td>{animalSummary.totalUsed}</td>
+                  </tr>
+                  <tr>
+                    <td>Sacrificed / euthanized</td>
+                    <td>{animalSummary.sacrificed}</td>
+                  </tr>
+                  <tr>
+                    <td>Rehabilitated</td>
+                    <td>{animalSummary.rehabilitated}</td>
+                  </tr>
+                  {(animalSummary.reused > 0 || animalSummary.other > 0) && (
+                    <>
+                      {animalSummary.reused > 0 ? (
+                        <tr>
+                          <td>Reused</td>
+                          <td>{animalSummary.reused}</td>
+                        </tr>
+                      ) : null}
+                      {animalSummary.other > 0 ? (
+                        <tr>
+                          <td>Other</td>
+                          <td>{animalSummary.other}</td>
+                        </tr>
+                      ) : null}
+                    </>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -566,6 +782,188 @@ export function FormBStep2b() {
                         />
                       </label>
                     </div>
+
+                    <div className="page-section nested-section" style={{ marginTop: "0.75rem" }}>
+                      <h5>Study evaluation parameters</h5>
+                      <p className="field-help">
+                        Parameters observed during the study and how often they are measured.
+                      </p>
+                      <table className="data-table compact-table">
+                        <thead>
+                          <tr>
+                            <th>Parameter</th>
+                            <th>Frequency type</th>
+                            <th>Frequency / schedule</th>
+                            <th>Method (optional)</th>
+                            <th />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.endpoints.map((endpoint, endpointIndex) => (
+                            <tr key={`endpoint-${phaseIndex}-${groupIndex}-${endpointIndex}`}>
+                              <td>
+                                <input
+                                  value={endpoint.parameter_name}
+                                  onChange={(e) =>
+                                    updateEndpoint(phaseIndex, groupIndex, endpointIndex, {
+                                      parameter_name: e.target.value,
+                                    })
+                                  }
+                                  placeholder="e.g. Body weight"
+                                />
+                              </td>
+                              <td>
+                                <select
+                                  value={endpoint.schedule_type}
+                                  onChange={(e) =>
+                                    updateEndpoint(phaseIndex, groupIndex, endpointIndex, {
+                                      schedule_type: e.target.value,
+                                    })
+                                  }
+                                >
+                                  {ENDPOINT_SCHEDULE_TYPES.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                <input
+                                  value={endpoint.schedule_detail}
+                                  onChange={(e) =>
+                                    updateEndpoint(phaseIndex, groupIndex, endpointIndex, {
+                                      schedule_detail: e.target.value,
+                                    })
+                                  }
+                                  placeholder="e.g. Weekly, Day 14, Days 1-7"
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  value={endpoint.method ?? ""}
+                                  onChange={(e) =>
+                                    updateEndpoint(phaseIndex, groupIndex, endpointIndex, {
+                                      method: e.target.value,
+                                    })
+                                  }
+                                  placeholder="e.g. Digital balance"
+                                />
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="btn-link danger"
+                                  onClick={() => removeEndpoint(phaseIndex, groupIndex, endpointIndex)}
+                                  disabled={group.endpoints.length <= 1}
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => addEndpoint(phaseIndex, groupIndex)}
+                      >
+                        + Add parameter
+                      </button>
+                    </div>
+
+                    <div className="page-section nested-section" style={{ marginTop: "0.75rem" }}>
+                      <h5>Animal disposition</h5>
+                      <p className="field-help">
+                        How animals in this group will be used, sacrificed, or rehabilitated. Counts
+                        must total {group.animal_count}.
+                      </p>
+                      <table className="data-table compact-table">
+                        <thead>
+                          <tr>
+                            <th>Disposition</th>
+                            <th>Count</th>
+                            <th>Method / destination</th>
+                            <th>Timing</th>
+                            <th />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.fates.map((fate, fateIndex) => (
+                            <tr key={`fate-${phaseIndex}-${groupIndex}-${fateIndex}`}>
+                              <td>
+                                <select
+                                  value={fate.fate_type}
+                                  onChange={(e) =>
+                                    updateFate(phaseIndex, groupIndex, fateIndex, {
+                                      fate_type: e.target.value,
+                                    })
+                                  }
+                                >
+                                  {FATE_TYPE_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={fate.count}
+                                  onChange={(e) =>
+                                    updateFate(phaseIndex, groupIndex, fateIndex, {
+                                      count: Number(e.target.value),
+                                    })
+                                  }
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  value={fate.method_or_destination ?? ""}
+                                  onChange={(e) =>
+                                    updateFate(phaseIndex, groupIndex, fateIndex, {
+                                      method_or_destination: e.target.value,
+                                    })
+                                  }
+                                  placeholder="e.g. CO2, adoption centre"
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  value={fate.timing ?? ""}
+                                  onChange={(e) =>
+                                    updateFate(phaseIndex, groupIndex, fateIndex, {
+                                      timing: e.target.value,
+                                    })
+                                  }
+                                  placeholder="e.g. End of phase"
+                                />
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="btn-link danger"
+                                  onClick={() => removeFate(phaseIndex, groupIndex, fateIndex)}
+                                  disabled={group.fates.length <= 1}
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => addFate(phaseIndex, groupIndex)}
+                      >
+                        + Add disposition row
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -588,12 +986,169 @@ export function FormBStep2b() {
             </button>
           </div>
 
+          <section className="page-section" style={{ marginTop: "1.5rem" }}>
+            <h3>Animal use rationale</h3>
+            <p className="field-help">
+              These fields replace the old Step 3. Species, strain, sex, age, and counts come from
+              the study groups above.
+            </p>
+            <div className="form-grid">
+              <label className="full-width">
+                Why is animal usage necessary for these studies?
+                <textarea
+                  value={animalRationale.whyAnimalNecessary}
+                  onChange={(e) => updateAnimalRationale({ whyAnimalNecessary: e.target.value })}
+                />
+              </label>
+              <label className="full-width">
+                In vitro / alternative study details
+                <textarea
+                  value={animalRationale.inVitroStudyDetails}
+                  onChange={(e) => updateAnimalRationale({ inVitroStudyDetails: e.target.value })}
+                />
+              </label>
+              <label className="full-width">
+                Why are the particular species selected?
+                <textarea
+                  value={animalRationale.whySpeciesSelected}
+                  onChange={(e) => updateAnimalRationale({ whySpeciesSelected: e.target.value })}
+                />
+              </label>
+              <label className="full-width">
+                Why is the estimated number of animals essential?
+                <textarea
+                  value={animalRationale.whyNumberEssential}
+                  onChange={(e) => updateAnimalRationale({ whyNumberEssential: e.target.value })}
+                />
+              </label>
+              <label className="full-width">
+                Have similar experiments been conducted in your establishment?
+                <textarea
+                  value={animalRationale.similarExperimentsInEstablishment}
+                  onChange={(e) =>
+                    updateAnimalRationale({ similarExperimentsInEstablishment: e.target.value })
+                  }
+                />
+              </label>
+              <label className="full-width">
+                If yes, justify why a new experiment is required
+                <textarea
+                  value={animalRationale.justifyNewExperiment}
+                  onChange={(e) => updateAnimalRationale({ justifyNewExperiment: e.target.value })}
+                />
+              </label>
+              <label className="full-width">
+                Similar experiments elsewhere (references)
+                <textarea
+                  value={animalRationale.similarExperimentsElsewhere}
+                  onChange={(e) =>
+                    updateAnimalRationale({ similarExperimentsElsewhere: e.target.value })
+                  }
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="page-section" style={{ marginTop: "1rem" }}>
+            <h3>Procurement and housing</h3>
+            <div className="form-grid">
+              <label>
+                Total animals (from study plan)
+                <input type="number" value={totalAnimals} readOnly disabled />
+              </label>
+              <label>
+                Source of animals
+                <select
+                  value={animalRationale.animalSource}
+                  onChange={(e) => updateAnimalRationale({ animalSource: e.target.value })}
+                >
+                  <option value="">Select source</option>
+                  <option value="Institutional Animal House">Institutional Animal House</option>
+                  <option value="CPCSEA Registered Breeder">CPCSEA Registered Breeder</option>
+                  <option value="Other IAEC-approved source">Other IAEC-approved source</option>
+                </select>
+              </label>
+              <label>
+                Days each animal will be housed
+                <input
+                  type="number"
+                  value={animalRationale.daysHoused || ""}
+                  onChange={(e) =>
+                    updateAnimalRationale({ daysHoused: Number(e.target.value) })
+                  }
+                />
+              </label>
+              <label className="full-width">
+                Justification for number of animals
+                <textarea
+                  value={animalRationale.numberJustification}
+                  onChange={(e) => updateAnimalRationale({ numberJustification: e.target.value })}
+                />
+              </label>
+              <label>
+                Breeder name
+                <input
+                  value={animalRationale.breederName}
+                  onChange={(e) => updateAnimalRationale({ breederName: e.target.value })}
+                />
+              </label>
+              <label>
+                Breeder registration number
+                <input
+                  value={animalRationale.breederRegistrationNumber}
+                  onChange={(e) =>
+                    updateAnimalRationale({ breederRegistrationNumber: e.target.value })
+                  }
+                />
+              </label>
+              <label className="full-width">
+                Breeder address
+                <textarea
+                  value={animalRationale.breederAddress}
+                  onChange={(e) => updateAnimalRationale({ breederAddress: e.target.value })}
+                />
+              </label>
+              <label className="full-width">
+                Year-wise breakup (must total {totalAnimals})
+                <div className="form-grid">
+                  {animalRationale.yearWiseBreakup.map((row, index) => (
+                    <div key={`year-${index}`} className="full-width form-grid">
+                      <label>
+                        Year
+                        <input
+                          value={row.year}
+                          onChange={(e) => {
+                            const next = [...animalRationale.yearWiseBreakup];
+                            next[index] = { ...next[index], year: e.target.value };
+                            updateAnimalRationale({ yearWiseBreakup: next });
+                          }}
+                        />
+                      </label>
+                      <label>
+                        Count
+                        <input
+                          type="number"
+                          value={row.count || ""}
+                          onChange={(e) => {
+                            const next = [...animalRationale.yearWiseBreakup];
+                            next[index] = { ...next[index], count: Number(e.target.value) };
+                            updateAnimalRationale({ yearWiseBreakup: next });
+                          }}
+                        />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </label>
+            </div>
+          </section>
+
           <div className="wizard-actions">
-            <button className="btn-secondary" onClick={() => navigate("/form-b/step-2")}>
+            <button type="button" className="btn-secondary" onClick={() => navigate("/form-b/step-2")}>
               ← Back
             </button>
-            <button className="btn" onClick={() => void handleSave("/form-b/step-3")} disabled={loading}>
-              Save & Next →
+            <button type="button" className="btn" onClick={() => void handleSave("/form-b/step-4")} disabled={loading}>
+              {loading ? "Saving…" : "Save & Next →"}
             </button>
           </div>
         </>

@@ -63,20 +63,6 @@ def _save_steps_2_to_7(client, headers, form_b_id, species_name=None, strain_nam
     suffix = uuid4().hex[:4]
     species_name = species_name or f"Rat-{suffix}"
     strain_name = strain_name or f"Wistar-{suffix}"
-    requirement = {
-        **STEP3_REQUIREMENT,
-        "species": species_name,
-        "strain": strain_name,
-    }
-    steps = wizard_steps_after_step1(form_b_id)
-    steps[1] = (
-        "/formb/step-3",
-        {
-            "form_b_id": form_b_id,
-            **STEP3_BODY,
-            "requirements": [requirement],
-        },
-    )
 
     with SessionLocal() as db:
         species = db.query(Species).filter(Species.name == species_name).first()
@@ -96,7 +82,7 @@ def _save_steps_2_to_7(client, headers, form_b_id, species_name=None, strain_nam
         species_id = species.id
         strain_id = strain.id
 
-    for path, body in steps:
+    for path, body in wizard_steps_after_step1(form_b_id):
         res = client.post(path, json=body, headers=headers)
         assert res.status_code == 200, res.text
         if path == "/formb/step-2":
@@ -175,37 +161,44 @@ def test_form_b_step3_supports_multiple_animal_requirements(client, monkeypatch)
         db.add(rat)
         db.add(mouse)
         db.flush()
-        db.add(Strain(name=wistar_name, species_id=rat.id))
-        db.add(Strain(name=balbc_name, species_id=mouse.id))
+        wistar = Strain(name=wistar_name, species_id=rat.id)
+        balbc = Strain(name=balbc_name, species_id=mouse.id)
+        db.add(wistar)
+        db.add(balbc)
         db.commit()
+        rat_id = rat.id
+        wistar_id = wistar.id
+        mouse_id = mouse.id
+        balbc_id = balbc.id
 
-    step3_res = client.post(
-        "/formb/step-3",
-        json={
-            "form_b_id": form_b_id,
-            **STEP3_BODY,
-            "requirements": [
+    from tests.formb_payloads import study_plan_animal_rationale, study_plan_body
+
+    study_plan = study_plan_body(form_b_id, species_id=rat_id, strain_id=wistar_id)
+    study_plan["animal_rationale"] = study_plan_animal_rationale(20)
+    study_plan["phases"] = [
+        {
+            **study_plan["phases"][0],
+            "animal_cap": 20,
+            "groups": [
                 {
-                    **STEP3_REQUIREMENT,
-                    "species": rat_name,
-                    "strain": wistar_name,
-                    "number_required": 12,
-                    "justification": "Group A",
-                    "year_wise_breakup": [{"year": "2026", "count": 12}],
+                    **study_plan["phases"][0]["groups"][0],
+                    "animal_count": 12,
+                    "species_id": rat_id,
+                    "strain_id": wistar_id,
+                    "fates": [{**study_plan["phases"][0]["groups"][0]["fates"][0], "count": 12}],
                 },
                 {
-                    **STEP3_REQUIREMENT,
-                    "species": mouse_name,
-                    "strain": balbc_name,
-                    "number_required": 8,
-                    "justification": "Group B",
-                    "year_wise_breakup": [{"year": "2026", "count": 8}],
+                    **study_plan["phases"][0]["groups"][1],
+                    "animal_count": 8,
+                    "species_id": mouse_id,
+                    "strain_id": balbc_id,
+                    "fates": [{**study_plan["phases"][0]["groups"][1]["fates"][0], "count": 8}],
                 },
             ],
-        },
-        headers=headers,
-    )
-    assert step3_res.status_code == 200, step3_res.text
+        }
+    ]
+    plan_res = client.put(f"/formb/{form_b_id}/study-plan", json=study_plan, headers=headers)
+    assert plan_res.status_code == 200, plan_res.text
 
     review = client.get(f"/formb/{form_b_id}/review", headers=headers).json()
     assert len(review["step3"]["requirements"]) == 2

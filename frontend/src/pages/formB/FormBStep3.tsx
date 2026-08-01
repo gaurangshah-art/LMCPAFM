@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  getFormBStudyPlan,
   readStoredFormBId,
   saveFormBStep3,
   type FormBAnimalRequirementEntry,
   type FormBYearWiseCountEntry,
 } from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
+import { getSpeciesOptions, getStrainsOptions, type LookupOption } from "../../api/lookupApi";
 import { LoadingState } from "../../components/common/LoadingState";
 import { INSTITUTIONAL_DEFAULTS } from "../../constants/institution";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
@@ -113,12 +115,36 @@ function parseSavedStep3(data: Record<string, unknown> | null | undefined): Step
   };
 }
 
+function applyStudyPlanTotal(formState: Step3Form, studyPlanTotal: number | null): Step3Form {
+  if (studyPlanTotal == null || studyPlanTotal <= 0) {
+    return formState;
+  }
+  if (formState.requirements.length !== 1) {
+    return formState;
+  }
+
+  const row = formState.requirements[0];
+  const yearWiseBreakup =
+    row.year_wise_breakup.length === 1
+      ? [{ ...row.year_wise_breakup[0], count: studyPlanTotal }]
+      : row.year_wise_breakup;
+
+  return {
+    ...formState,
+    requirements: [{ ...row, number_required: studyPlanTotal, year_wise_breakup: yearWiseBreakup }],
+  };
+}
+
 export function FormBStep3() {
   const navigate = useNavigate();
   const [formBId] = useState<number | null>(readStoredFormBId());
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [form, setForm] = useState<Step3Form>(EMPTY_FORM);
+  const [studyPlanTotal, setStudyPlanTotal] = useState<number | null>(null);
+  const [studyPlanLoading, setStudyPlanLoading] = useState(true);
+  const [speciesOptions, setSpeciesOptions] = useState<LookupOption[]>([]);
+  const [strainCache, setStrainCache] = useState<Record<number, LookupOption[]>>({});
 
   const { value: saved, loading: loadingSaved } = useFormBStepReview(
     formBId,
@@ -128,10 +154,49 @@ export function FormBStep3() {
   );
 
   useEffect(() => {
-    if (saved) {
-      setForm(saved);
+    if (!formBId) {
+      setStudyPlanLoading(false);
+      return;
     }
-  }, [saved]);
+
+    getFormBStudyPlan(formBId)
+      .then((plan) => setStudyPlanTotal(plan.total_animals))
+      .catch(() => setStudyPlanTotal(null))
+      .finally(() => setStudyPlanLoading(false));
+  }, [formBId]);
+
+  useEffect(() => {
+    getSpeciesOptions().then(setSpeciesOptions).catch(() => setSpeciesOptions([]));
+  }, []);
+
+  useEffect(() => {
+    if (loadingSaved || studyPlanLoading) {
+      return;
+    }
+    const base = saved ?? EMPTY_FORM;
+    setForm(applyStudyPlanTotal(base, studyPlanTotal));
+  }, [saved, loadingSaved, studyPlanLoading, studyPlanTotal]);
+
+  async function loadStrains(speciesId: number) {
+    if (strainCache[speciesId]) return;
+    const strains = await getStrainsOptions(speciesId);
+    setStrainCache((current) => ({ ...current, [speciesId]: strains }));
+  }
+
+  useEffect(() => {
+    if (!speciesOptions.length) return;
+    for (const row of form.requirements) {
+      if (!row.species) continue;
+      const speciesId = speciesOptions.find((option) => option.name === row.species)?.id;
+      if (speciesId) {
+        void loadStrains(speciesId);
+      }
+    }
+  }, [form.requirements, speciesOptions]);
+
+  function speciesIdForName(name: string): number | null {
+    return speciesOptions.find((option) => option.name === name)?.id ?? null;
+  }
 
   function updateRationale<K extends keyof Omit<Step3Form, "requirements">>(
     key: K,
@@ -167,6 +232,21 @@ export function FormBStep3() {
   }
 
   function validateStep3() {
+    if (studyPlanTotal == null || studyPlanTotal <= 0) {
+      return "Complete Step 2b (study plan) before saving animal requirements.";
+    }
+
+    const requirementTotal = form.requirements.reduce(
+      (sum, row) => sum + (row.number_required || 0),
+      0,
+    );
+    if (requirementTotal !== studyPlanTotal) {
+      return (
+        `Total animals across requirement rows (${requirementTotal}) must match the ` +
+        `Step 2b study plan total (${studyPlanTotal}).`
+      );
+    }
+
     if (!form.whyAnimalNecessary.trim()) return "Explain why animal usage is necessary.";
     if (!form.inVitroStudyDetails.trim()) return "Describe in vitro study status.";
     if (!form.whySpeciesSelected.trim()) return "Explain species selection.";
@@ -257,7 +337,10 @@ export function FormBStep3() {
           ...row,
           weight: row.weight.trim(),
           justification: row.justification.trim(),
-          number_required: Number(row.number_required),
+          number_required:
+            form.requirements.length === 1 && studyPlanTotal != null && studyPlanTotal > 0
+              ? studyPlanTotal
+              : Number(row.number_required),
           days_housed: Number(row.days_housed),
         })),
       });
@@ -270,7 +353,7 @@ export function FormBStep3() {
     }
   }
 
-  if (loadingSaved) {
+  if (loadingSaved || studyPlanLoading) {
     return <LoadingState label="Loading animal requirements..." />;
   }
 
@@ -288,6 +371,26 @@ export function FormBStep3() {
       {formBId && (
         <>
           {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
+          {studyPlanTotal != null && studyPlanTotal > 0 ? (
+            <div className="summary-card" style={{ marginBottom: "1rem" }}>
+              <h4>Total animals (from Step 2b study plan)</h4>
+              <p>{studyPlanTotal}</p>
+              {form.requirements.length === 1 ? (
+                <p className="field-help">
+                  The total number required below is filled automatically from your study plan.
+                </p>
+              ) : (
+                <p className="field-help">
+                  Split this total across the species/strain rows below. All rows must add up to{" "}
+                  {studyPlanTotal}.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="error-text">
+              Complete Step 2b (study plan) first so the animal total can be carried forward here.
+            </p>
+          )}
           <p><strong>Form B internal ID:</strong> {formBId}</p>
 
           <div className="form-grid">
@@ -370,15 +473,19 @@ export function FormBStep3() {
                   Species
                   <select
                     value={row.species}
-                    onChange={(e) => updateRequirement(row.id, { species: e.target.value })}
+                    onChange={(e) => {
+                      const species = e.target.value;
+                      const speciesId = speciesIdForName(species);
+                      updateRequirement(row.id, { species, strain: "" });
+                      if (speciesId) void loadStrains(speciesId);
+                    }}
                   >
                     <option value="">Select species</option>
-                    <option value="Rat">Rat</option>
-                    <option value="Mouse">Mouse</option>
-                    <option value="Rabbit">Rabbit</option>
-                    <option value="Guinea Pig">Guinea Pig</option>
-                    <option value="Hamster">Hamster</option>
-                    <option value="Other">Other</option>
+                    {speciesOptions.map((option) => (
+                      <option key={option.id} value={option.name}>
+                        {option.name}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label>
@@ -386,15 +493,19 @@ export function FormBStep3() {
                   <select
                     value={row.strain}
                     onChange={(e) => updateRequirement(row.id, { strain: e.target.value })}
+                    disabled={!row.species}
                   >
                     <option value="">Select strain</option>
-                    <option value="Wistar">Wistar</option>
-                    <option value="Sprague Dawley">Sprague Dawley</option>
-                    <option value="Swiss Albino">Swiss Albino</option>
-                    <option value="BALB/c">BALB/c</option>
-                    <option value="C57BL/6">C57BL/6</option>
-                    <option value="New Zealand White">New Zealand White</option>
-                    <option value="Other">Other</option>
+                    {(
+                      (() => {
+                        const speciesId = speciesIdForName(row.species);
+                        return speciesId ? strainCache[speciesId] ?? [] : [];
+                      })()
+                    ).map((option) => (
+                      <option key={option.id} value={option.name}>
+                        {option.name}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label>
@@ -432,13 +543,20 @@ export function FormBStep3() {
                 </label>
                 <label>
                   Total number required
-                  <input
-                    type="number"
-                    value={row.number_required || ""}
-                    onChange={(e) =>
-                      updateRequirement(row.id, { number_required: Number(e.target.value) })
-                    }
-                  />
+                  {form.requirements.length === 1 && studyPlanTotal != null && studyPlanTotal > 0 ? (
+                    <>
+                      <input type="number" value={studyPlanTotal} readOnly disabled />
+                      <span className="field-help">From Step 2b study plan.</span>
+                    </>
+                  ) : (
+                    <input
+                      type="number"
+                      value={row.number_required || ""}
+                      onChange={(e) =>
+                        updateRequirement(row.id, { number_required: Number(e.target.value) })
+                      }
+                    />
+                  )}
                 </label>
                 <label>
                   Number of days each animal will be housed

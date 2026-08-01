@@ -108,10 +108,37 @@ class FormBStudyPhaseEntry(BaseModel):
     groups: list[FormBStudyGroupEntry] = Field(..., min_length=1)
 
 
+class FormBStudyPlanAnimalRationale(BaseModel):
+    why_animal_necessary: str = Field(..., min_length=1, max_length=5000)
+    in_vitro_study_details: str = Field(..., min_length=1, max_length=5000)
+    why_species_selected: str = Field(..., min_length=1, max_length=5000)
+    why_number_essential: str = Field(..., min_length=1, max_length=5000)
+    similar_experiments_in_establishment: str = Field(..., min_length=1, max_length=5000)
+    justify_new_experiment: str = Field("", max_length=5000)
+    similar_experiments_elsewhere: str = Field(..., min_length=1, max_length=5000)
+    animal_source: str = Field(..., min_length=1, max_length=200)
+    days_housed: int = Field(..., ge=1)
+    number_justification: str = Field(..., min_length=1, max_length=5000)
+    year_wise_breakup: list[dict] = Field(..., min_length=1)
+    breeder_name: str = Field(..., min_length=1, max_length=500)
+    breeder_address: str = Field(..., min_length=1, max_length=1000)
+    breeder_registration_number: str = Field(..., min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def validate_conditional_justification(self):
+        prior = self.similar_experiments_in_establishment.strip().lower()
+        if prior.startswith("yes") and not self.justify_new_experiment.strip():
+            raise ValueError(
+                "Justify why a new experiment is required when similar work was done in your establishment."
+            )
+        return self
+
+
 class FormBStudyPlanSave(BaseModel):
     form_b_id: int
     design_rationale: str = Field(..., min_length=1, max_length=5000)
     phases: list[FormBStudyPhaseEntry] = Field(..., min_length=1)
+    animal_rationale: FormBStudyPlanAnimalRationale
 
     @model_validator(mode="after")
     def validate_unique_phase_order(self):
@@ -128,3 +155,4 @@ class FormBStudyPlanRead(BaseModel):
     total_animals: int = 0
     phase_count: int = 0
     group_count: int = 0
+    animal_rationale: dict | None = None

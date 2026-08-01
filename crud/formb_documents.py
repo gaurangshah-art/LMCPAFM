@@ -32,6 +32,30 @@ def _write_multiline(pdf: FPDF, text: str, height: float = 6) -> None:
     pdf.multi_cell(pdf.epw, height, _safe_text(text))
 
 
+def _write_animal_summary_table(pdf: FPDF, summary: dict) -> None:
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 7, "Animal use summary", ln=True)
+    pdf.ln(1)
+    col_w = pdf.epw / 2
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(col_w, 7, "Category", border=1)
+    pdf.cell(col_w, 7, "Count", border=1, ln=True)
+    pdf.set_font("Helvetica", "", 10)
+    rows = [
+        ("Total animals used", summary.get("total_used", 0)),
+        ("Sacrificed / euthanized", summary.get("sacrificed", 0)),
+        ("Rehabilitated", summary.get("rehabilitated", 0)),
+    ]
+    if summary.get("reused"):
+        rows.append(("Reused", summary["reused"]))
+    if summary.get("other"):
+        rows.append(("Other disposition", summary["other"]))
+    for label, count in rows:
+        pdf.cell(col_w, 7, _safe_text(label), border=1)
+        pdf.cell(col_w, 7, str(count), border=1, ln=True)
+    pdf.ln(2)
+
+
 def _pdf_output_bytes(pdf: FPDF) -> bytes:
     output = pdf.output()
     if isinstance(output, bytearray):
@@ -97,6 +121,9 @@ def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
             ln=True,
         )
     pdf.cell(0, 7, _safe_text(f"Total animals across phases: {plan['total_animals']}"), ln=True)
+    if plan.get("animal_summary"):
+        pdf.ln(2)
+        _write_animal_summary_table(pdf, plan["animal_summary"])
     if plan.get("design_rationale"):
         pdf.ln(2)
         pdf.set_font("Helvetica", "B", 11)

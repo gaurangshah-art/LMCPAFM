@@ -33,7 +33,6 @@ import { getMyInvestigatorProfile } from "../api/investigatorProfileApi";
 import { FormBStep1 } from "../pages/formB/FormBStep1";
 import { FormBStep2 } from "../pages/formB/FormBStep2";
 import { FormBStep2b } from "../pages/formB/FormBStep2b";
-import { FormBStep3 } from "../pages/formB/FormBStep3";
 import { FormBStep4 } from "../pages/formB/FormBStep4";
 import { FormBStep5 } from "../pages/formB/FormBStep5";
 import { FormBStep6 } from "../pages/formB/FormBStep6";
@@ -464,15 +463,7 @@ export default function App() {
 
             <Route
               path="/form-b/step-3"
-              element={
-                <ProtectedRoute
-                  currentUser={currentUser}
-                  isAuthLoading={isAuthLoading}
-                  allowedRoles={["investigator"]}
-                >
-                  <FormBStep3 />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/form-b/step-2b" replace />}
             />
 
             <Route

@@ -9,7 +9,6 @@ from crud.formb_membership import get_editable_form_b, get_member_form_b
 from database.lmcpafm_models import (
     ExperimentGroup,
     FormB,
-    FormBAnimalRequirement,
     FormBGroupDosing,
     FormBGroupEndpoint,
     FormBGroupFate,
@@ -41,15 +40,99 @@ def _parse_duration_from_notes(notes: str | None) -> str:
     return ""
 
 
-def _get_form_b_animal_total(db: Session, form_b_id: int) -> int | None:
-    rows = (
-        db.query(FormBAnimalRequirement)
-        .filter(FormBAnimalRequirement.form_b_id == form_b_id)
+def get_study_plan_total_animals(db: Session, form_b_id: int) -> int | None:
+    phases = (
+        db.query(FormBStudyPhase)
+        .filter(FormBStudyPhase.form_b_id == form_b_id)
         .all()
     )
-    if not rows:
+    if not phases:
         return None
-    return sum(row.count for row in rows)
+    total = sum(phase.animal_cap for phase in phases)
+    return total if total > 0 else None
+
+
+def _sync_step3_from_study_plan(db: Session, form_b: FormB, payload) -> None:
+    from crud.formb_wizard import _sync_animal_requirements
+
+    rationale = payload.animal_rationale
+    total_animals = sum(phase.animal_cap for phase in payload.phases)
+    breakup_total = sum(int(entry.get("count", 0)) for entry in rationale.year_wise_breakup)
+    if breakup_total != total_animals:
+        raise CRUDValidationError(
+            f"Year-wise animal counts ({breakup_total}) must equal the study plan total "
+            f"({total_animals})."
+        )
+
+    aggregates: dict[tuple[int, int], dict] = {}
+    for phase in payload.phases:
+        for group in phase.groups:
+            key = (group.species_id, group.strain_id)
+            species = db.query(Species).filter(Species.id == group.species_id).first()
+            strain = db.query(Strain).filter(Strain.id == group.strain_id).first()
+            if species is None or strain is None:
+                raise CRUDValidationError("Invalid species or strain in study plan groups.")
+            if key not in aggregates:
+                aggregates[key] = {
+                    "species": species.name,
+                    "strain": strain.name,
+                    "sex": group.sex,
+                    "age": group.age,
+                    "weight": group.weight_range,
+                    "number_required": 0,
+                }
+            aggregates[key]["number_required"] += group.animal_count
+
+    requirements: list[dict] = []
+    for aggregate in aggregates.values():
+        row_total = aggregate["number_required"]
+        if len(rationale.year_wise_breakup) == 1:
+            year_rows = [
+                {
+                    "year": str(rationale.year_wise_breakup[0]["year"]),
+                    "count": row_total,
+                }
+            ]
+        else:
+            remaining = row_total
+            year_rows = []
+            for index, entry in enumerate(rationale.year_wise_breakup):
+                if index == len(rationale.year_wise_breakup) - 1:
+                    count = remaining
+                else:
+                    share = int(round(row_total * (int(entry["count"]) / total_animals)))
+                    count = min(share, remaining)
+                remaining -= count
+                year_rows.append({"year": str(entry["year"]), "count": count})
+
+        requirements.append(
+            {
+                **aggregate,
+                "source": rationale.animal_source,
+                "justification": rationale.number_justification,
+                "days_housed": rationale.days_housed,
+                "breeder_name": rationale.breeder_name,
+                "breeder_address": rationale.breeder_address,
+                "breeder_registration_number": rationale.breeder_registration_number,
+                "year_wise_breakup": year_rows,
+            }
+        )
+
+    step3_data = {
+        "why_animal_necessary": rationale.why_animal_necessary.strip(),
+        "in_vitro_study_details": rationale.in_vitro_study_details.strip(),
+        "why_species_selected": rationale.why_species_selected.strip(),
+        "why_number_essential": rationale.why_number_essential.strip(),
+        "similar_experiments_in_establishment": rationale.similar_experiments_in_establishment.strip(),
+        "justify_new_experiment": rationale.justify_new_experiment.strip(),
+        "similar_experiments_elsewhere": rationale.similar_experiments_elsewhere.strip(),
+        "requirements": requirements,
+    }
+
+    application_data = dict(form_b.application_data or {})
+    application_data["step3"] = step3_data
+    form_b.application_data = application_data
+    _sync_animal_requirements(db, form_b, step3_data)
 
 
 def _phase_to_dict(phase: FormBStudyPhase) -> dict:
@@ -150,6 +233,32 @@ def get_study_plan(db: Session, user: User, form_b_id: int) -> dict:
         "total_animals": total_animals,
         "phase_count": len(phases),
         "group_count": group_count,
+        "animal_rationale": step2b.get("animal_rationale")
+        or _animal_rationale_from_step3(application_data.get("step3")),
+    }
+
+
+def _animal_rationale_from_step3(step3: dict | None) -> dict | None:
+    if not isinstance(step3, dict):
+        return None
+    requirements = step3.get("requirements") or []
+    first = requirements[0] if requirements else {}
+    year_rows = first.get("year_wise_breakup") or [{"year": "", "count": 0}]
+    return {
+        "why_animal_necessary": step3.get("why_animal_necessary") or "",
+        "in_vitro_study_details": step3.get("in_vitro_study_details") or "",
+        "why_species_selected": step3.get("why_species_selected") or "",
+        "why_number_essential": step3.get("why_number_essential") or "",
+        "similar_experiments_in_establishment": step3.get("similar_experiments_in_establishment") or "",
+        "justify_new_experiment": step3.get("justify_new_experiment") or "",
+        "similar_experiments_elsewhere": step3.get("similar_experiments_elsewhere") or "",
+        "animal_source": first.get("source") or "",
+        "days_housed": first.get("days_housed") or 0,
+        "number_justification": first.get("justification") or "",
+        "year_wise_breakup": year_rows,
+        "breeder_name": first.get("breeder_name") or "",
+        "breeder_address": first.get("breeder_address") or "",
+        "breeder_registration_number": first.get("breeder_registration_number") or "",
     }
 
 
@@ -208,14 +317,6 @@ def validate_study_plan_payload(db: Session, form_b_id: int, payload: FormBStudy
                     )
 
         phase_total += phase.animal_cap
-
-    step3_total = _get_form_b_animal_total(db, form_b_id)
-    if step3_total is not None and phase_total != step3_total:
-        raise CRUDValidationError(
-            f"Study plan requires {phase_total} animals across phases but "
-            f"Step 3 requests {step3_total}. Group totals must match the total "
-            f"animals requested in Step 3."
-        )
 
     sequence_orders = {phase.sequence_order for phase in payload.phases}
     order_to_depends = {
@@ -344,8 +445,10 @@ def save_study_plan(db: Session, user: User, payload: FormBStudyPlanSave) -> dic
         "design_rationale": (payload.design_rationale or "").strip(),
         "phase_count": len(payload.phases),
         "total_animals": sum(phase.animal_cap for phase in payload.phases),
+        "animal_rationale": payload.animal_rationale.model_dump(),
     }
     form_b.application_data = application_data
+    _sync_step3_from_study_plan(db, form_b, payload)
 
     db.commit()
     db.refresh(form_b)
@@ -396,8 +499,18 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
         FormBGroupFateEntry,
         FormBStudyGroupEntry,
         FormBStudyPhaseEntry,
+        FormBStudyPlanAnimalRationale,
         FormBStudyPlanSave,
     )
+
+    animal_rationale_data = step2b.get("animal_rationale") or _animal_rationale_from_step3(
+        application_data.get("step3")
+    )
+    if not animal_rationale_data:
+        raise CRUDValidationError(
+            "Complete the animal use rationale in Step 2b before continuing."
+        )
+    animal_rationale = FormBStudyPlanAnimalRationale.model_validate(animal_rationale_data)
 
     for phase in phases:
         depends_on_sequence = None
@@ -479,6 +592,7 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
             form_b_id=form_b_id,
             design_rationale=design_rationale,
             phases=payload_phases,
+            animal_rationale=animal_rationale,
         ),
     )
 
@@ -528,6 +642,37 @@ def sync_experiment_groups_from_study_plan(db: Session, project_id: int) -> int:
     return created
 
 
+def compute_animal_summary(phases: list[dict]) -> dict:
+    total_used = 0
+    sacrificed = 0
+    rehabilitated = 0
+    reused = 0
+    other = 0
+
+    for phase in phases:
+        for group in phase.get("groups", []):
+            total_used += group.get("animal_count", 0)
+            for fate in group.get("fates", []):
+                count = fate.get("count", 0)
+                fate_type = fate.get("fate_type", "")
+                if fate_type in {"sacrifice", "euthanasia"}:
+                    sacrificed += count
+                elif fate_type == "rehabilitation":
+                    rehabilitated += count
+                elif fate_type == "reuse":
+                    reused += count
+                elif fate_type == "other":
+                    other += count
+
+    return {
+        "total_used": total_used,
+        "sacrificed": sacrificed,
+        "rehabilitated": rehabilitated,
+        "reused": reused,
+        "other": other,
+    }
+
+
 def load_study_plan_for_pdf(db: Session, form_b_id: int) -> dict:
     form_b = db.query(FormB).filter(FormB.id == form_b_id).first()
     if form_b is None:
@@ -550,12 +695,14 @@ def load_study_plan_for_pdf(db: Session, form_b_id: int) -> dict:
     application_data = form_b.application_data or {}
     step2 = application_data.get("step2") or {}
     step2b = application_data.get(STEP2B_KEY) or {}
+    phase_dicts = [_phase_to_dict(phase) for phase in phases]
     return {
         "project_title": project.title if project else "",
         "principal_investigator": project.principal_investigator if project else "",
         "proposed_start_date": step2.get("proposed_start_date"),
         "proposed_completion_date": step2.get("proposed_completion_date"),
         "design_rationale": step2b.get("design_rationale") or "",
-        "phases": [_phase_to_dict(phase) for phase in phases],
+        "phases": phase_dicts,
         "total_animals": sum(phase.animal_cap for phase in phases),
+        "animal_summary": compute_animal_summary(phase_dicts),
     }

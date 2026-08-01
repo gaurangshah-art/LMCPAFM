@@ -14,6 +14,15 @@ export function getApprovedProtocolOptions() {
   return fetchLookup("/lookup/approved-protocols");
 }
 
+export function getSpeciesOptions() {
+  return fetchLookup("/species");
+}
+
+export async function getStrainsOptions(speciesId?: number) {
+  const query = speciesId && speciesId > 0 ? `?species_id=${speciesId}` : "";
+  return fetchLookup(`/strain${query}`);
+}
+
 export function getApprovedSpeciesOptions() {
   return fetchLookup("/lookup/approved-species");
 }

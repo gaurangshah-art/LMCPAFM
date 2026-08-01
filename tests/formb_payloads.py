@@ -140,10 +140,31 @@ def step2_body(form_b_id: int) -> dict:
     }
 
 
+def study_plan_animal_rationale(total_animals: int = 20) -> dict:
+    return {
+        "why_animal_necessary": STEP3_BODY["why_animal_necessary"],
+        "in_vitro_study_details": STEP3_BODY["in_vitro_study_details"],
+        "why_species_selected": STEP3_BODY["why_species_selected"],
+        "why_number_essential": STEP3_BODY["why_number_essential"],
+        "similar_experiments_in_establishment": STEP3_BODY["similar_experiments_in_establishment"],
+        "justify_new_experiment": STEP3_BODY["justify_new_experiment"],
+        "similar_experiments_elsewhere": STEP3_BODY["similar_experiments_elsewhere"],
+        "animal_source": STEP3_REQUIREMENT["source"],
+        "days_housed": STEP3_REQUIREMENT["days_housed"],
+        "number_justification": STEP3_REQUIREMENT["justification"],
+        "year_wise_breakup": [{"year": "2026", "count": total_animals}],
+        "breeder_name": STEP3_REQUIREMENT["breeder_name"],
+        "breeder_address": STEP3_REQUIREMENT["breeder_address"],
+        "breeder_registration_number": STEP3_REQUIREMENT["breeder_registration_number"],
+    }
+
+
 def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: int | None = None) -> dict:
+    total_animals = 20
     return {
         "form_b_id": form_b_id,
         "design_rationale": "Pilot informs pivotal design.",
+        "animal_rationale": study_plan_animal_rationale(total_animals),
         "phases": [
             {
                 "phase_code": "pilot",
@@ -324,7 +345,6 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
 def wizard_steps_after_step1(form_b_id: int) -> list[tuple[str, dict]]:
     return [
         ("/formb/step-2", step2_body(form_b_id)),
-        ("/formb/step-3", {"form_b_id": form_b_id, **STEP3_BODY}),
         ("/formb/step-4", {"form_b_id": form_b_id, **STEP4_BODY}),
         ("/formb/step-5", {"form_b_id": form_b_id, **STEP5_BODY}),
         ("/formb/step-6", {"form_b_id": form_b_id, **STEP6_BODY}),

@@ -60,13 +60,6 @@ def _start_and_complete_wizard(client, headers, payload):
         strain_id = strain.id
 
     for path, body in wizard_steps_after_step1(form_b_id):
-        if path == "/formb/step-3":
-            body = {
-                **body,
-                "requirements": [
-                    {**body["requirements"][0], "species": species_name, "strain": strain_name},
-                ],
-            }
         res = client.post(path, json=body, headers=headers)
         assert res.status_code == 200, res.text
         if path == "/formb/step-2":

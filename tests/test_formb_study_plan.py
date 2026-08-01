@@ -72,6 +72,52 @@ def test_form_b_study_plan_save_and_annexure_pdf(client, monkeypatch):
     assert pdf_res.content.startswith(b"%PDF")
 
 
+def test_form_b_annexure_pdf_includes_animal_summary_table(client, monkeypatch):
+    from crud.formb_documents import render_study_plan_annexure_pdf
+    from crud.formb_study_plan import load_study_plan_for_pdf
+
+    headers, payload = _register_and_login(client, monkeypatch)
+    form_b_id = client.post("/formb/start", headers=headers).json()["id"]
+    client.post("/formb/step-1", json=step1_body(form_b_id, payload), headers=headers)
+
+    suffix = uuid4().hex[:4]
+    with SessionLocal() as db:
+        species = Species(name=f"Summary-{suffix}")
+        db.add(species)
+        db.flush()
+        strain = Strain(name=f"Strain-{suffix}", species_id=species.id)
+        db.add(strain)
+        db.commit()
+        species_id = species.id
+        strain_id = strain.id
+
+    body = study_plan_body(form_b_id, species_id=species_id, strain_id=strain_id)
+    body["phases"][0]["groups"][0]["fates"] = [
+        {"fate_type": "sacrifice", "count": 3, "method_or_destination": "CO2", "timing": "Week 4"},
+        {"fate_type": "rehabilitation", "count": 2, "method_or_destination": "Adoption", "timing": "Week 4"},
+    ]
+    body["phases"][0]["groups"][0]["animal_count"] = 5
+
+    save_res = client.put(f"/formb/{form_b_id}/study-plan", json=body, headers=headers)
+    assert save_res.status_code == 200, save_res.text
+
+    with SessionLocal() as db:
+        plan = load_study_plan_for_pdf(db, form_b_id)
+        pdf_bytes = render_study_plan_annexure_pdf(db, form_b_id)
+
+    assert pdf_bytes.startswith(b"%PDF")
+    summary = plan["animal_summary"]
+    assert summary["total_used"] == 20
+    assert summary["sacrificed"] >= 13
+    assert summary["rehabilitated"] >= 2
+
+    read_res = client.get(f"/formb/{form_b_id}/study-plan", headers=headers)
+    saved_endpoints = read_res.json()["phases"][0]["groups"][0]["endpoints"]
+    assert saved_endpoints
+    assert saved_endpoints[0]["parameter_name"]
+    assert saved_endpoints[0]["schedule_detail"]
+
+
 def test_form_b_study_plan_rejects_mismatched_fate_counts(client, monkeypatch):
     headers, payload = _register_and_login(client, monkeypatch)
     form_b_id = client.post("/formb/start", headers=headers).json()["id"]

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../../api/errors";
 import { readStoredFormBId, saveFormBStep7 } from "../../api/formbApi";
@@ -60,9 +60,12 @@ function mapSaved(data: Record<string, unknown> | null | undefined) {
 
 export function FormBStep7() {
   const navigate = useNavigate();
+  const validationRef = useRef<HTMLDivElement | null>(null);
   const [formBId] = useState<number | null>(readStoredFormBId());
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [showDeclarationErrors, setShowDeclarationErrors] = useState(false);
   const [form, setForm] = useState(EMPTY);
 
   const { value: saved, loading: loadingSaved } = useFormBStepReview(formBId, "step7", mapSaved, EMPTY);
@@ -73,6 +76,16 @@ export function FormBStep7() {
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+    setValidationError(null);
+  }
+
+  function showValidationIssue(message: string, highlightDeclarations = false) {
+    setValidationError(message);
+    setShowDeclarationErrors(highlightDeclarations);
+    setErrorMessage(null);
+    window.setTimeout(() => {
+      validationRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
   }
 
   function validateStep7() {
@@ -87,7 +100,7 @@ export function FormBStep7() {
 
     for (const key of FORM_B_DECLARATIONS) {
       if (!form.declarations[key]) {
-        return "All investigator declarations must be accepted before continuing.";
+        return "Please accept all investigator declarations below before continuing.";
       }
     }
 
@@ -122,23 +135,25 @@ export function FormBStep7() {
 
   async function handleNext() {
     if (!formBId) {
-      alert("Form B ID missing. Please complete previous steps.");
+      showValidationIssue("Form B ID missing. Please complete previous steps.");
       return;
     }
 
     const error = validateStep7();
     if (error) {
-      alert(error);
+      showValidationIssue(error, error.includes("declarations"));
       return;
     }
 
     const attachmentError = await validateCertificateAttachments();
     if (attachmentError) {
-      alert(attachmentError);
+      showValidationIssue(attachmentError);
       return;
     }
 
     setLoading(true);
+    setValidationError(null);
+    setShowDeclarationErrors(false);
     setErrorMessage(null);
     try {
       await saveFormBStep7({
@@ -183,7 +198,7 @@ export function FormBStep7() {
   }
 
   return (
-    <div className="page-card">
+    <div className="page-card form-b-step7">
       <header className="section-header">
         <h2>Form B – Step 7</h2>
         <p>Section II item 14 and investigator declaration.</p>
@@ -321,23 +336,57 @@ export function FormBStep7() {
             </label>
           </div>
 
-          <section className="dashboard-section">
-            <h3>Investigator declaration</h3>
-            {FORM_B_DECLARATIONS.map((key) => (
-              <label key={key} className="checkbox-row full-width">
-                <input
-                  type="checkbox"
-                  checked={form.declarations[key]}
-                  onChange={(e) =>
-                    updateField("declarations", {
-                      ...form.declarations,
-                      [key]: e.target.checked,
-                    })
-                  }
-                />
-                {FORM_B_DECLARATION_LABELS[key]}
-              </label>
-            ))}
+          <section className="form-b-declaration-section">
+            <div className="form-b-declaration-header">
+              <div>
+                <h3>Investigator declaration</h3>
+                <p className="field-help">
+                  Read each statement carefully and tick every box. All declarations are mandatory
+                  before you can continue to review.
+                </p>
+              </div>
+              <p className="declaration-progress" aria-live="polite">
+                {Object.values(form.declarations).filter(Boolean).length} of{" "}
+                {FORM_B_DECLARATIONS.length} accepted
+              </p>
+            </div>
+
+            {validationError ? (
+              <p className="error-text declaration-validation-error">{validationError}</p>
+            ) : null}
+
+            <div className="declaration-checklist" ref={validationRef}>
+              {FORM_B_DECLARATIONS.map((key, index) => {
+                const checked = form.declarations[key];
+                return (
+                  <label
+                    key={key}
+                    className={`declaration-check-item${checked ? " is-checked" : ""}${
+                      showDeclarationErrors && !checked ? " field-invalid" : ""
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        setValidationError(null);
+                        setShowDeclarationErrors(false);
+                        updateField("declarations", {
+                          ...form.declarations,
+                          [key]: e.target.checked,
+                        });
+                      }}
+                    />
+                    <span className="declaration-check-content">
+                      <span className="declaration-check-title">Declaration {index + 1}</span>
+                      <span className="declaration-check-text">
+                        {FORM_B_DECLARATION_LABELS[key]}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
           </section>
 
           <div className="form-grid">
@@ -366,11 +415,14 @@ export function FormBStep7() {
           </div>
 
           <div className="wizard-actions">
-            <button className="btn-secondary" onClick={() => navigate("/form-b/step-6")}>
+            {validationError && !validationError.includes("declarations") ? (
+              <p className="error-text wizard-validation-error full-width">{validationError}</p>
+            ) : null}
+            <button type="button" className="btn-secondary" onClick={() => navigate("/form-b/step-6")}>
               ← Back
             </button>
-            <button className="btn" onClick={handleNext} disabled={loading}>
-              Save & Next →
+            <button type="button" className="btn" onClick={() => void handleNext()} disabled={loading}>
+              {loading ? "Saving…" : "Save & Next →"}
             </button>
           </div>
         </>
