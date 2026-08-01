@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
-
 from fpdf import FPDF
 from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDNotFoundError
+from crud.formb_application_pdf import render_cpcsea_form_b_application_pdf
 from crud.formb_internal import get_meeting_form_b_summary
 from crud.formb_study_plan import load_study_plan_for_pdf
 from crud.project_certificate import (
@@ -224,38 +223,7 @@ def _pdf_output_bytes(pdf: FPDF) -> bytes:
 
 
 def render_form_b_application_pdf(db: Session, project_id: int) -> bytes:
-    project = db.query(IAECProject).filter(IAECProject.id == project_id).first()
-    if project is None:
-        raise CRUDNotFoundError("Project not found")
-
-    form_b = db.query(FormB).filter(FormB.project_id == project_id).first()
-    if form_b is None:
-        raise CRUDNotFoundError("Form B not found for project")
-
-    pdf = _SimplePDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "Form B Application", ln=True)
-    pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 8, _safe_text(f"Project: {project.title}"), ln=True)
-    pdf.cell(0, 8, _safe_text(f"Principal Investigator: {project.principal_investigator}"), ln=True)
-    if project.protocol_number:
-        pdf.cell(0, 8, _safe_text(f"Protocol Number: {project.protocol_number}"), ln=True)
-    pdf.ln(4)
-
-    application_data = form_b.application_data or {}
-    for step_key in ("step1", "step2", "step2b", "step3", "step4", "step5", "step6", "step7"):
-        step_data = application_data.get(step_key)
-        if not step_data:
-            continue
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 8, step_key.upper(), ln=True)
-        pdf.set_font("Helvetica", "", 10)
-        _write_multiline(pdf, json.dumps(step_data, indent=2), 6)
-        pdf.ln(2)
-
-    return _pdf_output_bytes(pdf)
+    return render_cpcsea_form_b_application_pdf(db, project_id)
 
 
 def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:

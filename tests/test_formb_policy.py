@@ -129,3 +129,18 @@ def test_form_b_application_pdf_download(client, monkeypatch):
     assert pdf_res.status_code == 200, pdf_res.text
     assert pdf_res.headers["content-type"] == "application/pdf"
     assert pdf_res.content.startswith(b"%PDF")
+
+    from crud.formb_application_pdf import render_cpcsea_form_b_application_pdf
+    from database.database import SessionLocal
+    from database.lmcpafm_models import FormB
+
+    with SessionLocal() as db:
+        form_b = db.query(FormB).filter(FormB.id == form_b_id).first()
+        pdf_bytes = render_cpcsea_form_b_application_pdf(db, form_b.project_id)
+    assert pdf_bytes.startswith(b"%PDF")
+    assert len(pdf_bytes) > 8000
+    import re
+
+    count_match = re.search(rb"/Count\s+(\d+)", pdf_bytes)
+    assert count_match is not None
+    assert int(count_match.group(1)) >= 4
