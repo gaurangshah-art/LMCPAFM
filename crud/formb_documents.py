@@ -58,6 +58,17 @@ def _write_evaluation_parameters(pdf: FPDF, endpoints: list[dict]) -> None:
     pdf.ln(1)
 
 
+def _write_phase_procedures(pdf: FPDF, phase: dict) -> None:
+    _write_multiline(pdf, "Blood withdrawal and surgical procedures", 6, bold=True)
+    volume = (phase.get("blood_withdrawal_volume") or "").strip() or "Not recorded"
+    site = (phase.get("blood_withdrawal_site") or "").strip() or "Not recorded"
+    surgery = (phase.get("surgical_procedure") or "").strip() or "None"
+    _write_multiline(pdf, f"  Amount of blood to be withdrawn: {volume}", 5)
+    _write_multiline(pdf, f"  Site of blood withdrawal: {site}", 5)
+    _write_multiline(pdf, f"  Surgical procedure, if any: {surgery}", 5)
+    pdf.ln(1)
+
+
 def _write_animal_summary_table(pdf: FPDF, summary: dict) -> None:
     _write_multiline(pdf, "Animal use summary", 6, bold=True)
     pdf.ln(1)
@@ -81,6 +92,126 @@ def _write_animal_summary_table(pdf: FPDF, summary: dict) -> None:
         pdf.cell(col_w, 7, _safe_text(label), border=1)
         pdf.cell(col_w, 7, str(count), border=1, new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
+
+
+def _format_group_name(group: dict) -> str:
+    code = group.get("group_code") or ""
+    name = group.get("group_name") or "Group"
+    role = group.get("role") or ""
+    label = f"{code}: {name}" if code else name
+    if role:
+        label = f"{label} ({role})"
+    return label
+
+
+def _format_group_animal_cell(group: dict) -> str:
+    species = group.get("species_name") or "-"
+    strain = group.get("strain_name") or "-"
+    gender = group.get("sex") or "-"
+    return f"{species}, {strain}, {gender}"
+
+
+def _format_group_treatment_cell(group: dict) -> str:
+    dosing = group.get("dosing") or []
+    if dosing:
+        dose = dosing[0]
+        parts = [
+            dose.get("agent_name") or "-",
+            dose.get("dose") or "-",
+            dose.get("route") or "-",
+            dose.get("frequency") or "-",
+            dose.get("duration") or "-",
+        ]
+        return "; ".join(str(part) for part in parts)
+    if group.get("treatment_summary"):
+        return str(group["treatment_summary"])
+    if group.get("role") == "control":
+        return "Vehicle / NA"
+    return "-"
+
+
+def _table_row_height(pdf: FPDF, col_widths: list[float], cells: list[str], line_height: float = 4) -> float:
+    max_lines = 1
+    for width, cell in zip(col_widths, cells):
+        lines = pdf.multi_cell(width, line_height, _safe_text(cell), split_only=True)
+        max_lines = max(max_lines, len(lines))
+    return line_height * max_lines
+
+
+def _write_table_row(
+    pdf: FPDF,
+    col_widths: list[float],
+    cells: list[str],
+    *,
+    header: bool = False,
+    font_size: int = 8,
+    line_height: float = 4,
+) -> None:
+    pdf.set_font("Helvetica", "B" if header else "", font_size)
+    row_height = _table_row_height(pdf, col_widths, cells, line_height)
+    if pdf.get_y() + row_height > pdf.page_break_trigger:
+        pdf.add_page()
+    y_start = pdf.get_y()
+    x_start = pdf.l_margin
+    x = x_start
+    for width, cell in zip(col_widths, cells):
+        pdf.set_xy(x, y_start)
+        pdf.multi_cell(width, line_height, _safe_text(cell), border=1)
+        x += width
+    pdf.set_y(y_start + row_height)
+
+
+def _write_phase_groups_table(pdf: FPDF, groups: list[dict]) -> None:
+    if not groups:
+        _write_multiline(pdf, "No groups recorded.", 5)
+        return
+
+    pdf.ln(1)
+    _write_multiline(pdf, "Experimental groups", 6, bold=True)
+    col_widths = [pdf.epw * 0.18, pdf.epw * 0.27, pdf.epw * 0.10, pdf.epw * 0.45]
+    _write_table_row(
+        pdf,
+        col_widths,
+        [
+            "Group name",
+            "Animal (species, strain, gender)",
+            "No. of animals",
+            "Treatment (drug; dose; route; frequency; duration)",
+        ],
+        header=True,
+    )
+    for group in groups:
+        _write_table_row(
+            pdf,
+            col_widths,
+            [
+                _format_group_name(group),
+                _format_group_animal_cell(group),
+                str(group.get("animal_count") or 0),
+                _format_group_treatment_cell(group),
+            ],
+        )
+    pdf.ln(1)
+
+
+def _write_group_disposition(pdf: FPDF, groups: list[dict]) -> None:
+    has_fates = any(group.get("fates") for group in groups)
+    if not has_fates:
+        return
+    _write_multiline(pdf, "Animal disposition by group", 6, bold=True)
+    for group in groups:
+        fates = group.get("fates") or []
+        if not fates:
+            continue
+        label = _format_group_name(group)
+        parts = []
+        for fate in fates:
+            parts.append(
+                f"{fate.get('fate_type')}: {fate.get('count')} "
+                f"({fate.get('method_or_destination') or '-'}, {fate.get('timing') or '-'})"
+            )
+        _write_multiline(pdf, f"  {label}: {'; '.join(parts)}", 5)
+    pdf.ln(1)
 
 
 def _pdf_output_bytes(pdf: FPDF) -> bytes:
@@ -143,9 +274,6 @@ def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
             6,
         )
     _write_multiline(pdf, f"Total animals across phases: {plan['total_animals']}", 6)
-    if plan.get("animal_summary"):
-        pdf.ln(2)
-        _write_animal_summary_table(pdf, plan["animal_summary"])
     if plan.get("design_rationale"):
         pdf.ln(2)
         _write_multiline(pdf, "Design rationale", 6, bold=True)
@@ -170,52 +298,13 @@ def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
             _write_multiline(pdf, f"Contingency: {phase['contingency_note']}", 5)
 
         _write_evaluation_parameters(pdf, phase.get("endpoints") or [])
+        _write_phase_procedures(pdf, phase)
+        _write_phase_groups_table(pdf, phase.get("groups") or [])
+        _write_group_disposition(pdf, phase.get("groups") or [])
 
-        for group in phase.get("groups", []):
-            pdf.ln(2)
-            _write_multiline(
-                pdf,
-                f"Group {group['group_code']}: {group['group_name']} "
-                f"({group['role']}, n={group['animal_count']})",
-                5,
-                bold=True,
-            )
-            species = group.get("species_name") or "-"
-            strain = group.get("strain_name") or "-"
-            _write_multiline(pdf, f"Species/Strain: {species} / {strain}", 5)
-            if group.get("sex") or group.get("age") or group.get("weight_range"):
-                _write_multiline(
-                    pdf,
-                    f"Sex/Age/Weight: {group.get('sex') or '-'} / "
-                    f"{group.get('age') or '-'} / {group.get('weight_range') or '-'}",
-                    5,
-                )
-            if group.get("feeding_diet"):
-                _write_multiline(pdf, f"Diet: {group['feeding_diet']}", 5)
-            if group.get("treatment_summary"):
-                _write_multiline(pdf, f"Treatment: {group['treatment_summary']}", 5)
-
-            if group.get("dosing"):
-                _write_multiline(pdf, "Dosing schedule:", 5, bold=True)
-                for dose in group["dosing"]:
-                    line = (
-                        f"  - {dose['agent_name']} {dose['dose']} "
-                        f"({dose['route']}, {dose['frequency']})"
-                    )
-                    if dose.get("start_day") is not None:
-                        line += f" from day {dose['start_day']}"
-                    _write_multiline(pdf, line, 5)
-
-            if group.get("fates"):
-                _write_multiline(pdf, "Animal disposition:", 5, bold=True)
-                for fate in group["fates"]:
-                    _write_multiline(
-                        pdf,
-                        f"  - {fate['fate_type']}: {fate['count']} "
-                        f"({fate.get('method_or_destination') or '-'}, "
-                        f"{fate.get('timing') or '-'})",
-                        5,
-                    )
+    if plan.get("animal_summary"):
+        pdf.ln(4)
+        _write_animal_summary_table(pdf, plan["animal_summary"])
 
     return _pdf_output_bytes(pdf)
 

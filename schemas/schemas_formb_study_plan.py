@@ -96,6 +96,9 @@ class FormBStudyPhaseEntry(BaseModel):
     depends_on_sequence_order: int | None = Field(None, ge=1)
     reuse_animals_allowed: bool = False
     endpoints: list[FormBGroupEndpointEntry] = Field(default_factory=list)
+    blood_withdrawal_volume: str = Field("", max_length=5000)
+    blood_withdrawal_site: str = Field("", max_length=5000)
+    surgical_procedure: str = Field("", max_length=5000)
     groups: list[FormBStudyGroupEntry] = Field(..., min_length=1)
 
 

@@ -116,6 +116,11 @@ def test_form_b_annexure_pdf_includes_animal_summary_table(client, monkeypatch):
     assert saved_endpoints
     assert saved_endpoints[0]["parameter_name"]
     assert saved_endpoints[0]["schedule_detail"]
+    phase0 = read_res.json()["phases"][0]
+    assert phase0["blood_withdrawal_volume"] == "0.5 ml per draw"
+    assert phase0["blood_withdrawal_site"] == "Retro-orbital"
+    assert phase0["surgical_procedure"] == "None"
+    assert plan["phases"][0]["blood_withdrawal_volume"] == "0.5 ml per draw"
 
 
 def test_form_b_study_plan_rejects_mismatched_fate_counts(client, monkeypatch):

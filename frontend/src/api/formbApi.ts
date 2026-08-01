@@ -322,6 +322,9 @@ export interface FormBStudyPhaseEntry {
   depends_on_sequence_order?: number | null;
   reuse_animals_allowed: boolean;
   endpoints: FormBGroupEndpointEntry[];
+  blood_withdrawal_volume?: string;
+  blood_withdrawal_site?: string;
+  surgical_procedure?: string;
   groups: FormBStudyGroupEntry[];
 }
 

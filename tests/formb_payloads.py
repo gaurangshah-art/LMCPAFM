@@ -169,6 +169,11 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
             "schedule_detail": "Weekly",
         }
     ]
+    phase_procedures = {
+        "blood_withdrawal_volume": "0.5 ml per draw",
+        "blood_withdrawal_site": "Retro-orbital",
+        "surgical_procedure": "None",
+    }
     return {
         "form_b_id": form_b_id,
         "design_rationale": "Pilot informs pivotal design.",
@@ -186,6 +191,7 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                 "depends_on_sequence_order": None,
                 "reuse_animals_allowed": False,
                 "endpoints": phase_endpoints,
+                **phase_procedures,
                 "groups": [
                     {
                         "group_code": "P1",
@@ -257,6 +263,7 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                 "depends_on_sequence_order": 1,
                 "reuse_animals_allowed": False,
                 "endpoints": phase_endpoints,
+                **phase_procedures,
                 "groups": [
                     {
                         "group_code": "V1",

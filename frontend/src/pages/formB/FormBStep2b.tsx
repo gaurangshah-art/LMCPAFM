@@ -90,6 +90,9 @@ function emptyPhase(order = 1): FormBStudyPhaseEntry {
     depends_on_sequence_order: null,
     reuse_animals_allowed: false,
     endpoints: defaultEndpoints(),
+    blood_withdrawal_volume: "",
+    blood_withdrawal_site: "",
+    surgical_procedure: "",
     groups,
   };
 }
@@ -380,6 +383,16 @@ export function FormBStep2b() {
         if (!endpoint.schedule_detail.trim()) {
           return `Phase "${phase.phase_name}": enter frequency/timing for "${endpoint.parameter_name}".`;
         }
+      }
+
+      if (!phase.blood_withdrawal_volume?.trim()) {
+        return `Phase "${phase.phase_name}": enter amount of blood to be withdrawn (or "Not applicable").`;
+      }
+      if (!phase.blood_withdrawal_site?.trim()) {
+        return `Phase "${phase.phase_name}": enter site of blood withdrawal (or "Not applicable").`;
+      }
+      if (!phase.surgical_procedure?.trim()) {
+        return `Phase "${phase.phase_name}": describe any surgical procedure (or "None").`;
       }
 
       for (const group of phase.groups) {
@@ -745,6 +758,48 @@ export function FormBStep2b() {
                 >
                   + Add parameter
                 </button>
+              </div>
+
+              <div className="page-section nested-section" style={{ marginTop: "0.75rem" }}>
+                <h4>Blood withdrawal and surgical procedures (required)</h4>
+                <p className="field-help">
+                  IAEC requires the amount and site of blood withdrawal and any surgical
+                  procedures for this phase. Enter &quot;Not applicable&quot; or &quot;None&quot; where
+                  relevant.
+                </p>
+                <div className="form-grid">
+                  <label className="full-width">
+                    Amount of blood to be withdrawn
+                    <input
+                      value={phase.blood_withdrawal_volume ?? ""}
+                      onChange={(e) =>
+                        updatePhase(phaseIndex, { blood_withdrawal_volume: e.target.value })
+                      }
+                      placeholder='e.g. 0.5 ml per draw, or "Not applicable"'
+                    />
+                  </label>
+                  <label className="full-width">
+                    Site of blood withdrawal
+                    <input
+                      value={phase.blood_withdrawal_site ?? ""}
+                      onChange={(e) =>
+                        updatePhase(phaseIndex, { blood_withdrawal_site: e.target.value })
+                      }
+                      placeholder='e.g. Retro-orbital, or "Not applicable"'
+                    />
+                  </label>
+                  <label className="full-width">
+                    Surgical procedure, if any
+                    <textarea
+                      value={phase.surgical_procedure ?? ""}
+                      onChange={(e) =>
+                        updatePhase(phaseIndex, { surgical_procedure: e.target.value })
+                      }
+                      placeholder='e.g. Laparotomy under isoflurane, or "None"'
+                      rows={2}
+                    />
+                  </label>
+                </div>
               </div>
 
               {phase.groups.map((group, groupIndex) => {

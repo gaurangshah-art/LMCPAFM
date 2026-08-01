@@ -156,6 +156,51 @@ def _phase_endpoints_from_groups(phase: FormBStudyPhase) -> list[dict]:
     return []
 
 
+def _step4_procedure_fallback(application_data: dict) -> dict[str, str]:
+    step4 = application_data.get("step4") or {}
+    if not isinstance(step4, dict):
+        return {}
+    return {
+        "blood_withdrawal_volume": (step4.get("blood_withdrawal_volumes") or "").strip(),
+        "blood_withdrawal_site": (step4.get("blood_withdrawal_sites") or "").strip(),
+        "surgical_procedure": (step4.get("surgical_procedures") or "").strip(),
+    }
+
+
+def _extract_phase_procedures(phases) -> dict[str, dict[str, str]]:
+    return {
+        str(phase.sequence_order): {
+            "blood_withdrawal_volume": (phase.blood_withdrawal_volume or "").strip(),
+            "blood_withdrawal_site": (phase.blood_withdrawal_site or "").strip(),
+            "surgical_procedure": (phase.surgical_procedure or "").strip(),
+        }
+        for phase in phases
+    }
+
+
+def _apply_phase_procedures(
+    phase_dicts: list[dict],
+    step2b: dict,
+    application_data: dict | None = None,
+) -> None:
+    procedures = step2b.get("phase_procedures") or {}
+    fallback = _step4_procedure_fallback(application_data or {}) if application_data else {}
+    for phase in phase_dicts:
+        proc = procedures.get(str(phase["sequence_order"]), {})
+        volume = (proc.get("blood_withdrawal_volume") or "").strip()
+        site = (proc.get("blood_withdrawal_site") or "").strip()
+        surgery = (proc.get("surgical_procedure") or "").strip()
+        if not volume and fallback.get("blood_withdrawal_volume"):
+            volume = fallback["blood_withdrawal_volume"]
+        if not site and fallback.get("blood_withdrawal_site"):
+            site = fallback["blood_withdrawal_site"]
+        if not surgery and fallback.get("surgical_procedure"):
+            surgery = fallback["surgical_procedure"]
+        phase["blood_withdrawal_volume"] = volume
+        phase["blood_withdrawal_site"] = site
+        phase["surgical_procedure"] = surgery
+
+
 def _phase_to_dict(phase: FormBStudyPhase) -> dict:
     return {
         "id": phase.id,
@@ -235,6 +280,7 @@ def get_study_plan(db: Session, user: User, form_b_id: int) -> dict:
     application_data = form_b.application_data or {}
     step2b = application_data.get(STEP2B_KEY) or {}
     phase_dicts = [_phase_to_dict(phase) for phase in phases]
+    _apply_phase_procedures(phase_dicts, step2b, application_data)
     group_count = sum(len(phase.groups) for phase in phases)
     total_animals = sum(phase.animal_cap for phase in phases)
     return {
@@ -340,6 +386,22 @@ def validate_study_plan_payload(db: Session, form_b_id: int, payload: FormBStudy
                 raise CRUDValidationError(
                     f"Invalid schedule type '{endpoint.schedule_type}' in phase '{phase.phase_name}'."
                 )
+
+        if not phase.blood_withdrawal_volume.strip():
+            raise CRUDValidationError(
+                f"Phase '{phase.phase_name}': enter amount of blood to be withdrawn "
+                "(or 'Not applicable')."
+            )
+        if not phase.blood_withdrawal_site.strip():
+            raise CRUDValidationError(
+                f"Phase '{phase.phase_name}': enter site of blood withdrawal "
+                "(or 'Not applicable')."
+            )
+        if not phase.surgical_procedure.strip():
+            raise CRUDValidationError(
+                f"Phase '{phase.phase_name}': describe any surgical procedure "
+                "(or 'None' / 'Not applicable')."
+            )
 
         phase_total += phase.animal_cap
 
@@ -471,6 +533,7 @@ def save_study_plan(db: Session, user: User, payload: FormBStudyPlanSave) -> dic
         "phase_count": len(payload.phases),
         "total_animals": sum(phase.animal_cap for phase in payload.phases),
         "animal_rationale": payload.animal_rationale.model_dump(),
+        "phase_procedures": _extract_phase_procedures(payload.phases),
     }
     form_b.application_data = application_data
     _sync_step3_from_study_plan(db, form_b, payload)
@@ -545,6 +608,7 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
                 depends_on_sequence = parent.sequence_order
 
         endpoint_source = next((group for group in phase.groups if group.endpoints), None)
+        phase_proc = (step2b.get("phase_procedures") or {}).get(str(phase.sequence_order), {})
         payload_phases.append(
             FormBStudyPhaseEntry(
                 phase_code=phase.phase_code,
@@ -557,6 +621,9 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
                 contingency_note=phase.contingency_note,
                 depends_on_sequence_order=depends_on_sequence,
                 reuse_animals_allowed=phase.reuse_animals_allowed,
+                blood_withdrawal_volume=phase_proc.get("blood_withdrawal_volume") or "",
+                blood_withdrawal_site=phase_proc.get("blood_withdrawal_site") or "",
+                surgical_procedure=phase_proc.get("surgical_procedure") or "",
                 endpoints=[
                     FormBGroupEndpointEntry(
                         parameter_code=row.parameter_code,
@@ -722,6 +789,7 @@ def load_study_plan_for_pdf(db: Session, form_b_id: int) -> dict:
     step2 = application_data.get("step2") or {}
     step2b = application_data.get(STEP2B_KEY) or {}
     phase_dicts = [_phase_to_dict(phase) for phase in phases]
+    _apply_phase_procedures(phase_dicts, step2b, application_data)
     return {
         "project_title": project.title if project else "",
         "principal_investigator": project.principal_investigator if project else "",
