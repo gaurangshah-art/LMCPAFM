@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getFormBStudyPlan,
@@ -8,7 +8,8 @@ import {
   type FormBYearWiseCountEntry,
 } from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
-import { getSpeciesOptions, getStrainsOptions, type LookupOption } from "../../api/lookupApi";
+import { getSpeciesOptions, type LookupOption } from "../../api/lookupApi";
+import { useStrainLookup } from "../../hooks/useStrainLookup";
 import { LoadingState } from "../../components/common/LoadingState";
 import { INSTITUTIONAL_DEFAULTS } from "../../constants/institution";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
@@ -144,7 +145,6 @@ export function FormBStep3() {
   const [studyPlanTotal, setStudyPlanTotal] = useState<number | null>(null);
   const [studyPlanLoading, setStudyPlanLoading] = useState(true);
   const [speciesOptions, setSpeciesOptions] = useState<LookupOption[]>([]);
-  const [strainCache, setStrainCache] = useState<Record<number, LookupOption[]>>({});
 
   const { value: saved, loading: loadingSaved } = useFormBStepReview(
     formBId,
@@ -177,26 +177,19 @@ export function FormBStep3() {
     setForm(applyStudyPlanTotal(base, studyPlanTotal));
   }, [saved, loadingSaved, studyPlanLoading, studyPlanTotal]);
 
-  async function loadStrains(speciesId: number) {
-    if (strainCache[speciesId]) return;
-    const strains = await getStrainsOptions(speciesId);
-    setStrainCache((current) => ({ ...current, [speciesId]: strains }));
-  }
-
-  useEffect(() => {
-    if (!speciesOptions.length) return;
-    for (const row of form.requirements) {
-      if (!row.species) continue;
-      const speciesId = speciesOptions.find((option) => option.name === row.species)?.id;
-      if (speciesId) {
-        void loadStrains(speciesId);
-      }
-    }
-  }, [form.requirements, speciesOptions]);
-
   function speciesIdForName(name: string): number | null {
     return speciesOptions.find((option) => option.name === name)?.id ?? null;
   }
+
+  const speciesIdsInForm = useMemo(
+    () =>
+      form.requirements
+        .map((row) => speciesIdForName(row.species))
+        .filter((id): id is number => id != null && id > 0),
+    [form.requirements, speciesOptions],
+  );
+  const { ensureStrainsLoaded, strainsForSpecies, strainsLoading } =
+    useStrainLookup(speciesIdsInForm);
 
   function updateRationale<K extends keyof Omit<Step3Form, "requirements">>(
     key: K,
@@ -477,7 +470,7 @@ export function FormBStep3() {
                       const species = e.target.value;
                       const speciesId = speciesIdForName(species);
                       updateRequirement(row.id, { species, strain: "" });
-                      if (speciesId) void loadStrains(speciesId);
+                      if (speciesId) void ensureStrainsLoaded(speciesId);
                     }}
                   >
                     <option value="">Select species</option>
@@ -495,13 +488,16 @@ export function FormBStep3() {
                     onChange={(e) => updateRequirement(row.id, { strain: e.target.value })}
                     disabled={!row.species}
                   >
-                    <option value="">Select strain</option>
-                    {(
-                      (() => {
-                        const speciesId = speciesIdForName(row.species);
-                        return speciesId ? strainCache[speciesId] ?? [] : [];
-                      })()
-                    ).map((option) => (
+                    <option value="">
+                      {!row.species
+                        ? "Select species first"
+                        : strainsLoading(speciesIdForName(row.species))
+                          ? "Loading strains..."
+                          : strainsForSpecies(speciesIdForName(row.species)).length
+                            ? "Select strain"
+                            : "No strains for this species"}
+                    </option>
+                    {strainsForSpecies(speciesIdForName(row.species)).map((option) => (
                       <option key={option.id} value={option.name}>
                         {option.name}
                       </option>

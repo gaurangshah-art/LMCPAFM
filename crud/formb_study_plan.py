@@ -135,6 +135,27 @@ def _sync_step3_from_study_plan(db: Session, form_b: FormB, payload) -> None:
     _sync_animal_requirements(db, form_b, step3_data)
 
 
+def _endpoint_rows_to_dicts(rows) -> list[dict]:
+    return [
+        {
+            "parameter_code": row.parameter_code,
+            "parameter_name": row.parameter_name,
+            "schedule_type": row.schedule_type,
+            "schedule_detail": row.schedule_detail,
+            "method": row.method,
+            "notes": row.notes,
+        }
+        for row in rows
+    ]
+
+
+def _phase_endpoints_from_groups(phase: FormBStudyPhase) -> list[dict]:
+    for group in phase.groups:
+        if group.endpoints:
+            return _endpoint_rows_to_dicts(group.endpoints)
+    return []
+
+
 def _phase_to_dict(phase: FormBStudyPhase) -> dict:
     return {
         "id": phase.id,
@@ -148,6 +169,7 @@ def _phase_to_dict(phase: FormBStudyPhase) -> dict:
         "contingency_note": phase.contingency_note,
         "depends_on_phase_id": phase.depends_on_phase_id,
         "reuse_animals_allowed": phase.reuse_animals_allowed,
+        "endpoints": _phase_endpoints_from_groups(phase),
         "groups": [_group_to_dict(group) for group in phase.groups],
     }
 
@@ -182,17 +204,6 @@ def _group_to_dict(group: FormBStudyGroup) -> dict:
                 "notes": row.notes,
             }
             for row in group.dosing_entries
-        ],
-        "endpoints": [
-            {
-                "parameter_code": row.parameter_code,
-                "parameter_name": row.parameter_name,
-                "schedule_type": row.schedule_type,
-                "schedule_detail": row.schedule_detail,
-                "method": row.method,
-                "notes": row.notes,
-            }
-            for row in group.endpoints
         ],
         "fates": [
             {
@@ -310,11 +321,25 @@ def validate_study_plan_payload(db: Session, form_b_id: int, payload: FormBStudy
                         f"Invalid fate type '{fate.fate_type}' in group '{group.group_name}'."
                     )
 
-            for endpoint in group.endpoints:
-                if endpoint.schedule_type not in SCHEDULE_TYPES:
-                    raise CRUDValidationError(
-                        f"Invalid schedule type '{endpoint.schedule_type}' in group '{group.group_name}'."
-                    )
+        if not phase.endpoints:
+            raise CRUDValidationError(
+                f"Phase '{phase.phase_name}': add at least one study evaluation parameter."
+            )
+
+        for endpoint in phase.endpoints:
+            if not endpoint.parameter_name.strip():
+                raise CRUDValidationError(
+                    f"Phase '{phase.phase_name}': every study evaluation parameter needs a name."
+                )
+            if not endpoint.schedule_detail.strip():
+                raise CRUDValidationError(
+                    f"Phase '{phase.phase_name}': enter frequency/schedule for "
+                    f"'{endpoint.parameter_name}'."
+                )
+            if endpoint.schedule_type not in SCHEDULE_TYPES:
+                raise CRUDValidationError(
+                    f"Invalid schedule type '{endpoint.schedule_type}' in phase '{phase.phase_name}'."
+                )
 
         phase_total += phase.animal_cap
 
@@ -407,7 +432,7 @@ def save_study_plan(db: Session, user: User, payload: FormBStudyPlanSave) -> dic
                     )
                 )
 
-            for endpoint_entry in group_entry.endpoints:
+            for endpoint_entry in phase_entry.endpoints:
                 db.add(
                     FormBGroupEndpoint(
                         study_group_id=group.id,
@@ -519,6 +544,7 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
             if parent is not None:
                 depends_on_sequence = parent.sequence_order
 
+        endpoint_source = next((group for group in phase.groups if group.endpoints), None)
         payload_phases.append(
             FormBStudyPhaseEntry(
                 phase_code=phase.phase_code,
@@ -531,6 +557,17 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
                 contingency_note=phase.contingency_note,
                 depends_on_sequence_order=depends_on_sequence,
                 reuse_animals_allowed=phase.reuse_animals_allowed,
+                endpoints=[
+                    FormBGroupEndpointEntry(
+                        parameter_code=row.parameter_code,
+                        parameter_name=row.parameter_name,
+                        schedule_type=row.schedule_type,
+                        schedule_detail=row.schedule_detail,
+                        method=row.method,
+                        notes=row.notes,
+                    )
+                    for row in (endpoint_source.endpoints if endpoint_source else [])
+                ],
                 groups=[
                     FormBStudyGroupEntry(
                         group_code=group.group_code,
@@ -558,17 +595,6 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
                                 notes=row.notes,
                             )
                             for row in group.dosing_entries
-                        ],
-                        endpoints=[
-                            FormBGroupEndpointEntry(
-                                parameter_code=row.parameter_code,
-                                parameter_name=row.parameter_name,
-                                schedule_type=row.schedule_type,
-                                schedule_detail=row.schedule_detail,
-                                method=row.method,
-                                notes=row.notes,
-                            )
-                            for row in group.endpoints
                         ],
                         fates=[
                             FormBGroupFateEntry(

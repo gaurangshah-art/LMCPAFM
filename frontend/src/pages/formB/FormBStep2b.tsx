@@ -12,7 +12,8 @@ import {
   type FormBStudyPhaseEntry,
 } from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
-import { getSpeciesOptions, getStrainsOptions, type LookupOption } from "../../api/lookupApi";
+import { getSpeciesOptions, type LookupOption } from "../../api/lookupApi";
+import { useStrainLookup } from "../../hooks/useStrainLookup";
 import {
   createEmptyAnimalRationale,
   parseAnimalRationale,
@@ -71,7 +72,6 @@ function emptyGroup(animalCount = 6): FormBStudyGroupEntry {
     housing_notes: "",
     treatment_summary: "",
     dosing: [emptyDosing()],
-    endpoints: defaultEndpoints(),
     fates: defaultFate(animalCount),
   };
 }
@@ -89,6 +89,7 @@ function emptyPhase(order = 1): FormBStudyPhaseEntry {
     contingency_note: "",
     depends_on_sequence_order: null,
     reuse_animals_allowed: false,
+    endpoints: defaultEndpoints(),
     groups,
   };
 }
@@ -96,19 +97,35 @@ function emptyPhase(order = 1): FormBStudyPhaseEntry {
 function normalizePlan(data: FormBStudyPhaseEntry[] | undefined): FormBStudyPhaseEntry[] {
   if (!data?.length) return [emptyPhase(1)];
   return data.map((phase, index) => {
+    const legacyGroupEndpoints = phase.groups.find(
+      (group) => (group as FormBStudyGroupEntry & { endpoints?: FormBGroupEndpointEntry[] }).endpoints?.length,
+    ) as (FormBStudyGroupEntry & { endpoints?: FormBGroupEndpointEntry[] }) | undefined;
     const groups = phase.groups.map((group) => ({
       ...group,
+      species_id:
+        group.species_id != null && group.species_id !== ""
+          ? Number(group.species_id)
+          : null,
+      strain_id:
+        group.strain_id != null && group.strain_id !== ""
+          ? Number(group.strain_id)
+          : null,
       dosing: group.dosing?.length
         ? group.dosing.map((dose) => ({ ...emptyDosing(), ...dose, duration: dose.duration ?? "" }))
         : [emptyDosing()],
-      endpoints: group.endpoints?.length ? group.endpoints : defaultEndpoints(),
       fates: group.fates?.length ? group.fates : defaultFate(group.animal_count),
     }));
+    const endpoints = phase.endpoints?.length
+      ? phase.endpoints
+      : legacyGroupEndpoints?.endpoints?.length
+        ? legacyGroupEndpoints.endpoints
+        : defaultEndpoints();
     const animalCap = groups.reduce((sum, group) => sum + group.animal_count, 0);
     return {
       ...phase,
       sequence_order: phase.sequence_order || index + 1,
       animal_cap: animalCap,
+      endpoints,
       groups,
     };
   });
@@ -126,7 +143,12 @@ export function FormBStep2b() {
   );
   const [phases, setPhases] = useState<FormBStudyPhaseEntry[]>([emptyPhase(1)]);
   const [speciesOptions, setSpeciesOptions] = useState<LookupOption[]>([]);
-  const [strainCache, setStrainCache] = useState<Record<number, LookupOption[]>>({});
+  const speciesIdsInPlan = useMemo(
+    () => phases.flatMap((phase) => phase.groups.map((group) => group.species_id)),
+    [phases],
+  );
+  const { ensureStrainsLoaded, strainsForSpecies, strainsLoading } =
+    useStrainLookup(speciesIdsInPlan);
 
   useEffect(() => {
     getSpeciesOptions().then(setSpeciesOptions).catch(() => setSpeciesOptions([]));
@@ -186,12 +208,6 @@ export function FormBStep2b() {
     setAnimalRationale((current) => ({ ...current, ...patch }));
   }
 
-  async function loadStrains(speciesId: number) {
-    if (strainCache[speciesId]) return;
-    const strains = await getStrainsOptions(speciesId);
-    setStrainCache((current) => ({ ...current, [speciesId]: strains }));
-  }
-
   function syncPhaseCap(phase: FormBStudyPhaseEntry): FormBStudyPhaseEntry {
     const animalCap = phase.groups.reduce((sum, group) => sum + group.animal_count, 0);
     return { ...phase, animal_cap: animalCap };
@@ -244,49 +260,36 @@ export function FormBStep2b() {
 
   function updateEndpoint(
     phaseIndex: number,
-    groupIndex: number,
     endpointIndex: number,
     patch: Partial<FormBGroupEndpointEntry>,
   ) {
     setPhases((current) =>
       current.map((phase, pi) => {
         if (pi !== phaseIndex) return phase;
-        const groups = phase.groups.map((group, gi) => {
-          if (gi !== groupIndex) return group;
-          const endpoints = group.endpoints.map((endpoint, ei) =>
-            ei === endpointIndex ? { ...endpoint, ...patch } : endpoint,
-          );
-          return { ...group, endpoints };
-        });
-        return syncPhaseCap({ ...phase, groups });
-      }),
-    );
-  }
-
-  function addEndpoint(phaseIndex: number, groupIndex: number) {
-    setPhases((current) =>
-      current.map((phase, pi) => {
-        if (pi !== phaseIndex) return phase;
-        const groups = phase.groups.map((group, gi) =>
-          gi === groupIndex
-            ? { ...group, endpoints: [...group.endpoints, emptyEndpoint()] }
-            : group,
+        const endpoints = phase.endpoints.map((endpoint, ei) =>
+          ei === endpointIndex ? { ...endpoint, ...patch } : endpoint,
         );
-        return syncPhaseCap({ ...phase, groups });
+        return { ...phase, endpoints };
       }),
     );
   }
 
-  function removeEndpoint(phaseIndex: number, groupIndex: number, endpointIndex: number) {
+  function addEndpoint(phaseIndex: number) {
+    setPhases((current) =>
+      current.map((phase, pi) =>
+        pi === phaseIndex
+          ? { ...phase, endpoints: [...phase.endpoints, emptyEndpoint()] }
+          : phase,
+      ),
+    );
+  }
+
+  function removeEndpoint(phaseIndex: number, endpointIndex: number) {
     setPhases((current) =>
       current.map((phase, pi) => {
         if (pi !== phaseIndex) return phase;
-        const groups = phase.groups.map((group, gi) => {
-          if (gi !== groupIndex) return group;
-          const endpoints = group.endpoints.filter((_, ei) => ei !== endpointIndex);
-          return { ...group, endpoints: endpoints.length ? endpoints : defaultEndpoints() };
-        });
-        return syncPhaseCap({ ...phase, groups });
+        const endpoints = phase.endpoints.filter((_, ei) => ei !== endpointIndex);
+        return { ...phase, endpoints: endpoints.length ? endpoints : defaultEndpoints() };
       }),
     );
   }
@@ -367,6 +370,18 @@ export function FormBStep2b() {
       }
       if (!phase.groups.length) return `Phase "${phase.phase_name}" needs at least one group.`;
 
+      if (!phase.endpoints.length) {
+        return `Phase "${phase.phase_name}": add at least one study evaluation parameter.`;
+      }
+      for (const endpoint of phase.endpoints) {
+        if (!endpoint.parameter_name.trim()) {
+          return `Phase "${phase.phase_name}": every evaluation parameter needs a name.`;
+        }
+        if (!endpoint.schedule_detail.trim()) {
+          return `Phase "${phase.phase_name}": enter frequency/timing for "${endpoint.parameter_name}".`;
+        }
+      }
+
       for (const group of phase.groups) {
         if (!group.group_name.trim()) return "Every group needs a title.";
         if (group.animal_count <= 0) return `Group "${group.group_name}" needs a positive animal count.`;
@@ -383,18 +398,6 @@ export function FormBStep2b() {
             !dose.duration.trim()
           ) {
             return `Group "${group.group_name}": complete drug, dose, route, frequency, and duration.`;
-          }
-        }
-
-        if (!group.endpoints.length) {
-          return `Group "${group.group_name}": add at least one study evaluation parameter.`;
-        }
-        for (const endpoint of group.endpoints) {
-          if (!endpoint.parameter_name.trim()) {
-            return `Group "${group.group_name}": every evaluation parameter needs a name.`;
-          }
-          if (!endpoint.schedule_detail.trim()) {
-            return `Group "${group.group_name}": enter frequency/timing for "${endpoint.parameter_name}".`;
           }
         }
 
@@ -653,6 +656,97 @@ export function FormBStep2b() {
                 </label>
               </div>
 
+              <div className="page-section nested-section" style={{ marginTop: "0.75rem" }}>
+                <h4>Study evaluation parameters (required)</h4>
+                <p className="field-help">
+                  IAEC requires the parameters observed during this phase and how often they are
+                  measured. These apply uniformly to all groups in the phase.
+                </p>
+                <table className="data-table compact-table">
+                  <thead>
+                    <tr>
+                      <th>Parameter</th>
+                      <th>Frequency type</th>
+                      <th>Frequency / schedule</th>
+                      <th>Method (optional)</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {phase.endpoints.map((endpoint, endpointIndex) => (
+                      <tr key={`endpoint-${phaseIndex}-${endpointIndex}`}>
+                        <td>
+                          <input
+                            value={endpoint.parameter_name}
+                            onChange={(e) =>
+                              updateEndpoint(phaseIndex, endpointIndex, {
+                                parameter_name: e.target.value,
+                              })
+                            }
+                            placeholder="e.g. Body weight"
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={endpoint.schedule_type}
+                            onChange={(e) =>
+                              updateEndpoint(phaseIndex, endpointIndex, {
+                                schedule_type: e.target.value,
+                              })
+                            }
+                          >
+                            {ENDPOINT_SCHEDULE_TYPES.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            value={endpoint.schedule_detail}
+                            onChange={(e) =>
+                              updateEndpoint(phaseIndex, endpointIndex, {
+                                schedule_detail: e.target.value,
+                              })
+                            }
+                            placeholder="e.g. Weekly, Day 14, Days 1-7"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={endpoint.method ?? ""}
+                            onChange={(e) =>
+                              updateEndpoint(phaseIndex, endpointIndex, {
+                                method: e.target.value,
+                              })
+                            }
+                            placeholder="e.g. Digital balance"
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-link danger"
+                            onClick={() => removeEndpoint(phaseIndex, endpointIndex)}
+                            disabled={phase.endpoints.length <= 1}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => addEndpoint(phaseIndex)}
+                >
+                  + Add parameter
+                </button>
+              </div>
+
               {phase.groups.map((group, groupIndex) => {
                 const dose = group.dosing[0] ?? emptyDosing();
                 return (
@@ -696,23 +790,23 @@ export function FormBStep2b() {
                       <label>
                         Species
                         <select
-                          value={group.species_id ?? ""}
+                          value={group.species_id != null ? String(group.species_id) : ""}
                           onChange={(e) => {
                             const speciesId = e.target.value ? Number(e.target.value) : null;
                             updateGroup(phaseIndex, groupIndex, { species_id: speciesId, strain_id: null });
-                            if (speciesId) void loadStrains(speciesId);
+                            if (speciesId) void ensureStrainsLoaded(speciesId);
                           }}
                         >
                           <option value="">Select species</option>
                           {speciesOptions.map((option) => (
-                            <option key={option.id} value={option.id}>{option.name}</option>
+                            <option key={option.id} value={String(option.id)}>{option.name}</option>
                           ))}
                         </select>
                       </label>
                       <label>
                         Strain
                         <select
-                          value={group.strain_id ?? ""}
+                          value={group.strain_id != null ? String(group.strain_id) : ""}
                           onChange={(e) =>
                             updateGroup(phaseIndex, groupIndex, {
                               strain_id: e.target.value ? Number(e.target.value) : null,
@@ -720,9 +814,17 @@ export function FormBStep2b() {
                           }
                           disabled={!group.species_id}
                         >
-                          <option value="">Select strain</option>
-                          {(group.species_id ? strainCache[group.species_id] ?? [] : []).map((option) => (
-                            <option key={option.id} value={option.id}>{option.name}</option>
+                          <option value="">
+                            {!group.species_id
+                              ? "Select species first"
+                              : strainsLoading(group.species_id)
+                                ? "Loading strains..."
+                                : strainsForSpecies(group.species_id).length
+                                  ? "Select strain"
+                                  : "No strains for this species"}
+                          </option>
+                          {strainsForSpecies(group.species_id).map((option) => (
+                            <option key={option.id} value={String(option.id)}>{option.name}</option>
                           ))}
                         </select>
                       </label>
@@ -781,96 +883,6 @@ export function FormBStep2b() {
                           placeholder="e.g. 4 weeks"
                         />
                       </label>
-                    </div>
-
-                    <div className="page-section nested-section" style={{ marginTop: "0.75rem" }}>
-                      <h5>Study evaluation parameters</h5>
-                      <p className="field-help">
-                        Parameters observed during the study and how often they are measured.
-                      </p>
-                      <table className="data-table compact-table">
-                        <thead>
-                          <tr>
-                            <th>Parameter</th>
-                            <th>Frequency type</th>
-                            <th>Frequency / schedule</th>
-                            <th>Method (optional)</th>
-                            <th />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {group.endpoints.map((endpoint, endpointIndex) => (
-                            <tr key={`endpoint-${phaseIndex}-${groupIndex}-${endpointIndex}`}>
-                              <td>
-                                <input
-                                  value={endpoint.parameter_name}
-                                  onChange={(e) =>
-                                    updateEndpoint(phaseIndex, groupIndex, endpointIndex, {
-                                      parameter_name: e.target.value,
-                                    })
-                                  }
-                                  placeholder="e.g. Body weight"
-                                />
-                              </td>
-                              <td>
-                                <select
-                                  value={endpoint.schedule_type}
-                                  onChange={(e) =>
-                                    updateEndpoint(phaseIndex, groupIndex, endpointIndex, {
-                                      schedule_type: e.target.value,
-                                    })
-                                  }
-                                >
-                                  {ENDPOINT_SCHEDULE_TYPES.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td>
-                                <input
-                                  value={endpoint.schedule_detail}
-                                  onChange={(e) =>
-                                    updateEndpoint(phaseIndex, groupIndex, endpointIndex, {
-                                      schedule_detail: e.target.value,
-                                    })
-                                  }
-                                  placeholder="e.g. Weekly, Day 14, Days 1-7"
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  value={endpoint.method ?? ""}
-                                  onChange={(e) =>
-                                    updateEndpoint(phaseIndex, groupIndex, endpointIndex, {
-                                      method: e.target.value,
-                                    })
-                                  }
-                                  placeholder="e.g. Digital balance"
-                                />
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className="btn-link danger"
-                                  onClick={() => removeEndpoint(phaseIndex, groupIndex, endpointIndex)}
-                                  disabled={group.endpoints.length <= 1}
-                                >
-                                  Remove
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => addEndpoint(phaseIndex, groupIndex)}
-                      >
-                        + Add parameter
-                      </button>
                     </div>
 
                     <div className="page-section nested-section" style={{ marginTop: "0.75rem" }}>

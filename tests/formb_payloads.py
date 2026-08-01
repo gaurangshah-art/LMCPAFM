@@ -161,6 +161,14 @@ def study_plan_animal_rationale(total_animals: int = 20) -> dict:
 
 def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: int | None = None) -> dict:
     total_animals = 20
+    phase_endpoints = [
+        {
+            "parameter_code": "body_weight",
+            "parameter_name": "Body weight",
+            "schedule_type": "recurring",
+            "schedule_detail": "Weekly",
+        }
+    ]
     return {
         "form_b_id": form_b_id,
         "design_rationale": "Pilot informs pivotal design.",
@@ -177,6 +185,7 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                 "contingency_note": "",
                 "depends_on_sequence_order": None,
                 "reuse_animals_allowed": False,
+                "endpoints": phase_endpoints,
                 "groups": [
                     {
                         "group_code": "P1",
@@ -192,14 +201,6 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                         "housing_notes": "",
                         "treatment_summary": "Vehicle",
                         "dosing": [],
-                        "endpoints": [
-                            {
-                                "parameter_code": "body_weight",
-                                "parameter_name": "Body weight",
-                                "schedule_type": "recurring",
-                                "schedule_detail": "Weekly",
-                            }
-                        ],
                         "fates": [
                             {
                                 "fate_type": "sacrifice",
@@ -233,14 +234,6 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                                 "end_day": 28,
                             }
                         ],
-                        "endpoints": [
-                            {
-                                "parameter_code": "body_weight",
-                                "parameter_name": "Body weight",
-                                "schedule_type": "recurring",
-                                "schedule_detail": "Weekly",
-                            }
-                        ],
                         "fates": [
                             {
                                 "fate_type": "sacrifice",
@@ -263,6 +256,7 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                 "contingency_note": "Proceed only if pilot succeeds",
                 "depends_on_sequence_order": 1,
                 "reuse_animals_allowed": False,
+                "endpoints": phase_endpoints,
                 "groups": [
                     {
                         "group_code": "V1",
@@ -278,14 +272,6 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                         "housing_notes": "",
                         "treatment_summary": "Vehicle",
                         "dosing": [],
-                        "endpoints": [
-                            {
-                                "parameter_code": "body_weight",
-                                "parameter_name": "Body weight",
-                                "schedule_type": "recurring",
-                                "schedule_detail": "Weekly",
-                            }
-                        ],
                         "fates": [
                             {
                                 "fate_type": "sacrifice",
@@ -317,14 +303,6 @@ def study_plan_body(form_b_id: int, species_id: int | None = None, strain_id: in
                                 "duration": "8 weeks",
                                 "start_day": 1,
                                 "end_day": 56,
-                            }
-                        ],
-                        "endpoints": [
-                            {
-                                "parameter_code": "body_weight",
-                                "parameter_name": "Body weight",
-                                "schedule_type": "recurring",
-                                "schedule_detail": "Weekly",
                             }
                         ],
                         "fates": [

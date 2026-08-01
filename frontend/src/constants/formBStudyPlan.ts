@@ -48,16 +48,7 @@ export function emptyEndpoint(): FormBGroupEndpointEntry {
 }
 
 export function defaultEndpoints(): FormBGroupEndpointEntry[] {
-  return [
-    {
-      parameter_code: "body_weight",
-      parameter_name: "Body weight",
-      schedule_type: "recurring",
-      schedule_detail: "Weekly",
-      method: "",
-      notes: "",
-    },
-  ];
+  return [emptyEndpoint()];
 }
 
 export function defaultFate(count: number): FormBGroupFateEntry[] {
@@ -105,21 +96,21 @@ export function buildStudyPlanPayloadPhases(
   return sourcePhases.map((phase) =>
     syncPhaseCap({
       ...phase,
+      endpoints: phase.endpoints.map((endpoint) => ({
+        ...endpoint,
+        parameter_code:
+          endpoint.parameter_code.trim() || slugParameterCode(endpoint.parameter_name),
+        parameter_name: endpoint.parameter_name.trim(),
+        schedule_detail: endpoint.schedule_detail.trim(),
+        method: endpoint.method?.trim() || null,
+        notes: endpoint.notes?.trim() || null,
+      })),
       groups: phase.groups.map((group) => ({
         ...group,
         dosing:
           group.role === "control" && !group.dosing[0]?.agent_name.trim()
             ? []
             : group.dosing.slice(0, 1),
-        endpoints: group.endpoints.map((endpoint) => ({
-          ...endpoint,
-          parameter_code:
-            endpoint.parameter_code.trim() || slugParameterCode(endpoint.parameter_name),
-          parameter_name: endpoint.parameter_name.trim(),
-          schedule_detail: endpoint.schedule_detail.trim(),
-          method: endpoint.method?.trim() || null,
-          notes: endpoint.notes?.trim() || null,
-        })),
         fates: group.fates.map((fate) => ({
           ...fate,
           method_or_destination: fate.method_or_destination?.trim() || null,

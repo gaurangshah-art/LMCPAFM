@@ -307,7 +307,6 @@ export interface FormBStudyGroupEntry {
   housing_notes?: string | null;
   treatment_summary?: string | null;
   dosing: FormBGroupDosingEntry[];
-  endpoints: FormBGroupEndpointEntry[];
   fates: FormBGroupFateEntry[];
 }
 
@@ -322,6 +321,7 @@ export interface FormBStudyPhaseEntry {
   contingency_note?: string | null;
   depends_on_sequence_order?: number | null;
   reuse_animals_allowed: boolean;
+  endpoints: FormBGroupEndpointEntry[];
   groups: FormBStudyGroupEntry[];
 }
 

@@ -56,7 +56,6 @@ class FormBStudyGroupEntry(BaseModel):
     housing_notes: str | None = Field(None, max_length=5000)
     treatment_summary: str | None = Field(None, max_length=5000)
     dosing: list[FormBGroupDosingEntry] = Field(default_factory=list)
-    endpoints: list[FormBGroupEndpointEntry] = Field(default_factory=list)
     fates: list[FormBGroupFateEntry] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -73,15 +72,6 @@ class FormBStudyGroupEntry(BaseModel):
                     raise ValueError(
                         f"Group '{self.group_name}': treatment duration is required."
                     )
-        if not self.endpoints:
-            self.endpoints = [
-                FormBGroupEndpointEntry(
-                    parameter_code="study_end",
-                    parameter_name="Study completion",
-                    schedule_type="single",
-                    schedule_detail="End of phase",
-                )
-            ]
         if not self.fates:
             self.fates = [
                 FormBGroupFateEntry(
@@ -105,6 +95,7 @@ class FormBStudyPhaseEntry(BaseModel):
     contingency_note: str | None = Field(None, max_length=5000)
     depends_on_sequence_order: int | None = Field(None, ge=1)
     reuse_animals_allowed: bool = False
+    endpoints: list[FormBGroupEndpointEntry] = Field(default_factory=list)
     groups: list[FormBStudyGroupEntry] = Field(..., min_length=1)
 
 

@@ -27,19 +27,45 @@ class _SimplePDF(BrandedPDF):
         self.ln(1)
 
 
-def _write_multiline(pdf: FPDF, text: str, height: float = 6) -> None:
+def _write_multiline(pdf: FPDF, text: str, height: float = 6, bold: bool = False) -> None:
     pdf.set_x(pdf.l_margin)
+    size = 10 if not bold else 11
+    pdf.set_font("Helvetica", "B" if bold else "", size)
     pdf.multi_cell(pdf.epw, height, _safe_text(text))
 
 
+def _init_annexure_pdf() -> _SimplePDF:
+    pdf = _SimplePDF()
+    pdf.set_margins(15, 38, 15)
+    pdf.set_auto_page_break(auto=True, margin=18)
+    return pdf
+
+
+def _write_evaluation_parameters(pdf: FPDF, endpoints: list[dict]) -> None:
+    _write_multiline(pdf, "Study evaluation parameters", 6, bold=True)
+    if not endpoints:
+        _write_multiline(pdf, "Not recorded.", 5)
+        return
+    for endpoint in endpoints:
+        schedule_type = endpoint.get("schedule_type") or "-"
+        line = (
+            f"  - {endpoint.get('parameter_name') or '-'} "
+            f"({schedule_type}): {endpoint.get('schedule_detail') or '-'}"
+        )
+        if endpoint.get("method"):
+            line += f"; method: {endpoint['method']}"
+        _write_multiline(pdf, line, 5)
+    pdf.ln(1)
+
+
 def _write_animal_summary_table(pdf: FPDF, summary: dict) -> None:
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(0, 7, "Animal use summary", ln=True)
+    _write_multiline(pdf, "Animal use summary", 6, bold=True)
     pdf.ln(1)
     col_w = pdf.epw / 2
+    pdf.set_x(pdf.l_margin)
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(col_w, 7, "Category", border=1)
-    pdf.cell(col_w, 7, "Count", border=1, ln=True)
+    pdf.cell(col_w, 7, _safe_text("Category"), border=1)
+    pdf.cell(col_w, 7, _safe_text("Count"), border=1, new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
     rows = [
         ("Total animals used", summary.get("total_used", 0)),
@@ -51,8 +77,9 @@ def _write_animal_summary_table(pdf: FPDF, summary: dict) -> None:
     if summary.get("other"):
         rows.append(("Other disposition", summary["other"]))
     for label, count in rows:
+        pdf.set_x(pdf.l_margin)
         pdf.cell(col_w, 7, _safe_text(label), border=1)
-        pdf.cell(col_w, 7, str(count), border=1, ln=True)
+        pdf.cell(col_w, 7, str(count), border=1, new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
 
 
@@ -102,90 +129,74 @@ def render_form_b_application_pdf(db: Session, project_id: int) -> bytes:
 
 def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
     plan = load_study_plan_for_pdf(db, form_b_id)
-    pdf = _SimplePDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf = _init_annexure_pdf()
     pdf.add_page()
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "Annexure I - Experimental Study Plan", ln=True, align="C")
+    _write_multiline(pdf, "Annexure I - Experimental Study Plan", 8, bold=True)
     pdf.ln(2)
-    pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 7, _safe_text(f"Project: {plan['project_title']}"), ln=True)
-    pdf.cell(0, 7, _safe_text(f"Principal Investigator: {plan['principal_investigator']}"), ln=True)
+    _write_multiline(pdf, f"Project: {plan['project_title']}", 6)
+    _write_multiline(pdf, f"Principal Investigator: {plan['principal_investigator']}", 6)
     if plan.get("proposed_start_date"):
-        pdf.cell(
-            0,
-            7,
-            _safe_text(
-                f"Proposed period: {plan['proposed_start_date']} to {plan.get('proposed_completion_date') or '-'}"
-            ),
-            ln=True,
+        _write_multiline(
+            pdf,
+            f"Proposed period: {plan['proposed_start_date']} to "
+            f"{plan.get('proposed_completion_date') or '-'}",
+            6,
         )
-    pdf.cell(0, 7, _safe_text(f"Total animals across phases: {plan['total_animals']}"), ln=True)
+    _write_multiline(pdf, f"Total animals across phases: {plan['total_animals']}", 6)
     if plan.get("animal_summary"):
         pdf.ln(2)
         _write_animal_summary_table(pdf, plan["animal_summary"])
     if plan.get("design_rationale"):
         pdf.ln(2)
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 7, "Design rationale", ln=True)
-        pdf.set_font("Helvetica", "", 10)
+        _write_multiline(pdf, "Design rationale", 6, bold=True)
         _write_multiline(pdf, plan["design_rationale"], 6)
 
     for phase in plan["phases"]:
-        pdf.ln(4)
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(
-            0,
-            8,
-            _safe_text(
-                f"Phase {phase['sequence_order']}: {phase['phase_name']} ({phase['phase_code']})"
-            ),
-            ln=True,
+        pdf.ln(3)
+        _write_multiline(
+            pdf,
+            f"Phase {phase['sequence_order']}: {phase['phase_name']} ({phase['phase_code']})",
+            7,
+            bold=True,
         )
-        pdf.set_font("Helvetica", "", 10)
-        pdf.cell(0, 6, _safe_text(f"Animal cap: {phase['animal_cap']}"), ln=True)
+        _write_multiline(pdf, f"Animal cap: {phase['animal_cap']}", 5)
         if phase.get("planned_start_date"):
-            pdf.cell(0, 6, _safe_text(f"Planned start: {phase['planned_start_date']}"), ln=True)
+            _write_multiline(pdf, f"Planned start: {phase['planned_start_date']}", 5)
         if phase.get("planned_duration_weeks"):
-            pdf.cell(0, 6, _safe_text(f"Duration (weeks): {phase['planned_duration_weeks']}"), ln=True)
+            _write_multiline(pdf, f"Duration (weeks): {phase['planned_duration_weeks']}", 5)
         if phase.get("objective"):
-            _write_multiline(pdf, f"Objective: {phase['objective']}", 6)
+            _write_multiline(pdf, f"Objective: {phase['objective']}", 5)
         if phase.get("contingency_note"):
-            _write_multiline(pdf, f"Contingency: {phase['contingency_note']}", 6)
+            _write_multiline(pdf, f"Contingency: {phase['contingency_note']}", 5)
+
+        _write_evaluation_parameters(pdf, phase.get("endpoints") or [])
 
         for group in phase.get("groups", []):
             pdf.ln(2)
-            pdf.set_font("Helvetica", "B", 10)
-            pdf.cell(
-                0,
-                6,
-                _safe_text(
-                    f"Group {group['group_code']}: {group['group_name']} "
-                    f"({group['role']}, n={group['animal_count']})"
-                ),
-                ln=True,
+            _write_multiline(
+                pdf,
+                f"Group {group['group_code']}: {group['group_name']} "
+                f"({group['role']}, n={group['animal_count']})",
+                5,
+                bold=True,
             )
-            pdf.set_font("Helvetica", "", 9)
             species = group.get("species_name") or "-"
             strain = group.get("strain_name") or "-"
-            pdf.cell(0, 5, _safe_text(f"Species/Strain: {species} / {strain}"), ln=True)
+            _write_multiline(pdf, f"Species/Strain: {species} / {strain}", 5)
             if group.get("sex") or group.get("age") or group.get("weight_range"):
-                pdf.cell(
-                    0,
+                _write_multiline(
+                    pdf,
+                    f"Sex/Age/Weight: {group.get('sex') or '-'} / "
+                    f"{group.get('age') or '-'} / {group.get('weight_range') or '-'}",
                     5,
-                    _safe_text(
-                        f"Sex/Age/Weight: {group.get('sex') or '-'} / "
-                        f"{group.get('age') or '-'} / {group.get('weight_range') or '-'}"
-                    ),
-                    ln=True,
                 )
             if group.get("feeding_diet"):
-                pdf.cell(0, 5, _safe_text(f"Diet: {group['feeding_diet']}"), ln=True)
+                _write_multiline(pdf, f"Diet: {group['feeding_diet']}", 5)
             if group.get("treatment_summary"):
                 _write_multiline(pdf, f"Treatment: {group['treatment_summary']}", 5)
 
             if group.get("dosing"):
-                pdf.cell(0, 5, _safe_text("Dosing schedule:"), ln=True)
+                _write_multiline(pdf, "Dosing schedule:", 5, bold=True)
                 for dose in group["dosing"]:
                     line = (
                         f"  - {dose['agent_name']} {dose['dose']} "
@@ -195,18 +206,8 @@ def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
                         line += f" from day {dose['start_day']}"
                     _write_multiline(pdf, line, 5)
 
-            if group.get("endpoints"):
-                pdf.cell(0, 5, _safe_text("Parameters / timelines:"), ln=True)
-                for endpoint in group["endpoints"]:
-                    _write_multiline(
-                        pdf,
-                        f"  - {endpoint['parameter_name']} ({endpoint['schedule_type']}): "
-                        f"{endpoint['schedule_detail']}",
-                        5,
-                    )
-
             if group.get("fates"):
-                pdf.cell(0, 5, _safe_text("Animal disposition:"), ln=True)
+                _write_multiline(pdf, "Animal disposition:", 5, bold=True)
                 for fate in group["fates"]:
                     _write_multiline(
                         pdf,

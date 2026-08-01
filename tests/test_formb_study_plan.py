@@ -112,7 +112,7 @@ def test_form_b_annexure_pdf_includes_animal_summary_table(client, monkeypatch):
     assert summary["rehabilitated"] >= 2
 
     read_res = client.get(f"/formb/{form_b_id}/study-plan", headers=headers)
-    saved_endpoints = read_res.json()["phases"][0]["groups"][0]["endpoints"]
+    saved_endpoints = read_res.json()["phases"][0]["endpoints"]
     assert saved_endpoints
     assert saved_endpoints[0]["parameter_name"]
     assert saved_endpoints[0]["schedule_detail"]
