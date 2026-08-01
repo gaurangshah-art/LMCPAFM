@@ -15,7 +15,22 @@ export function getApiErrorMessage(error: unknown): string {
       return detail;
     }
     if (Array.isArray(detail)) {
-      return detail.map((item) => JSON.stringify(item)).join("; ");
+      const messages = detail
+        .map((item) => {
+          if (typeof item === "string") return item;
+          if (item && typeof item === "object" && "msg" in item) {
+            const loc = Array.isArray((item as { loc?: unknown }).loc)
+              ? (item as { loc: unknown[] }).loc.filter((part) => part !== "body").join(" → ")
+              : "";
+            const msg = String((item as { msg: unknown }).msg);
+            return loc ? `${loc}: ${msg}` : msg;
+          }
+          return JSON.stringify(item);
+        })
+        .filter(Boolean);
+      if (messages.length) {
+        return messages.join(" ");
+      }
     }
 
     return error.message;
@@ -26,4 +41,19 @@ export function getApiErrorMessage(error: unknown): string {
   }
 
   return "Unexpected error";
+}
+
+export function isNotFoundError(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 404;
+}
+
+export function isFormBNotFoundError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+  if (error.response?.status === 404) {
+    return true;
+  }
+  const detail = error.response?.data?.detail;
+  return typeof detail === "string" && detail.toLowerCase().includes("form b not found");
 }

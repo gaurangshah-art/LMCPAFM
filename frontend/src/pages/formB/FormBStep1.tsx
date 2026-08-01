@@ -3,22 +3,22 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   getFormBReview,
   getFormBStep1Autofill,
-  readStoredFormBId,
   saveFormBStep1,
   startFormB,
-  storeFormBId,
   type FormBStep1Autofill,
 } from "../../api/formbApi";
-import { getApiErrorMessage } from "../../api/errors";
+import { getApiErrorMessage, isFormBNotFoundError } from "../../api/errors";
 import { ErrorAlert } from "../../components/common/ErrorAlert";
 import { LoadingState } from "../../components/common/LoadingState";
+import { SuccessNote } from "../../components/common/SuccessNote";
 import { InstitutionalFieldsPanel } from "../../components/forms/InstitutionalFieldsPanel";
 import { RESEARCH_TYPES } from "../../constants/institution";
+import { useStoredFormBId } from "../../hooks/useStoredFormBId";
 
 export function FormBStep1() {
   const navigate = useNavigate();
 
-  const [formBId, setFormBId] = useState<number | null>(readStoredFormBId());
+  const { formBId, setFormBId, validating, staleNotice } = useStoredFormBId();
   const [loading, setLoading] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -48,6 +48,10 @@ export function FormBStep1() {
   }
 
   useEffect(() => {
+    if (validating) {
+      return;
+    }
+
     let cancelled = false;
 
     (async () => {
@@ -74,7 +78,7 @@ export function FormBStep1() {
           }
         }
       } catch (error) {
-        if (!cancelled) {
+        if (!cancelled && !isFormBNotFoundError(error)) {
           setErrorMessage(getApiErrorMessage(error));
         }
       } finally {
@@ -87,7 +91,7 @@ export function FormBStep1() {
     return () => {
       cancelled = true;
     };
-  }, [formBId]);
+  }, [formBId, validating]);
 
   async function handleStartFormB() {
     setLoading(true);
@@ -102,7 +106,6 @@ export function FormBStep1() {
 
       const started = await startFormB();
       setFormBId(started.id);
-      storeFormBId(started.id);
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));
     } finally {
@@ -158,7 +161,7 @@ export function FormBStep1() {
     }
   }
 
-  if (prefillLoading) {
+  if (prefillLoading || validating) {
     return <LoadingState label="Loading investigator details for Form B..." />;
   }
 
@@ -176,6 +179,8 @@ export function FormBStep1() {
           starting Form B.
         </p>
       ) : null}
+
+      {staleNotice ? <SuccessNote message={staleNotice} /> : null}
 
       {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
 

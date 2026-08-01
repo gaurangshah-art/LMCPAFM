@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from utils.business_validation import assert_iso_date_on_or_after, validate_weight_grams
-from utils.formb_funding_proof import FUNDING_PROOF_REFERENCE_SET
+from utils.formb_funding_proof import FUNDING_PROOF_REFERENCE_OPTIONS, FUNDING_PROOF_REFERENCE_SET
 
 
 class FormBBase(BaseModel):
@@ -216,22 +216,48 @@ class FormBStep2Save(BaseModel):
     proposed_completion_date: str = Field(..., max_length=20)
     funding_agency: str = Field(..., min_length=1, max_length=200)
     funding_address: str = Field(..., min_length=1, max_length=1000)
-    funding_proof_references: list[str] = Field(..., min_length=1)
+    funding_proof_references: list[str] = Field(default_factory=list)
     summary: str = Field(..., min_length=1, max_length=5000)
     objectives: str = Field(..., min_length=1, max_length=5000)
     expected_outcomes: str = Field(..., min_length=1, max_length=5000)
     study_plan_annexure_reference: str = Field(..., min_length=1, max_length=500)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_funding_proof(cls, data):
+        if not isinstance(data, dict):
+            return data
+        references = data.get("funding_proof_references")
+        legacy = data.get("funding_proof_reference")
+        if (not references or references == []) and legacy:
+            if isinstance(legacy, str):
+                matched = [opt for opt in FUNDING_PROOF_REFERENCE_OPTIONS if opt in legacy]
+                if matched:
+                    data["funding_proof_references"] = matched
+                else:
+                    data["funding_proof_references"] = [
+                        part.strip()
+                        for part in legacy.split(";")
+                        if part.strip() in FUNDING_PROOF_REFERENCE_SET
+                    ]
+            elif isinstance(legacy, list):
+                data["funding_proof_references"] = [
+                    str(item).strip()
+                    for item in legacy
+                    if str(item).strip() in FUNDING_PROOF_REFERENCE_SET
+                ]
+        return data
+
     @field_validator("funding_proof_references")
     @classmethod
     def validate_funding_proof_references(cls, values: list[str]) -> list[str]:
         cleaned = [value.strip() for value in values if value and value.strip()]
-        if not cleaned:
-            raise ValueError("Select at least one funding proof reference.")
-        invalid = [value for value in cleaned if value not in FUNDING_PROOF_REFERENCE_SET]
-        if invalid:
-            raise ValueError(f"Invalid funding proof reference: {invalid[0]}")
-        return list(dict.fromkeys(cleaned))
+        valid = [value for value in cleaned if value in FUNDING_PROOF_REFERENCE_SET]
+        if not valid:
+            raise ValueError(
+                "Select at least one funding proof reference from the provided list."
+            )
+        return list(dict.fromkeys(valid))
 
     @model_validator(mode="after")
     def validate_project_dates(self):

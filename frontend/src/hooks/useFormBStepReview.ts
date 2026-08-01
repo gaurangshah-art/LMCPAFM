@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import { getApiErrorMessage } from "../api/errors";
-import { getFormBReview, type FormBReviewData } from "../api/formbApi";
+import { getApiErrorMessage, isFormBNotFoundError } from "../api/errors";
+import {
+  clearStoredFormBId,
+  getFormBReview,
+  type FormBReviewData,
+} from "../api/formbApi";
 
 type StepKey = keyof Pick<
   FormBReviewData,
@@ -33,7 +37,14 @@ export function useFormBStepReview<T>(
         }
       } catch (error) {
         if (!cancelled) {
-          setErrorMessage(getApiErrorMessage(error));
+          if (isFormBNotFoundError(error)) {
+            clearStoredFormBId();
+            setErrorMessage(
+              "Your saved Form B draft is no longer available. Return to Step 1 and click Start Form B.",
+            );
+          } else {
+            setErrorMessage(getApiErrorMessage(error));
+          }
         }
       } finally {
         if (!cancelled) {

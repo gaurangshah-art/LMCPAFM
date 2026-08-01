@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { readStoredFormBId, saveFormBStep2 } from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
@@ -31,10 +31,15 @@ const EMPTY = {
 
 export function FormBStep2() {
   const navigate = useNavigate();
+  const validationRef = useRef<HTMLDivElement | null>(null);
   const [formBId] = useState<number | null>(readStoredFormBId());
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [showFundingProofError, setShowFundingProofError] = useState(false);
+  const [showLegacyFundingNote, setShowLegacyFundingNote] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  const [hydrated, setHydrated] = useState(false);
 
   const { value: saved, loading: loadingSaved } = useFormBStepReview(
     formBId,
@@ -44,7 +49,18 @@ export function FormBStep2() {
   );
 
   useEffect(() => {
-    if (!saved) return;
+    if (!saved || hydrated) return;
+    const parsedReferences = parseFundingProofReferences(
+      (saved as Record<string, unknown>).funding_proof_references ??
+        (saved as Record<string, unknown>).funding_proof_reference,
+    );
+    const legacyRaw =
+      (saved as Record<string, unknown>).funding_proof_reference ??
+      (saved as Record<string, unknown>).funding_proof_references;
+    const hadLegacyText =
+      typeof legacyRaw === "string" &&
+      legacyRaw.trim().length > 0 &&
+      parsedReferences.length === 0;
     setForm({
       title: readString(saved, "title"),
       durationMonths: readString(saved, "duration_months"),
@@ -52,19 +68,22 @@ export function FormBStep2() {
       proposedCompletionDate: readString(saved, "proposed_completion_date"),
       fundingAgency: readString(saved, "funding_agency"),
       fundingAddress: readString(saved, "funding_address"),
-      fundingProofReferences: parseFundingProofReferences(
-        (saved as Record<string, unknown>).funding_proof_references ??
-          (saved as Record<string, unknown>).funding_proof_reference,
-      ),
+      fundingProofReferences: parsedReferences,
       summary: readString(saved, "summary"),
       objectives: readString(saved, "objectives"),
       expectedOutcomes: readString(saved, "expected_outcomes"),
       annexureReference: readString(saved, "study_plan_annexure_reference"),
     });
-  }, [saved]);
+    setShowLegacyFundingNote(hadLegacyText);
+    setHydrated(true);
+  }, [saved, hydrated]);
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+    setValidationError(null);
+    if (key === "fundingProofReferences") {
+      setShowFundingProofError(false);
+    }
   }
 
   function toggleFundingProof(option: string) {
@@ -77,6 +96,8 @@ export function FormBStep2() {
       }
       return { ...current, fundingProofReferences: Array.from(selected) };
     });
+    setShowFundingProofError(false);
+    setValidationError(null);
   }
 
   function validateStep2() {
@@ -94,9 +115,9 @@ export function FormBStep2() {
     if (!form.fundingAgency) return "Funding agency is required.";
     if (!form.fundingAddress.trim()) return "Funding agency address is required.";
     if (!form.fundingProofReferences.length) {
-      return "Select at least one funding proof reference.";
+      return "Select at least one funding proof reference (scroll up to the checkbox list above the attachment).";
     }
-    if (!form.summary.trim()) return "Project summary is required.";
+    if (!form.summary.trim()) return "Study plan summary is required.";
     if (!form.objectives.trim()) return "Objectives are required.";
     if (!form.expectedOutcomes.trim()) return "Expected outcomes are required.";
     if (!form.annexureReference.trim()) {
@@ -113,25 +134,35 @@ export function FormBStep2() {
     return null;
   }
 
+  function showValidationIssue(message: string, highlightFundingProof = false) {
+    setValidationError(message);
+    setShowFundingProofError(highlightFundingProof);
+    setErrorMessage(null);
+    window.setTimeout(() => {
+      validationRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+  }
+
   async function handleNext() {
     if (!formBId) {
-      alert("Form B ID missing. Please complete Step 1 first.");
+      showValidationIssue("Form B ID missing. Please complete Step 1 first.");
       return;
     }
 
     const error = validateStep2();
     if (error) {
-      alert(error);
+      showValidationIssue(error, error.includes("funding proof reference"));
       return;
     }
 
     const attachmentError = await validateAttachments();
     if (attachmentError) {
-      alert(attachmentError);
+      showValidationIssue(attachmentError);
       return;
     }
 
     setLoading(true);
+    setValidationError(null);
     setErrorMessage(null);
     try {
       await saveFormBStep2({
@@ -142,7 +173,7 @@ export function FormBStep2() {
         proposed_completion_date: form.proposedCompletionDate,
         funding_agency: form.fundingAgency,
         funding_address: form.fundingAddress.trim(),
-        funding_proof_references: form.fundingProofReferences,
+        funding_proof_references: parseFundingProofReferences(form.fundingProofReferences),
         summary: form.summary.trim(),
         objectives: form.objectives.trim(),
         expected_outcomes: form.expectedOutcomes.trim(),
@@ -151,7 +182,9 @@ export function FormBStep2() {
 
       navigate("/form-b/step-2b");
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
+      const message = getApiErrorMessage(error);
+      setErrorMessage(message);
+      showValidationIssue(message, message.toLowerCase().includes("funding proof"));
     } finally {
       setLoading(false);
     }
@@ -236,11 +269,27 @@ export function FormBStep2() {
               />
             </label>
 
-            <fieldset className="full-width checkbox-group">
+            <fieldset
+              className={`full-width checkbox-group${showFundingProofError ? " field-invalid" : ""}`}
+              id="funding-proof-reference"
+            >
               <legend>Funding proof reference *</legend>
-              <p className="field-help">
-                Select all applicable proof types. Upload the corresponding document(s) below.
-              </p>
+              {showLegacyFundingNote ? (
+                <p className="field-help">
+                  A previous free-text funding note was saved earlier. Please select the
+                  applicable proof type(s) from the list below.
+                </p>
+              ) : (
+                <p className="field-help">
+                  Select all applicable proof types, then upload the document(s) below.
+                </p>
+              )}
+              {form.fundingProofReferences.length > 0 ? (
+                <p className="field-help">
+                  Selected: {form.fundingProofReferences.length} option
+                  {form.fundingProofReferences.length === 1 ? "" : "s"}
+                </p>
+              ) : null}
               {FUNDING_PROOF_REFERENCE_OPTIONS.map((option) => (
                 <label key={option} className="checkbox-label">
                   <input
@@ -264,7 +313,7 @@ export function FormBStep2() {
             ) : null}
 
             <label className="full-width">
-              Study plan summary
+              Study plan summary *
               <span className="field-help">Brief about the project in 1–2 lines.</span>
               <textarea
                 value={form.summary}
@@ -273,14 +322,14 @@ export function FormBStep2() {
               />
             </label>
             <label className="full-width">
-              Objectives
+              Objectives *
               <textarea
                 value={form.objectives}
                 onChange={(e) => updateField("objectives", e.target.value)}
               />
             </label>
             <label className="full-width">
-              Expected outcomes
+              Expected outcomes *
               <textarea
                 value={form.expectedOutcomes}
                 onChange={(e) => updateField("expectedOutcomes", e.target.value)}
@@ -301,12 +350,15 @@ export function FormBStep2() {
             </label>
           </div>
 
-          <div className="wizard-actions">
-            <button className="btn-secondary" onClick={() => navigate("/form-b/step-1")}>
+          <div ref={validationRef} className="wizard-actions">
+            {validationError ? (
+              <p className="error-text wizard-validation-error full-width">{validationError}</p>
+            ) : null}
+            <button type="button" className="btn-secondary" onClick={() => navigate("/form-b/step-1")}>
               ← Back
             </button>
-            <button className="btn" onClick={handleNext} disabled={loading}>
-              Save & Next →
+            <button type="button" className="btn" onClick={() => void handleNext()} disabled={loading}>
+              {loading ? "Saving…" : "Save & Next →"}
             </button>
           </div>
         </>

@@ -7,14 +7,37 @@ export const FUNDING_PROOF_REFERENCE_OPTIONS = [
 
 export type FundingProofReferenceOption = (typeof FUNDING_PROOF_REFERENCE_OPTIONS)[number];
 
+const FUNDING_PROOF_REFERENCE_SET = new Set<string>(FUNDING_PROOF_REFERENCE_OPTIONS);
+
+export function isValidFundingProofReference(value: string): value is FundingProofReferenceOption {
+  return FUNDING_PROOF_REFERENCE_SET.has(value);
+}
+
+/** Keep only known checkbox options; ignore legacy free-text notes. */
 export function parseFundingProofReferences(saved: unknown): string[] {
+  const collected: string[] = [];
+
   if (Array.isArray(saved)) {
-    return saved.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+    for (const item of saved) {
+      if (typeof item === "string" && isValidFundingProofReference(item.trim())) {
+        collected.push(item.trim());
+      }
+    }
+  } else if (typeof saved === "string" && saved.trim()) {
+    for (const option of FUNDING_PROOF_REFERENCE_OPTIONS) {
+      if (saved.includes(option)) {
+        collected.push(option);
+      }
+    }
+    if (!collected.length) {
+      for (const part of saved.split(";")) {
+        const trimmed = part.trim();
+        if (isValidFundingProofReference(trimmed)) {
+          collected.push(trimmed);
+        }
+      }
+    }
   }
-  if (typeof saved === "string" && saved.trim()) {
-    const matched = FUNDING_PROOF_REFERENCE_OPTIONS.filter((option) => saved.includes(option));
-    if (matched.length) return matched;
-    return saved.split(";").map((part) => part.trim()).filter(Boolean);
-  }
-  return [];
+
+  return [...new Set(collected)];
 }
