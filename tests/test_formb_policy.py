@@ -143,4 +143,4 @@ def test_form_b_application_pdf_download(client, monkeypatch):
 
     count_match = re.search(rb"/Count\s+(\d+)", pdf_bytes)
     assert count_match is not None
-    assert int(count_match.group(1)) >= 4
+    assert int(count_match.group(1)) >= 3

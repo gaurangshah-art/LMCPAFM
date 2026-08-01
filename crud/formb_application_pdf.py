@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from fpdf import FPDF
 from sqlalchemy.orm import Session
 
@@ -8,10 +10,9 @@ from crud.formb_study_plan import load_study_plan_for_pdf
 from database.lmcpafm_models import (
     FormB,
     FormBInvestigator,
-    FormBMeetingDecision,
-    IAECMeeting,
     IAECProject,
 )
+from utils.date_format import format_display_date
 from utils.pdf_branding import BrandedPDF, _safe_text
 
 FORM_B_TITLE = (
@@ -82,6 +83,38 @@ def _d(value, fallback: str = "-") -> str:
     return text if text else fallback
 
 
+def _date(value, fallback: str = "-") -> str:
+    formatted = format_display_date(value, fallback=fallback)
+    return formatted if formatted != "—" else fallback
+
+
+def _compact_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", value.lower())
+
+
+def _name_address_display(name: str | None, address: str | None) -> str:
+    name_text = (name or "").strip()
+    address_text = (address or "").strip()
+    if not address_text:
+        return name_text or "-"
+    if not name_text:
+        return address_text
+    compact_address = _compact_text(address_text)
+    for candidate in (name_text, name_text.split(",")[0].strip()):
+        compact_candidate = _compact_text(candidate)
+        if compact_candidate and compact_candidate in compact_address:
+            return address_text
+    return f"{name_text}\n{address_text}"
+
+
+def _format_breeder_details(name: str | None, address: str | None, reg_no: str | None) -> str:
+    body = _name_address_display(name, address)
+    reg = (reg_no or "").strip()
+    if reg and reg != "-":
+        return f"{body}\nReg. No.: {reg}"
+    return body
+
+
 def _ensure_space(pdf: FPDF, height: float = 12) -> None:
     if pdf.get_y() + height > pdf.page_break_trigger:
         pdf.add_page()
@@ -100,23 +133,26 @@ def _write_table_row(
     value: str,
     *,
     label_width: float | None = None,
-    font_size: int = 9,
+    font_size: int = 8,
+    line_height: float = 4.5,
 ) -> None:
-    label_width = label_width or pdf.epw * 0.38
+    label_width = label_width or pdf.epw * 0.42
     value_width = pdf.epw - label_width
     pdf.set_font("Helvetica", "", font_size)
-    row_height = max(
-        len(pdf.multi_cell(label_width, 4.5, _safe_text(label), split_only=True)),
-        len(pdf.multi_cell(value_width, 4.5, _safe_text(value), split_only=True)),
+    label_lines = pdf.multi_cell(
+        label_width, line_height, _safe_text(label), split_only=True
     )
-    row_height *= 4.5
+    value_lines = pdf.multi_cell(
+        value_width, line_height, _safe_text(value), split_only=True
+    )
+    row_height = line_height * max(len(label_lines), len(value_lines), 1)
     _ensure_space(pdf, row_height + 1)
     y_start = pdf.get_y()
     x_start = pdf.l_margin
     pdf.set_xy(x_start, y_start)
-    pdf.multi_cell(label_width, 4.5, _safe_text(label), border=1)
+    pdf.multi_cell(label_width, line_height, _safe_text(label), border=1)
     pdf.set_xy(x_start + label_width, y_start)
-    pdf.multi_cell(value_width, 4.5, _safe_text(value), border=1)
+    pdf.multi_cell(value_width, line_height, _safe_text(value), border=1)
     pdf.set_y(y_start + row_height)
 
 
@@ -192,19 +228,6 @@ def _load_application_context(db: Session, project_id: int) -> dict:
         if row.project_role.lower() not in {"principal_investigator", "principal investigator"}
     ]
 
-    meeting = None
-    decision = None
-    if form_b.meeting_id:
-        meeting = db.query(IAECMeeting).filter(IAECMeeting.id == form_b.meeting_id).first()
-        decision = (
-            db.query(FormBMeetingDecision)
-            .filter(
-                FormBMeetingDecision.form_b_id == form_b.id,
-                FormBMeetingDecision.meeting_id == form_b.meeting_id,
-            )
-            .first()
-        )
-
     study_plan = None
     try:
         study_plan = load_study_plan_for_pdf(db, form_b.id)
@@ -223,8 +246,6 @@ def _load_application_context(db: Session, project_id: int) -> dict:
         "step6": step6,
         "step7": step7,
         "co_investigators": co_investigators,
-        "meeting": meeting,
-        "decision": decision,
         "study_plan": study_plan,
     }
 
@@ -232,23 +253,27 @@ def _load_application_context(db: Session, project_id: int) -> dict:
 def _render_section_i(pdf: _FormBPDF, ctx: dict) -> None:
     step1 = ctx["step1"]
     step2 = ctx["step2"]
+    animal_rationale = (ctx["step2b"].get("animal_rationale") or {})
     _write_paragraph(pdf, "Section -I", bold=True, size=10)
     pdf.ln(1)
 
     rows = [
-        ("1. Name and address of establishment", _d(step1.get("establishment_name")) + "\n" + _d(step1.get("establishment_address"), "")),
+        (
+            "1. Name and address of establishment",
+            _name_address_display(step1.get("establishment_name"), step1.get("establishment_address")),
+        ),
         (
             "2. Registration number and date of registration.",
-            f"{_d(step1.get('registration_number'))}\n{_d(step1.get('registration_date'))}",
+            f"{_d(step1.get('registration_number'))}\n{_date(step1.get('registration_date'))}",
         ),
         (
             "3. Name, address and registration number of breeder from which animals acquired "
             "(or to be acquired) for experiments mentioned in parts B & C",
-            _d((ctx["step2b"].get("animal_rationale") or {}).get("breeder_name"))
-            + "\n"
-            + _d((ctx["step2b"].get("animal_rationale") or {}).get("breeder_address"))
-            + "\nReg. No.: "
-            + _d((ctx["step2b"].get("animal_rationale") or {}).get("breeder_registration_number")),
+            _format_breeder_details(
+                animal_rationale.get("breeder_name"),
+                animal_rationale.get("breeder_address"),
+                animal_rationale.get("breeder_registration_number"),
+            ),
         ),
         (
             "4. Place where the animals are presently kept (or proposed to be kept).",
@@ -260,7 +285,7 @@ def _render_section_i(pdf: _FormBPDF, ctx: dict) -> None:
         ),
         (
             "6. Date and Duration of experiment.",
-            f"From: {_d(step2.get('proposed_start_date'))}  To: {_d(step2.get('proposed_completion_date'))}\n"
+            f"From: {_date(step2.get('proposed_start_date'))}  To: {_date(step2.get('proposed_completion_date'))}\n"
             f"Duration: {_d(step2.get('duration_months'))} month(s)",
         ),
     ]
@@ -274,8 +299,16 @@ def _render_section_i(pdf: _FormBPDF, ctx: dict) -> None:
     )
     pdf.ln(2)
     _write_paragraph(pdf, "Signature", bold=True)
-    _write_paragraph(pdf, f"Name and Designation of Investigator: {_d(step1.get('principal_investigator'))}, {_d(step1.get('designation'))}")
-    _write_paragraph(pdf, f"Date: {_d((ctx['step7'] or {}).get('declaration_date'))}    Place: {_d((ctx['step7'] or {}).get('declaration_place'))}")
+    _write_paragraph(
+        pdf,
+        f"Name and Designation of Investigator: {_d(step1.get('principal_investigator'))}, "
+        f"{_d(step1.get('designation'))}",
+    )
+    _write_paragraph(
+        pdf,
+        f"Date: {_date((ctx['step7'] or {}).get('declaration_date'))}    "
+        f"Place: {_d((ctx['step7'] or {}).get('declaration_place'))}",
+    )
 
 
 def _render_section_ii(pdf: _FormBPDF, ctx: dict) -> None:
@@ -368,8 +401,8 @@ def _render_section_ii(pdf: _FormBPDF, ctx: dict) -> None:
         "5",
         "Duration of the animal experiment.",
         [
-            f"a. Date of initiation (Proposed): {_d(step2.get('proposed_start_date'))}",
-            f"b. Date of completion (Proposed): {_d(step2.get('proposed_completion_date'))}",
+            f"a. Date of initiation (Proposed): {_date(step2.get('proposed_start_date'))}",
+            f"b. Date of completion (Proposed): {_date(step2.get('proposed_completion_date'))}",
             f"Duration (months): {_d(step2.get('duration_months'))}",
         ],
     )
@@ -533,60 +566,8 @@ def _render_declarations(pdf: _FormBPDF, ctx: dict) -> None:
     _write_paragraph(
         pdf,
         f"Name of Investigator: {_d(step7.get('declaration_signature_name'))}    "
-        f"Date: {_d(step7.get('declaration_date'))}    Place: {_d(step7.get('declaration_place'))}",
+        f"Date: {_date(step7.get('declaration_date'))}    Place: {_d(step7.get('declaration_place'))}",
     )
-
-
-def _render_certificate(pdf: _FormBPDF, ctx: dict) -> None:
-    project = ctx["project"]
-    form_b = ctx["form_b"]
-    step2 = ctx["step2"]
-    step1 = ctx["step1"]
-    meeting = ctx["meeting"]
-    decision = ctx["decision"]
-    requirements = (ctx["step3"] or {}).get("requirements") or []
-
-    pdf.add_page()
-    _write_paragraph(pdf, "Certificate", bold=True, size=11)
-    protocol_no = _d(project.protocol_number, "………………")
-    title = _d(step2.get("title"), "………………………")
-    investigator = _d(step1.get("principal_investigator"), "………………………………..")
-    organization = _d(step1.get("establishment_name"), "……………(Organization)")
-    meeting_date = _d(getattr(meeting, "date", None), "………………")
-    duration = _d(step2.get("duration_months"), "…………………")
-
-    species_summary = ", ".join(
-        f"{req.get('number_required', 0)} {req.get('species', '-')}" for req in requirements
-    ) or "………………"
-
-    decision_text = "approved/recommended"
-    if decision is not None:
-        decision_text = _d(decision.decision, decision_text)
-
-    certificate_text = (
-        f"This is to certify that the project proposal no {protocol_no} entitled {title} "
-        f"submitted by Dr./ Mr. / Ms. {investigator} has been {decision_text} by the IAEC of "
-        f"{organization} in its meeting held on {meeting_date} and {species_summary} "
-        f"have been sanctioned under this proposal for a duration of next {duration} months."
-    )
-    _write_paragraph(pdf, certificate_text)
-    pdf.ln(4)
-    _write_paragraph(pdf, "Authorized by    Name    Signature    Date")
-    _write_paragraph(pdf, "Chairman: ……………………. ……………… ………………..")
-    _write_paragraph(pdf, "Member Secretary: ……………………. ……………… ………………..")
-    _write_paragraph(pdf, "Main Nominee of CPCSEA: ……………………. ……………… ………………..")
-    _write_paragraph(
-        pdf,
-        "(Kindly make sure that minutes of the meeting duly signed by all the participants are "
-        "maintained by Office)",
-        size=8,
-    )
-    if form_b.submitted_at is None:
-        _write_paragraph(
-            pdf,
-            "Note: IAEC approval details above are left for official completion at the time of meeting.",
-            size=8,
-        )
 
 
 def render_cpcsea_form_b_application_pdf(db: Session, project_id: int) -> bytes:
@@ -601,7 +582,6 @@ def render_cpcsea_form_b_application_pdf(db: Session, project_id: int) -> bytes:
     _render_section_i(pdf, ctx)
     _render_section_ii(pdf, ctx)
     _render_declarations(pdf, ctx)
-    _render_certificate(pdf, ctx)
 
     output = pdf.output()
     if isinstance(output, bytearray):

@@ -14,6 +14,7 @@ from crud.project_certificate import (
 )
 from database.lmcpafm_models import FormB, IAECMeeting, IAECProject
 from utils.branding import get_college_display_name
+from utils.date_format import format_display_date
 from utils.institution import get_cpcsea_registration_number, get_establishment_name
 from utils.pdf_branding import BrandedPDF, _safe_text
 
@@ -237,8 +238,8 @@ def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
     if plan.get("proposed_start_date"):
         _write_multiline(
             pdf,
-            f"Proposed period: {plan['proposed_start_date']} to "
-            f"{plan.get('proposed_completion_date') or '-'}",
+            f"Proposed period: {format_display_date(plan['proposed_start_date'])} to "
+            f"{format_display_date(plan.get('proposed_completion_date'))}",
             6,
         )
     _write_multiline(pdf, f"Total animals across phases: {plan['total_animals']}", 6)
@@ -257,7 +258,11 @@ def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
         )
         _write_multiline(pdf, f"Animal cap: {phase['animal_cap']}", 5)
         if phase.get("planned_start_date"):
-            _write_multiline(pdf, f"Planned start: {phase['planned_start_date']}", 5)
+            _write_multiline(
+                pdf,
+                f"Planned start: {format_display_date(phase['planned_start_date'])}",
+                5,
+            )
         if phase.get("planned_duration_weeks"):
             _write_multiline(pdf, f"Duration (weeks): {phase['planned_duration_weeks']}", 5)
         if phase.get("objective"):
