@@ -9,6 +9,8 @@ interface MeetingDetailsResponse {
     id: number;
     date: string;
     meeting_number?: string | null;
+    meeting_time?: string | null;
+    venue?: string | null;
     minutes: string;
   };
   assigned_projects: Array<{
@@ -84,6 +86,8 @@ export function IaecMeetingDetails() {
         <h2>IAEC Meeting Details</h2>
         <p>
           Meeting {meeting.meeting_number || meeting.id} on {formatDisplayDate(meeting.date)}
+          {meeting.meeting_time ? ` at ${meeting.meeting_time}` : ""}
+          {meeting.venue ? ` — ${meeting.venue}` : ""}
         </p>
       </header>
 

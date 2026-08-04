@@ -127,33 +127,103 @@ def _write_paragraph(pdf: FPDF, text: str, *, bold: bool = False, size: int = 9)
     pdf.multi_cell(pdf.epw, 4.5, _safe_text(text))
 
 
-def _write_table_row(
+def _count_wrapped_lines(
     pdf: FPDF,
-    label: str,
-    value: str,
+    width: float,
+    text: str,
     *,
-    label_width: float | None = None,
-    font_size: int = 8,
-    line_height: float = 4.5,
-) -> None:
-    label_width = label_width or pdf.epw * 0.42
-    value_width = pdf.epw - label_width
+    line_height: float,
+    font_size: int,
+) -> int:
     pdf.set_font("Helvetica", "", font_size)
-    label_lines = pdf.multi_cell(
-        label_width, line_height, _safe_text(label), split_only=True
+    lines = pdf.multi_cell(
+        width,
+        line_height,
+        _safe_text(text),
+        dry_run=True,
+        output="LINES",
     )
-    value_lines = pdf.multi_cell(
-        value_width, line_height, _safe_text(value), split_only=True
+    return max(len(lines), 1)
+
+
+def _estimate_section_i_table_height(
+    pdf: FPDF,
+    rows: list[tuple[str, str]],
+    *,
+    label_width: float,
+    value_width: float,
+    font_size: int,
+    line_height: float,
+    cell_padding_h: float,
+    cell_padding_v: float,
+) -> float:
+    total = 0.0
+    label_text_width = label_width - (cell_padding_h * 2)
+    value_text_width = value_width - (cell_padding_h * 2)
+    for label, value in rows:
+        label_lines = _count_wrapped_lines(
+            pdf, label_text_width, label, line_height=line_height, font_size=font_size
+        )
+        value_lines = _count_wrapped_lines(
+            pdf, value_text_width, value, line_height=line_height, font_size=font_size
+        )
+        content_lines = max(label_lines, value_lines)
+        total += (content_lines * line_height) + (cell_padding_v * 2)
+    return total
+
+
+def _write_section_i_table(pdf: FPDF, rows: list[tuple[str, str]]) -> None:
+    label_width = pdf.epw * 0.42
+    value_width = pdf.epw - label_width
+    line_height = 5.5
+    font_size = 8
+    cell_padding_h = 3.0
+    cell_padding_v = 5.0
+    label_text_width = label_width - (cell_padding_h * 2)
+    value_text_width = value_width - (cell_padding_h * 2)
+
+    estimated_height = _estimate_section_i_table_height(
+        pdf,
+        rows,
+        label_width=label_width,
+        value_width=value_width,
+        font_size=font_size,
+        line_height=line_height,
+        cell_padding_h=cell_padding_h,
+        cell_padding_v=cell_padding_v,
     )
-    row_height = line_height * max(len(label_lines), len(value_lines), 1)
-    _ensure_space(pdf, row_height + 1)
-    y_start = pdf.get_y()
+    _ensure_space(pdf, estimated_height + 2)
+
+    table_top = pdf.get_y()
     x_start = pdf.l_margin
-    pdf.set_xy(x_start, y_start)
-    pdf.multi_cell(label_width, line_height, _safe_text(label), border=1)
-    pdf.set_xy(x_start + label_width, y_start)
-    pdf.multi_cell(value_width, line_height, _safe_text(value), border=1)
-    pdf.set_y(y_start + row_height)
+    row_bounds: list[tuple[float, float]] = []
+    y_cursor = table_top
+
+    for label, value in rows:
+        row_top = y_cursor
+        text_top = row_top + cell_padding_v
+
+        pdf.set_font("Helvetica", "", font_size)
+        pdf.set_xy(x_start + cell_padding_h, text_top)
+        pdf.multi_cell(label_text_width, line_height, _safe_text(label), border=0)
+        label_bottom = pdf.get_y()
+
+        pdf.set_xy(x_start + label_width + cell_padding_h, text_top)
+        pdf.multi_cell(value_text_width, line_height, _safe_text(value), border=0)
+        value_bottom = pdf.get_y()
+
+        row_bottom = max(label_bottom, value_bottom) + cell_padding_v
+        row_bounds.append((row_top, row_bottom))
+        y_cursor = row_bottom
+
+    table_height = y_cursor - table_top
+    pdf.rect(x_start, table_top, pdf.epw, table_height)
+    for index, (row_top, row_bottom) in enumerate(row_bounds):
+        if index > 0:
+            pdf.line(x_start, row_top, x_start + pdf.epw, row_top)
+        pdf.line(x_start + label_width, row_top, x_start + label_width, row_bottom)
+
+    pdf.set_y(y_cursor)
 
 
 def _write_numbered_block(
@@ -289,8 +359,7 @@ def _render_section_i(pdf: _FormBPDF, ctx: dict) -> None:
             f"Duration: {_d(step2.get('duration_months'))} month(s)",
         ),
     ]
-    for label, value in rows:
-        _write_table_row(pdf, label, value)
+    _write_section_i_table(pdf, rows)
 
     research_type = _d(step1.get("research_type"))
     _write_paragraph(
@@ -578,6 +647,12 @@ def render_cpcsea_form_b_application_pdf(db: Session, project_id: int) -> bytes:
     pdf.add_page()
     _write_paragraph(pdf, FORM_B_TITLE, bold=True, size=11)
     _write_paragraph(pdf, FORM_B_SUBTITLE, size=9)
+    protocol_number = (ctx["project"].protocol_number or "").strip()
+    if protocol_number:
+        pdf.ln(2)
+        pdf.set_x(pdf.l_margin)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(pdf.epw, 8, _safe_text(f"IAEC Protocol No.: {protocol_number}"), ln=True, align="C")
     pdf.ln(2)
     _render_section_i(pdf, ctx)
     _render_section_ii(pdf, ctx)

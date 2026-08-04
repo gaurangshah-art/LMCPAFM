@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -13,13 +13,24 @@ from crud.formb_internal import (
 
 
 def _seed_form_b(db):
-    meeting = IAECMeeting(date=date(2026, 7, 23), meeting_number="3", minutes="minutes")
+    meeting = IAECMeeting(
+        date=date(2026, 7, 23),
+        meeting_number="3",
+        meeting_time="10:30",
+        venue="IAEC Conference Room",
+        minutes="minutes",
+    )
     project = IAECProject(title="Protocol Test", investigator_name="Dr Test")
     db.add_all([meeting, project])
     db.commit()
     db.refresh(meeting)
     db.refresh(project)
-    form_b = FormB(project_id=project.id, date=date.today(), meeting_id=meeting.id)
+    form_b = FormB(
+        project_id=project.id,
+        date=date.today(),
+        meeting_id=meeting.id,
+        submitted_at=datetime.now(timezone.utc),
+    )
     db.add(form_b)
     db.commit()
     db.refresh(form_b)
@@ -30,13 +41,23 @@ def test_form_b_meeting_workflow(client, iaec_auth_headers):
     from database.database import SessionLocal
 
     db = SessionLocal()
-    meeting = IAECMeeting(date=date(2026, 7, 23), meeting_number="3", minutes="m")
+    meeting = IAECMeeting(
+        date=date(2026, 7, 23),
+        meeting_number="3",
+        meeting_time="10:30",
+        venue="IAEC Conference Room",
+        minutes="m",
+    )
     project = IAECProject(title="Workflow Project", investigator_name="Dr A")
     db.add_all([meeting, project])
     db.commit()
     db.refresh(meeting)
     db.refresh(project)
-    form_b = FormB(project_id=project.id, date=date(2026, 7, 20))
+    form_b = FormB(
+        project_id=project.id,
+        date=date(2026, 7, 20),
+        submitted_at=datetime.now(timezone.utc),
+    )
     db.add(form_b)
     db.commit()
     db.refresh(form_b)
@@ -111,7 +132,12 @@ def test_protocol_serial_increments_per_meeting(client, iaec_auth_headers):
     db.add(project2)
     db.commit()
     db.refresh(project2)
-    form_b2 = FormB(project_id=project2.id, date=date.today(), meeting_id=meeting.id)
+    form_b2 = FormB(
+        project_id=project2.id,
+        date=date.today(),
+        meeting_id=meeting.id,
+        submitted_at=datetime.now(timezone.utc),
+    )
     db.add(form_b2)
     db.commit()
     db.refresh(form_b2)
@@ -142,13 +168,23 @@ def test_assign_and_clear_meeting():
 
     init_db()
     db = SessionLocal()
-    meeting = IAECMeeting(date=date.today(), meeting_number="1", minutes="m")
+    meeting = IAECMeeting(
+        date=date.today(),
+        meeting_number="1",
+        meeting_time="11:00",
+        venue="IAEC Conference Room",
+        minutes="m",
+    )
     project = IAECProject(title="Assign Test", investigator_name="Dr X")
     db.add_all([meeting, project])
     db.commit()
     db.refresh(meeting)
     db.refresh(project)
-    form_b = FormB(project_id=project.id, date=date.today())
+    form_b = FormB(
+        project_id=project.id,
+        date=date.today(),
+        submitted_at=datetime.now(timezone.utc),
+    )
     db.add(form_b)
     db.commit()
     db.refresh(form_b)
@@ -197,6 +233,12 @@ def test_meeting_endpoints_require_iaec_role(client):
 
     meeting_res = client.post(
         "/iaec/meeting",
-        json={"date": "2026-07-23", "meeting_number": "9", "minutes": ""},
+        json={
+            "date": "2026-07-23",
+            "meeting_number": "9",
+            "meeting_time": "10:00",
+            "venue": "IAEC Room",
+            "minutes": "",
+        },
     )
     assert meeting_res.status_code == 401

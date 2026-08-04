@@ -81,7 +81,12 @@ def test_iaec_cannot_assign_meeting_to_unsubmitted_form_b(client, iaec_auth_head
 
     meeting_res = client.post(
         "/iaec/meeting",
-        json={"date": "2026-08-15", "meeting_number": "GATE-01"},
+        json={
+            "date": "2026-08-15",
+            "meeting_number": "GATE-01",
+            "meeting_time": "10:30",
+            "venue": "IAEC Conference Room",
+        },
         headers=iaec_auth_headers,
     )
     assert meeting_res.status_code == 200, meeting_res.text

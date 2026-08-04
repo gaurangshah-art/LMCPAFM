@@ -57,6 +57,14 @@ function emptyDosing(): FormBGroupDosingEntry {
   };
 }
 
+function toOptionalNumericId(value: number | string | null | undefined): number | null {
+  if (value == null || value === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function emptyGroup(animalCount = 6): FormBStudyGroupEntry {
   return {
     group_code: "G1",
@@ -105,14 +113,8 @@ function normalizePlan(data: FormBStudyPhaseEntry[] | undefined): FormBStudyPhas
     ) as (FormBStudyGroupEntry & { endpoints?: FormBGroupEndpointEntry[] }) | undefined;
     const groups = phase.groups.map((group) => ({
       ...group,
-      species_id:
-        group.species_id != null && group.species_id !== ""
-          ? Number(group.species_id)
-          : null,
-      strain_id:
-        group.strain_id != null && group.strain_id !== ""
-          ? Number(group.strain_id)
-          : null,
+      species_id: toOptionalNumericId(group.species_id),
+      strain_id: toOptionalNumericId(group.strain_id),
       dosing: group.dosing?.length
         ? group.dosing.map((dose) => ({ ...emptyDosing(), ...dose, duration: dose.duration ?? "" }))
         : [emptyDosing()],

@@ -3,8 +3,20 @@ from datetime import date
 from database.lmcpafm_models import FormB, IAECMeeting, IAECProject
 
 
+def _meeting(**overrides):
+    values = {
+        "date": date(2026, 7, 23),
+        "meeting_number": "4",
+        "meeting_time": "10:30",
+        "venue": "IAEC Conference Room",
+        "minutes": "minutes",
+    }
+    values.update(overrides)
+    return IAECMeeting(**values)
+
+
 def _seed_invitation_ready_form_b(db):
-    meeting = IAECMeeting(date=date(2026, 7, 23), meeting_number="4", minutes="minutes")
+    meeting = _meeting()
     project = IAECProject(
         title="Email Test Project",
         investigator_name="Dr Email",
@@ -34,7 +46,7 @@ def test_meeting_invitation_requires_step1_email(client, iaec_auth_headers):
     from database.database import SessionLocal
 
     db = SessionLocal()
-    meeting = IAECMeeting(date=date(2026, 7, 23), meeting_number="5", minutes="m")
+    meeting = _meeting(meeting_number="5", minutes="m")
     project = IAECProject(
         title="Missing Email",
         investigator_name="Dr Missing",
@@ -62,7 +74,7 @@ def test_meeting_invitation_uses_linked_investigator_email(client, iaec_auth_hea
     from models.user import User
 
     db = SessionLocal()
-    meeting = IAECMeeting(date=date(2026, 7, 23), meeting_number="6", minutes="m")
+    meeting = _meeting(meeting_number="6", minutes="m")
     project = IAECProject(
         title="Linked PI Email",
         investigator_name="Dr Linked",
@@ -113,7 +125,7 @@ def test_meeting_invitation_resolves_email_from_pi_name(client, iaec_auth_header
     from models.user import User
 
     db = SessionLocal()
-    meeting = IAECMeeting(date=date(2026, 7, 23), meeting_number="7", minutes="m")
+    meeting = _meeting(meeting_number="7", minutes="m")
     user = User(
         name="Dr Name Match",
         email="name.match@lmcp.ac.in",
@@ -178,6 +190,21 @@ def test_meeting_invitation_queues_when_ready(client, iaec_auth_headers, monkeyp
     )
     assert res.status_code == 200, res.text
     assert res.json()["queued"] is True
+
+
+def test_meeting_invitation_email_includes_schedule(client, iaec_auth_headers, monkeypatch):
+    from crud.formb_email import _build_meeting_invitation_email_body, build_form_b_meeting_invitation_context
+    from database.database import SessionLocal
+
+    db = SessionLocal()
+    _meeting, form_b = _seed_invitation_ready_form_b(db)
+    context = build_form_b_meeting_invitation_context(db, form_b.id)
+    body = _build_meeting_invitation_email_body(context)
+    db.close()
+
+    assert "10:30" in body
+    assert "IAEC Conference Room" in body
+    assert "23/07/2026" in body
 
 
 def test_meeting_summary_pdf_download(client, iaec_auth_headers):

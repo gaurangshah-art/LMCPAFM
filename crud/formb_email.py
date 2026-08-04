@@ -40,6 +40,10 @@ def _build_meeting_invitation_email_body(context) -> str:
             "Meeting details:",
             f"- Date: {format_display_date(context.meeting_date)}",
         ])
+        if context.meeting_time:
+            lines.append(f"- Time: {context.meeting_time}")
+        if context.meeting_venue:
+            lines.append(f"- Venue: {context.meeting_venue}")
         if context.meeting_number:
             lines.append(f"- Meeting number: {context.meeting_number}")
 
@@ -224,6 +228,8 @@ def build_form_b_meeting_invitation_context(db: Session, form_b_id: int):
         meeting_id=form_b.meeting_id,
         meeting_date=meeting.date if meeting else None,
         meeting_number=meeting.meeting_number if meeting else None,
+        meeting_time=meeting.meeting_time if meeting else None,
+        meeting_venue=meeting.venue if meeting else None,
     )
 
 

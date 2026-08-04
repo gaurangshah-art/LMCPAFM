@@ -135,12 +135,16 @@ export interface IAECMeetingRecord {
   id: number;
   date: string;
   meeting_number: string | null;
+  meeting_time?: string | null;
+  venue?: string | null;
   minutes: string;
 }
 
 export interface IAECMeetingCreate {
   date: string;
   meeting_number?: string | null;
+  meeting_time: string;
+  venue: string;
   minutes?: string;
 }
 

@@ -363,6 +363,8 @@ class IAECMeeting(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     date: Mapped[Date] = mapped_column(Date)
     meeting_number: Mapped[str | None] = mapped_column(String, nullable=True)
+    meeting_time: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    venue: Mapped[str | None] = mapped_column(String(500), nullable=True)
     minutes: Mapped[str] = mapped_column(Text)
 
 

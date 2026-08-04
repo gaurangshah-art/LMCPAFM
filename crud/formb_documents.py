@@ -4,7 +4,7 @@ from fpdf import FPDF
 from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDNotFoundError
-from crud.formb_application_pdf import render_cpcsea_form_b_application_pdf
+from crud.formb_pdf_bundle import render_form_b_complete_pdf
 from crud.formb_internal import get_meeting_form_b_summary
 from crud.formb_study_plan import load_study_plan_for_pdf
 from crud.project_certificate import (
@@ -224,7 +224,7 @@ def _pdf_output_bytes(pdf: FPDF) -> bytes:
 
 
 def render_form_b_application_pdf(db: Session, project_id: int) -> bytes:
-    return render_cpcsea_form_b_application_pdf(db, project_id)
+    return render_form_b_complete_pdf(db, project_id)
 
 
 def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:

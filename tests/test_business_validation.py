@@ -130,6 +130,8 @@ def test_experiment_date_cannot_precede_meeting_or_allocation(
         meeting = IAECMeeting(
             meeting_number="01",
             date=date(2026, 2, 8),
+            meeting_time="10:30",
+            venue="IAEC Conference Room",
             minutes="Validation meeting",
         )
         db.add(meeting)

@@ -182,7 +182,13 @@ def test_experiment_groups_seeded_on_protocol_generation(client, monkeypatch, ia
 
     meeting_res = client.post(
         "/iaec/meeting",
-        json={"date": "2026-08-15", "meeting_number": f"SP-{suffix}", "minutes": "Study plan seed test"},
+        json={
+            "date": "2026-08-15",
+            "meeting_number": f"SP-{suffix}",
+            "meeting_time": "10:30",
+            "venue": "IAEC Conference Room",
+            "minutes": "Study plan seed test",
+        },
         headers=iaec_auth_headers,
     )
     meeting_id = meeting_res.json()["id"]

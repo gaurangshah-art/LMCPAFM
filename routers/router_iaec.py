@@ -351,6 +351,8 @@ def create_meeting(
     meeting = IAECMeeting(
         date=payload.date,
         meeting_number=payload.meeting_number,
+        meeting_time=payload.meeting_time.strip(),
+        venue=payload.venue.strip(),
         minutes=payload.minutes,
     )
     db.add(meeting)

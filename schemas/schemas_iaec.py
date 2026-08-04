@@ -129,6 +129,8 @@ class AnimalExperiment(AnimalExperimentBase):
 class IAECMeetingCreate(BaseModel):
     date: date
     meeting_number: str | None = None
+    meeting_time: str = Field(..., min_length=1, max_length=50)
+    venue: str = Field(..., min_length=1, max_length=500)
     minutes: str = ""
 
 
@@ -136,5 +138,7 @@ class IAECMeetingRead(BaseModel):
     id: int
     date: date
     meeting_number: str | None = None
+    meeting_time: str | None = None
+    venue: str | None = None
     minutes: str
     model_config = ConfigDict(from_attributes=True)
