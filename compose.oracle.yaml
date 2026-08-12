@@ -9,6 +9,8 @@ services:
     volumes:
       - ${LMCPAFM_DATA_DIR:-/opt/lmcpafm/data}:/data
     environment:
+      # Host bind uses ${PORT} in ports above; app always listens on 8000 in-container.
+      PORT: 8000
       FORMB_ATTACHMENT_DIR: /data/form_b_attachments
       LMCP_LOGO_PATH: /app/static/branding/lmcp-logo.png
 
