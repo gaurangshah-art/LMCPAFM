@@ -420,6 +420,20 @@ export async function getFormBReview(formBId: number): Promise<FormBReviewData> 
   return data;
 }
 
+export async function downloadFormBApplicationPdf(formBId: number): Promise<void> {
+  const response = await apiClient.get(`/formb/${formBId}/application.pdf`, {
+    responseType: "blob",
+  });
+  const blobUrl = window.URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = `form_b_${formBId}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(blobUrl);
+}
+
 export async function submitFormB(formBId: number): Promise<void> {
   await apiClient.post("/formb/submit", { form_b_id: formBId });
 }

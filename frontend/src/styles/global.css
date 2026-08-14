@@ -676,6 +676,17 @@ body.nav-menu-open {
   margin: 0 0 0.25rem;
 }
 
+.required-mark {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.form-required-note {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .field-invalid {
   border-color: #dc2626;
   box-shadow: 0 0 0 1px #dc2626;

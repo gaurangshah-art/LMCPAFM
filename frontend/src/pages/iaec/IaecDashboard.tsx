@@ -102,8 +102,8 @@ export function IaecDashboard() {
 
     setSendingInvitationId(formBId);
     try {
-      await sendFormBMeetingInvitation(formBId);
-      alert("Meeting invitation queued for delivery.");
+      const result = await sendFormBMeetingInvitation(formBId);
+      alert(`Meeting invitation sent to ${result.sent_to}.`);
     } catch (err) {
       alert(getApiErrorMessage(err));
     } finally {

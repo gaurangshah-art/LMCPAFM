@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import smtplib
 from types import SimpleNamespace
@@ -16,6 +17,8 @@ from database.lmcpafm_models import FormBInvestigator, IAECMeeting, IAECProject
 from models.investigator_profile import InvestigatorProfile
 from models.user import User
 from utils.date_format import format_display_date
+
+logger = logging.getLogger(__name__)
 
 
 def _build_meeting_invitation_email_subject(context) -> str:
@@ -117,6 +120,7 @@ def _send_email_with_attachment(
         if smtp_username and smtp_password:
             server.login(smtp_username, smtp_password)
         server.send_message(msg)
+    logger.info("Sent email to %s with subject %r", to_email, subject)
 
 
 def _email_for_user_id(db: Session, user_id: int | None) -> str | None:
@@ -275,7 +279,7 @@ def _invitation_attachment_filename(context) -> str:
     return f"form_b_{context.form_b_id}.pdf"
 
 
-def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> None:
+def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> str:
     context = validate_form_b_meeting_invitation_ready(db, form_b_id)
 
     pdf_bytes = render_form_b_application_pdf(db, context.project_id)
@@ -289,12 +293,16 @@ def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> None:
         attachment_bytes=pdf_bytes,
         attachment_filename=_invitation_attachment_filename(context),
     )
+    return context.principal_investigator_email
 
 
 def _send_invitation_background(form_b_id: int) -> None:
     db = SessionLocal()
     try:
         send_form_b_meeting_invitation_email(db, form_b_id)
+    except Exception:
+        logger.exception("Failed to send IAEC meeting invitation for Form B #%s", form_b_id)
+        raise
     finally:
         db.close()
 

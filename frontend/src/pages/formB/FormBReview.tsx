@@ -6,17 +6,19 @@ import {
   downloadFormBAttachment,
   getFormBReview,
   listFormBAttachments,
-  readStoredFormBId,
   submitFormB,
   type FormBAttachmentRecord,
   type FormBReviewData,
 } from "../../api/formbApi";
 import { LoadingState } from "../../components/common/LoadingState";
 import { ErrorAlert } from "../../components/common/ErrorAlert";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
 
 export function FormBReview() {
   const navigate = useNavigate();
-  const [formBId] = useState<number | null>(readStoredFormBId());
+  const { formBId, validating: resolvingFormB, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, resolvingFormB);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -87,7 +89,7 @@ export function FormBReview() {
     );
   }
 
-  if (loading) {
+  if (loading || resolvingFormB) {
     return <LoadingState label="Loading review data..." />;
   }
 

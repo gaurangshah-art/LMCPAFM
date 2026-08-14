@@ -2,12 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../../api/errors";
 import {
-  readStoredFormBId,
   saveFormBStep6,
   type FormBAuthorizedPersonnelEntry,
 } from "../../api/formbApi";
 import { LoadingState } from "../../components/common/LoadingState";
+import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
+import { RequiredMark } from "../../components/common/RequiredMark";
+import { WizardActionBar } from "../../components/common/WizardActionBar";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
+import { useWizardValidation } from "../../hooks/useWizardValidation";
 
 interface PersonnelRow extends FormBAuthorizedPersonnelEntry {
   id: string;
@@ -55,9 +60,12 @@ function mapSaved(data: Record<string, unknown> | null | undefined) {
 
 export function FormBStep6() {
   const navigate = useNavigate();
-  const [formBId] = useState<number | null>(readStoredFormBId());
+  const { formBId, validating: resolvingFormB, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, resolvingFormB);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { validationRef, validationError, showValidationError, clearValidationError } =
+    useWizardValidation();
   const [authorizedPersonnel, setAuthorizedPersonnel] = useState<PersonnelRow[]>([
     createEmptyPerson(),
   ]);
@@ -105,16 +113,17 @@ export function FormBStep6() {
 
   async function handleNext() {
     if (!formBId) {
-      alert("Form B ID missing. Please complete previous steps.");
+      showValidationError("Form B ID missing. Please complete previous steps.");
       return;
     }
 
     const error = validateStep6();
     if (error) {
-      alert(error);
+      showValidationError(error);
       return;
     }
 
+    clearValidationError();
     setLoading(true);
     setErrorMessage(null);
     try {
@@ -136,13 +145,15 @@ export function FormBStep6() {
 
       navigate("/form-b/step-7");
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
+      const message = getApiErrorMessage(error);
+      setErrorMessage(message);
+      showValidationError(message);
     } finally {
       setLoading(false);
     }
   }
 
-  if (loadingSaved) {
+  if (loadingSaved || resolvingFormB) {
     return <LoadingState label="Loading personnel and training..." />;
   }
 
@@ -153,17 +164,18 @@ export function FormBStep6() {
         <p>Section II: Authorized personnel and training.</p>
       </header>
 
+      <FormRequiredLegend />
+
       {!formBId && (
         <p className="error-text">Form B ID not found. Please complete previous steps.</p>
       )}
 
       {formBId && (
         <>
-          {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
           <p><strong>Form B internal ID:</strong> {formBId}</p>
 
           <div className="subform-header full-width">
-            <h3>Authorized personnel</h3>
+            <h3>Authorized personnel (all fields required)</h3>
             <button
               type="button"
               className="btn btn-secondary"
@@ -195,6 +207,7 @@ export function FormBStep6() {
               <div className="form-grid">
                 <label>
                   Name
+                  <RequiredMark />
                   <input
                     value={person.name}
                     onChange={(e) => updatePerson(person.id, { name: e.target.value })}
@@ -202,6 +215,7 @@ export function FormBStep6() {
                 </label>
                 <label>
                   Designation
+                  <RequiredMark />
                   <input
                     value={person.designation}
                     onChange={(e) => updatePerson(person.id, { designation: e.target.value })}
@@ -209,6 +223,7 @@ export function FormBStep6() {
                 </label>
                 <label>
                   Department
+                  <RequiredMark />
                   <input
                     value={person.department}
                     onChange={(e) => updatePerson(person.id, { department: e.target.value })}
@@ -216,6 +231,7 @@ export function FormBStep6() {
                 </label>
                 <label>
                   Telephone
+                  <RequiredMark />
                   <input
                     value={person.telephone}
                     onChange={(e) => updatePerson(person.id, { telephone: e.target.value })}
@@ -223,6 +239,7 @@ export function FormBStep6() {
                 </label>
                 <label>
                   Email
+                  <RequiredMark />
                   <input
                     type="email"
                     value={person.email}
@@ -231,6 +248,7 @@ export function FormBStep6() {
                 </label>
                 <label className="full-width">
                   Experience in laboratory animal experimentation
+                  <RequiredMark />
                   <textarea
                     value={person.experience}
                     onChange={(e) => updatePerson(person.id, { experience: e.target.value })}
@@ -243,6 +261,7 @@ export function FormBStep6() {
           <div className="form-grid">
             <label>
               Overall training level
+              <RequiredMark />
               <select value={trainingLevel} onChange={(e) => setTrainingLevel(e.target.value)}>
                 <option value="">Select training level</option>
                 <option value="Basic animal handling">Basic animal handling</option>
@@ -254,6 +273,7 @@ export function FormBStep6() {
             </label>
             <label>
               Competency certification
+              <RequiredMark />
               <select
                 value={competencyCertification}
                 onChange={(e) => setCompetencyCertification(e.target.value)}
@@ -267,18 +287,22 @@ export function FormBStep6() {
             </label>
             <label className="full-width">
               Training details
+              <RequiredMark />
               <textarea value={trainingDetails} onChange={(e) => setTrainingDetails(e.target.value)} />
             </label>
           </div>
 
-          <div className="wizard-actions">
+          <WizardActionBar
+            validationError={validationError ?? errorMessage}
+            actionRef={validationRef}
+          >
             <button className="btn-secondary" onClick={() => navigate("/form-b/step-5")}>
               ← Back
             </button>
             <button className="btn" onClick={handleNext} disabled={loading}>
               Save & Next →
             </button>
-          </div>
+          </WizardActionBar>
         </>
       )}
     </div>

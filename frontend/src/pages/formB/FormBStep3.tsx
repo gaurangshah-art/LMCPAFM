@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getFormBStudyPlan,
-  readStoredFormBId,
   saveFormBStep3,
   type FormBAnimalRequirementEntry,
   type FormBYearWiseCountEntry,
@@ -13,6 +12,8 @@ import { useStrainLookup } from "../../hooks/useStrainLookup";
 import { LoadingState } from "../../components/common/LoadingState";
 import { INSTITUTIONAL_DEFAULTS } from "../../constants/institution";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
 import { validateWeightGrams } from "../../utils/businessValidation";
 
 interface RequirementRow extends FormBAnimalRequirementEntry {
@@ -138,7 +139,8 @@ function applyStudyPlanTotal(formState: Step3Form, studyPlanTotal: number | null
 
 export function FormBStep3() {
   const navigate = useNavigate();
-  const [formBId] = useState<number | null>(readStoredFormBId());
+  const { formBId, validating: resolvingFormB, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, resolvingFormB);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [form, setForm] = useState<Step3Form>(EMPTY_FORM);
@@ -170,7 +172,7 @@ export function FormBStep3() {
   }, []);
 
   useEffect(() => {
-    if (loadingSaved || studyPlanLoading) {
+    if (loadingSaved || studyPlanLoading || resolvingFormB) {
       return;
     }
     const base = saved ?? EMPTY_FORM;
@@ -346,7 +348,7 @@ export function FormBStep3() {
     }
   }
 
-  if (loadingSaved || studyPlanLoading) {
+  if (loadingSaved || studyPlanLoading || resolvingFormB) {
     return <LoadingState label="Loading animal requirements..." />;
   }
 

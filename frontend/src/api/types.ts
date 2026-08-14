@@ -449,6 +449,8 @@ export interface ProjectWorkspaceExperiment {
 export interface ProjectWorkspace {
   project: IAECProject;
   form_b_id?: number | null;
+  form_b_submitted?: boolean;
+  form_b_submitted_at?: string | null;
   investigators: ProjectWorkspaceInvestigator[];
   planning: ExperimentPlanningStatus;
   groups: ExperimentGroup[];

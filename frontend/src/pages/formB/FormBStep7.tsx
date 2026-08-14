@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../../api/errors";
-import { readStoredFormBId, saveFormBStep7 } from "../../api/formbApi";
+import { saveFormBStep7 } from "../../api/formbApi";
 import { LoadingState } from "../../components/common/LoadingState";
+import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
+import { RequiredMark } from "../../components/common/RequiredMark";
+import { WizardActionBar } from "../../components/common/WizardActionBar";
 import {
   FormBAttachmentField,
   formBHasAttachment,
@@ -13,6 +16,8 @@ import {
   type FormBDeclarationKey,
 } from "../../constants/institution";
 import { readBoolean, readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
 
 const EMPTY = {
   hazardousAgentsUsed: "",
@@ -61,7 +66,8 @@ function mapSaved(data: Record<string, unknown> | null | undefined) {
 export function FormBStep7() {
   const navigate = useNavigate();
   const validationRef = useRef<HTMLDivElement | null>(null);
-  const [formBId] = useState<number | null>(readStoredFormBId());
+  const { formBId, validating: resolvingFormB, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, resolvingFormB);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -193,7 +199,7 @@ export function FormBStep7() {
     }
   }
 
-  if (loadingSaved) {
+  if (loadingSaved || resolvingFormB) {
     return <LoadingState label="Loading ethical compliance..." />;
   }
 
@@ -204,18 +210,20 @@ export function FormBStep7() {
         <p>Section II item 14 and investigator declaration.</p>
       </header>
 
+      <FormRequiredLegend />
+
       {!formBId && (
         <p className="error-text">Form B ID not found. Please complete previous steps.</p>
       )}
 
       {formBId && (
         <>
-          {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
           <p><strong>Form B internal ID:</strong> {formBId}</p>
 
           <div className="form-grid">
             <label>
               Use of hazardous agents?
+              <RequiredMark />
               <select
                 value={form.hazardousAgentsUsed}
                 onChange={(e) => updateField("hazardousAgentsUsed", e.target.value)}
@@ -290,6 +298,7 @@ export function FormBStep7() {
             ) : null}
             <label>
               CPCSEA guidelines adherence
+              <RequiredMark />
               <select
                 value={form.cpcseaAdherence}
                 onChange={(e) => updateField("cpcseaAdherence", e.target.value)}
@@ -301,6 +310,7 @@ export function FormBStep7() {
             </label>
             <label>
               Safety measures
+              <RequiredMark />
               <select
                 value={form.safetyMeasures}
                 onChange={(e) => updateField("safetyMeasures", e.target.value)}
@@ -315,6 +325,7 @@ export function FormBStep7() {
             </label>
             <label>
               Endpoint criteria
+              <RequiredMark />
               <select
                 value={form.endpointCriteria}
                 onChange={(e) => updateField("endpointCriteria", e.target.value)}
@@ -329,6 +340,7 @@ export function FormBStep7() {
             </label>
             <label className="full-width">
               IAEC history (related previous approvals, if any)
+              <RequiredMark />
               <textarea
                 value={form.iaecHistory}
                 onChange={(e) => updateField("iaecHistory", e.target.value)}
@@ -339,7 +351,10 @@ export function FormBStep7() {
           <section className="form-b-declaration-section">
             <div className="form-b-declaration-header">
               <div>
-                <h3>Investigator declaration</h3>
+                <h3>
+                  Investigator declaration
+                  <RequiredMark />
+                </h3>
                 <p className="field-help">
                   Read each statement carefully and tick every box. All declarations are mandatory
                   before you can continue to review.
@@ -351,11 +366,7 @@ export function FormBStep7() {
               </p>
             </div>
 
-            {validationError ? (
-              <p className="error-text declaration-validation-error">{validationError}</p>
-            ) : null}
-
-            <div className="declaration-checklist" ref={validationRef}>
+            <div className="declaration-checklist">
               {FORM_B_DECLARATIONS.map((key, index) => {
                 const checked = form.declarations[key];
                 return (
@@ -392,6 +403,7 @@ export function FormBStep7() {
           <div className="form-grid">
             <label>
               Name of investigator (signature)
+              <RequiredMark />
               <input
                 value={form.declarationSignatureName}
                 onChange={(e) => updateField("declarationSignatureName", e.target.value)}
@@ -399,6 +411,7 @@ export function FormBStep7() {
             </label>
             <label>
               Date
+              <RequiredMark />
               <input
                 type="date"
                 value={form.declarationDate}
@@ -407,6 +420,7 @@ export function FormBStep7() {
             </label>
             <label>
               Place
+              <RequiredMark />
               <input
                 value={form.declarationPlace}
                 onChange={(e) => updateField("declarationPlace", e.target.value)}
@@ -414,17 +428,14 @@ export function FormBStep7() {
             </label>
           </div>
 
-          <div className="wizard-actions">
-            {validationError && !validationError.includes("declarations") ? (
-              <p className="error-text wizard-validation-error full-width">{validationError}</p>
-            ) : null}
+          <WizardActionBar validationError={validationError ?? errorMessage} actionRef={validationRef}>
             <button type="button" className="btn-secondary" onClick={() => navigate("/form-b/step-6")}>
               ← Back
             </button>
             <button type="button" className="btn" onClick={() => void handleNext()} disabled={loading}>
               {loading ? "Saving…" : "Save & Next →"}
             </button>
-          </div>
+          </WizardActionBar>
         </>
       )}
     </div>

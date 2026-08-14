@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   getFormBStudyPlan,
   previewStudyPlanAnnexurePdf,
-  readStoredFormBId,
   saveFormBStudyPlan,
   type FormBGroupDosingEntry,
   type FormBGroupEndpointEntry,
@@ -31,7 +30,13 @@ import {
 } from "../../constants/formBStudyPlan";
 import { LoadingState } from "../../components/common/LoadingState";
 import { DraftRestoreBanner } from "../../components/common/DraftRestoreBanner";
+import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
+import { RequiredMark } from "../../components/common/RequiredMark";
+import { WizardActionBar } from "../../components/common/WizardActionBar";
 import { useFormDraftPersistence } from "../../hooks/useFormDraftPersistence";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
+import { useWizardValidation } from "../../hooks/useWizardValidation";
 
 const PHASE_CODES = [
   { value: "pilot", label: "Pilot" },
@@ -140,10 +145,13 @@ function normalizePlan(data: FormBStudyPhaseEntry[] | undefined): FormBStudyPhas
 
 export function FormBStep2b() {
   const navigate = useNavigate();
-  const [formBId] = useState<number | null>(readStoredFormBId());
+  const { formBId, validating: resolvingFormB, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, resolvingFormB);
   const [loading, setLoading] = useState(false);
   const [loadingSaved, setLoadingSaved] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { validationRef, validationError, showValidationError, clearValidationError } =
+    useWizardValidation();
   const [designRationale, setDesignRationale] = useState("");
   const [animalRationale, setAnimalRationale] = useState<FormBAnimalRationaleForm>(
     createEmptyAnimalRationale(),
@@ -504,22 +512,23 @@ export function FormBStep2b() {
 
   async function handleSave(nextPath?: string) {
     if (!formBId) {
-      alert("Form B ID missing.");
+      showValidationError("Form B ID missing.");
       return;
     }
     const planError = validateLocally();
     if (planError) {
-      alert(planError);
+      showValidationError(planError);
       return;
     }
     const rationaleError = validateAnimalRationale();
     if (rationaleError) {
-      alert(rationaleError);
+      showValidationError(rationaleError);
       return;
     }
 
     const payloadPhases = buildStudyPlanPayloadPhases(phases, syncPhaseCap);
 
+    clearValidationError();
     setLoading(true);
     setErrorMessage(null);
     try {
@@ -532,7 +541,9 @@ export function FormBStep2b() {
       clearDraft();
       if (nextPath) navigate(nextPath);
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
+      const message = getApiErrorMessage(error);
+      setErrorMessage(message);
+      showValidationError(message);
     } finally {
       setLoading(false);
     }
@@ -542,12 +553,12 @@ export function FormBStep2b() {
     if (!formBId) return;
     const planError = validateLocally();
     if (planError) {
-      alert(planError);
+      showValidationError(planError);
       return;
     }
     const rationaleError = validateAnimalRationale();
     if (rationaleError) {
-      alert(rationaleError);
+      showValidationError(rationaleError);
       return;
     }
     setLoading(true);
@@ -568,7 +579,7 @@ export function FormBStep2b() {
     }
   }
 
-  if (loadingSaved) {
+  if (loadingSaved || resolvingFormB) {
     return <LoadingState label="Loading study plan..." />;
   }
 
@@ -587,8 +598,9 @@ export function FormBStep2b() {
         <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />
       ) : null}
 
+      <FormRequiredLegend />
+
       {!formBId && <p className="error-text">Form B ID not found. Please complete Step 1 first.</p>}
-      {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
 
       {formBId && (
         <>
@@ -1180,6 +1192,7 @@ export function FormBStep2b() {
               </label>
               <label>
                 Breeder name
+                <RequiredMark />
                 <input
                   value={animalRationale.breederName}
                   onChange={(e) => updateAnimalRationale({ breederName: e.target.value })}
@@ -1187,6 +1200,7 @@ export function FormBStep2b() {
               </label>
               <label>
                 Breeder registration number
+                <RequiredMark />
                 <input
                   value={animalRationale.breederRegistrationNumber}
                   onChange={(e) =>
@@ -1196,6 +1210,7 @@ export function FormBStep2b() {
               </label>
               <label className="full-width">
                 Breeder address
+                <RequiredMark />
                 <textarea
                   value={animalRationale.breederAddress}
                   onChange={(e) => updateAnimalRationale({ breederAddress: e.target.value })}
@@ -1236,14 +1251,17 @@ export function FormBStep2b() {
             </div>
           </section>
 
-          <div className="wizard-actions">
+          <WizardActionBar
+            validationError={validationError ?? errorMessage}
+            actionRef={validationRef}
+          >
             <button type="button" className="btn-secondary" onClick={() => navigate("/form-b/step-2")}>
               ← Back
             </button>
             <button type="button" className="btn" onClick={() => void handleSave("/form-b/step-4")} disabled={loading}>
               {loading ? "Saving…" : "Save & Next →"}
             </button>
-          </div>
+          </WizardActionBar>
         </>
       )}
     </div>

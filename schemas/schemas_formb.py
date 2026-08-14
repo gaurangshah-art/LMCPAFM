@@ -490,6 +490,11 @@ class FormBReviewRead(BaseModel):
     step7: Optional[dict] = None
 
 
+class FormBInvitationSendRead(BaseModel):
+    ok: bool = True
+    sent_to: str
+
+
 class FormBAttachmentRead(BaseModel):
     id: int
     form_b_id: int

@@ -278,8 +278,13 @@ export async function upsertFormBMeetingDecision(
   await apiClient.put(`/iaec/form-b/${formBId}/decision`, payload);
 }
 
-export async function sendFormBMeetingInvitation(formBId: number): Promise<void> {
-  await apiClient.post(`/iaec/form-b/${formBId}/send-meeting-invitation`);
+export async function sendFormBMeetingInvitation(
+  formBId: number,
+): Promise<{ ok: boolean; sent_to: string }> {
+  const { data } = await apiClient.post<{ ok: boolean; sent_to: string }>(
+    `/iaec/form-b/${formBId}/send-meeting-invitation/sync`,
+  );
+  return data;
 }
 
 export async function downloadMeetingSummaryPdf(meetingId: number): Promise<Blob> {

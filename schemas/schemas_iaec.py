@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
-from datetime import date
+from datetime import date, datetime
 
 class IAECProjectBase(BaseModel):
     title: str
@@ -102,6 +102,8 @@ class ProjectWorkflowStatus(BaseModel):
 class ProjectWorkspaceRead(BaseModel):
     project: IAECProject
     form_b_id: int | None = None
+    form_b_submitted: bool = False
+    form_b_submitted_at: datetime | None = None
     investigators: list[dict] = []
     planning: ExperimentPlanningStatus
     groups: list[ExperimentGroup]

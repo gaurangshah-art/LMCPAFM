@@ -41,6 +41,7 @@ import { FormBStep5 } from "../pages/formB/FormBStep5";
 import { FormBStep6 } from "../pages/formB/FormBStep6";
 import { FormBStep7 } from "../pages/formB/FormBStep7";
 import { FormBReview } from "../pages/formB/FormBReview";
+import { FormBViewPage } from "../pages/formB/FormBViewPage";
 import { IaecCreateMeeting } from "../pages/iaec/IaecCreateMeeting";
 import { IaecMeetingDetails } from "../pages/iaec/IaecMeetingDetails";
 import { IaecProjectReview } from "../pages/iaec/IaecProjectReview";
@@ -534,6 +535,19 @@ export default function App() {
                   allowedRoles={["investigator"]}
                 >
                   <FormBReview />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/view"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBViewPage />
                 </ProtectedRoute>
               }
             />

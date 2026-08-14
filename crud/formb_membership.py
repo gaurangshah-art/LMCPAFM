@@ -149,6 +149,10 @@ def user_can_view_approval_letter(db: Session, user_id: int, project_id: int) ->
 
 
 def user_can_edit_project(db: Session, user_id: int, project_id: int) -> bool:
+    form_b = db.query(FormB).filter(FormB.project_id == project_id).first()
+    if form_b is not None and form_b.submitted_at is not None:
+        return False
+
     membership = (
         db.query(FormBInvestigator)
         .join(FormB, FormB.id == FormBInvestigator.form_b_id)

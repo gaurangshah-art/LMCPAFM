@@ -116,9 +116,15 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
             </button>
           ))}
           {workspace.form_b_id ? (
-            <Link className="btn btn-secondary" to={`/form-b/step-1?formBId=${workspace.form_b_id}`}>
-              Open Form B
-            </Link>
+            workspace.form_b_submitted ? (
+              <Link className="btn btn-secondary" to={`/form-b/view?formBId=${workspace.form_b_id}`}>
+                View submitted Form B
+              </Link>
+            ) : (
+              <Link className="btn btn-secondary" to={`/form-b/step-1?formBId=${workspace.form_b_id}`}>
+                Continue Form B
+              </Link>
+            )
           ) : null}
         </div>
       </section>
@@ -164,7 +170,8 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
                 },
                 {
                   header: "Can edit",
-                  cell: (row) => (row.can_edit_forms ? "Yes" : "No"),
+                  cell: (row) =>
+                    workspace.form_b_submitted ? "No (submitted)" : row.can_edit_forms ? "Yes" : "No",
                 },
               ]}
             />

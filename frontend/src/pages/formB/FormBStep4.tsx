@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../../api/errors";
-import { readStoredFormBId, saveFormBStep4 } from "../../api/formbApi";
+import { saveFormBStep4 } from "../../api/formbApi";
 import { LoadingState } from "../../components/common/LoadingState";
+import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
+import { RequiredMark } from "../../components/common/RequiredMark";
+import { WizardActionBar } from "../../components/common/WizardActionBar";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
+import { useWizardValidation } from "../../hooks/useWizardValidation";
 
 const EMPTY = {
   procedureDescription: "",
@@ -60,9 +66,12 @@ function mapSaved(data: Record<string, unknown> | null | undefined) {
 
 export function FormBStep4() {
   const navigate = useNavigate();
-  const [formBId] = useState<number | null>(readStoredFormBId());
+  const { formBId, validating: resolvingFormB, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, resolvingFormB);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { validationRef, validationError, showValidationError, clearValidationError } =
+    useWizardValidation();
   const [form, setForm] = useState(EMPTY);
 
   const { value: saved, loading: loadingSaved } = useFormBStepReview(formBId, "step4", mapSaved, EMPTY);
@@ -117,16 +126,17 @@ export function FormBStep4() {
 
   async function handleNext() {
     if (!formBId) {
-      alert("Form B ID missing. Please complete previous steps.");
+      showValidationError("Form B ID missing. Please complete previous steps.");
       return;
     }
 
     const error = validateStep4();
     if (error) {
-      alert(error);
+      showValidationError(error);
       return;
     }
 
+    clearValidationError();
     setLoading(true);
     setErrorMessage(null);
     try {
@@ -158,13 +168,15 @@ export function FormBStep4() {
 
       navigate("/form-b/step-5");
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
+      const message = getApiErrorMessage(error);
+      setErrorMessage(message);
+      showValidationError(message);
     } finally {
       setLoading(false);
     }
   }
 
-  if (loadingSaved) {
+  if (loadingSaved || resolvingFormB) {
     return <LoadingState label="Loading experimental design..." />;
   }
 
@@ -175,18 +187,20 @@ export function FormBStep4() {
         <p>Section II: Procedures, injections, surgery, and euthanasia.</p>
       </header>
 
+      <FormRequiredLegend />
+
       {!formBId && (
         <p className="error-text">Form B ID not found. Please complete previous steps.</p>
       )}
 
       {formBId && (
         <>
-          {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
           <p><strong>Form B internal ID:</strong> {formBId}</p>
 
           <div className="form-grid">
             <label className="full-width">
               Describe all invasive and potentially stressful procedures
+              <RequiredMark />
               <textarea
                 value={form.procedureDescription}
                 onChange={(e) => updateField("procedureDescription", e.target.value)}
@@ -250,6 +264,7 @@ export function FormBStep4() {
             </label>
             <label>
               Pain category (CPCSEA)
+              <RequiredMark />
               <select value={form.painCategory} onChange={(e) => updateField("painCategory", e.target.value)}>
                 <option value="">Select category</option>
                 <option value="A">A – No pain</option>
@@ -261,6 +276,7 @@ export function FormBStep4() {
             </label>
             <label>
               Anaesthesia
+              <RequiredMark />
               <select value={form.anaesthesia} onChange={(e) => updateField("anaesthesia", e.target.value)}>
                 <option value="">Select anaesthesia</option>
                 <option value="Ketamine + Xylazine">Ketamine + Xylazine</option>
@@ -271,6 +287,7 @@ export function FormBStep4() {
             </label>
             <label>
               Analgesia
+              <RequiredMark />
               <select value={form.analgesia} onChange={(e) => updateField("analgesia", e.target.value)}>
                 <option value="">Select analgesia</option>
                 <option value="Buprenorphine">Buprenorphine</option>
@@ -342,6 +359,7 @@ export function FormBStep4() {
             ) : null}
             <label>
               Euthanasia method
+              <RequiredMark />
               <select
                 value={form.euthanasiaMethod}
                 onChange={(e) => updateField("euthanasiaMethod", e.target.value)}
@@ -355,6 +373,7 @@ export function FormBStep4() {
             </label>
             <label className="full-width">
               Alternatives considered
+              <RequiredMark />
               <textarea
                 value={form.alternativesConsidered}
                 onChange={(e) => updateField("alternativesConsidered", e.target.value)}
@@ -362,6 +381,7 @@ export function FormBStep4() {
             </label>
             <label className="full-width">
               3Rs justification (Replacement, Reduction, Refinement)
+              <RequiredMark />
               <textarea
                 value={form.rationale3Rs}
                 onChange={(e) => updateField("rationale3Rs", e.target.value)}
@@ -369,14 +389,17 @@ export function FormBStep4() {
             </label>
           </div>
 
-          <div className="wizard-actions">
+          <WizardActionBar
+            validationError={validationError ?? errorMessage}
+            actionRef={validationRef}
+          >
             <button className="btn-secondary" onClick={() => navigate("/form-b/step-2b")}>
               ← Back
             </button>
             <button className="btn" onClick={handleNext} disabled={loading}>
               Save & Next →
             </button>
-          </div>
+          </WizardActionBar>
         </>
       )}
     </div>

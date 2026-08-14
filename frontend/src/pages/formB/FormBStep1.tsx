@@ -8,22 +8,26 @@ import {
   type FormBStep1Autofill,
 } from "../../api/formbApi";
 import { getApiErrorMessage, isFormBNotFoundError } from "../../api/errors";
-import { ErrorAlert } from "../../components/common/ErrorAlert";
 import { LoadingState } from "../../components/common/LoadingState";
 import { SuccessNote } from "../../components/common/SuccessNote";
 import { InstitutionalFieldsPanel } from "../../components/forms/InstitutionalFieldsPanel";
 import { RESEARCH_TYPES } from "../../constants/institution";
 import { DraftRestoreBanner } from "../../components/common/DraftRestoreBanner";
+import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
+import { RequiredMark } from "../../components/common/RequiredMark";
+import { WizardActionBar } from "../../components/common/WizardActionBar";
 import { useFormDraftPersistence } from "../../hooks/useFormDraftPersistence";
-import { useStoredFormBId } from "../../hooks/useStoredFormBId";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
+import { useWizardValidation } from "../../hooks/useWizardValidation";
 
 export function FormBStep1() {
   const navigate = useNavigate();
 
-  const { formBId, setFormBId, validating, staleNotice } = useStoredFormBId();
+  const { formBId, setFormBId, validating, staleNotice, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, validating);
   const [loading, setLoading] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [profileComplete, setProfileComplete] = useState(true);
   const [institutional, setInstitutional] = useState<FormBStep1Autofill | null>(null);
 
@@ -36,6 +40,8 @@ export function FormBStep1() {
   const [experience, setExperience] = useState("");
   const [researchType, setResearchType] = useState("");
   const [contactEmailSaved, setContactEmailSaved] = useState<boolean | null>(null);
+  const { validationRef, validationError, showValidationError, clearValidationError } =
+    useWizardValidation();
 
   const step1Draft = useMemo(
     () => ({
@@ -121,7 +127,7 @@ export function FormBStep1() {
         }
       } catch (error) {
         if (!cancelled && !isFormBNotFoundError(error)) {
-          setErrorMessage(getApiErrorMessage(error));
+          showValidationError(getApiErrorMessage(error));
         }
       } finally {
         if (!cancelled) {
@@ -137,19 +143,19 @@ export function FormBStep1() {
 
   async function handleStartFormB() {
     setLoading(true);
-    setErrorMessage(null);
+    clearValidationError();
     try {
       const autofill = await getFormBStep1Autofill();
       applyAutofill(autofill);
       if (!autofill.profile_complete) {
-        setErrorMessage("Complete your investigator profile before starting Form B.");
+        showValidationError("Complete your investigator profile before starting Form B.");
         return;
       }
 
       const started = await startFormB();
       setFormBId(started.id);
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
+      showValidationError(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -169,18 +175,18 @@ export function FormBStep1() {
 
   async function handleNext() {
     if (!formBId) {
-      setErrorMessage("Form B has not been started yet.");
+      showValidationError("Form B has not been started yet.");
       return;
     }
 
     const error = validateStep1();
     if (error) {
-      setErrorMessage(error);
+      showValidationError(error);
       return;
     }
 
+    clearValidationError();
     setLoading(true);
-    setErrorMessage(null);
     try {
       await saveFormBStep1({
         form_b_id: formBId,
@@ -198,7 +204,7 @@ export function FormBStep1() {
 
       navigate("/form-b/step-2");
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
+      showValidationError(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -219,6 +225,8 @@ export function FormBStep1() {
         <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />
       ) : null}
 
+      <FormRequiredLegend />
+
       {!profileComplete ? (
         <p className="auth-note" role="note">
           Your investigator profile is incomplete.{" "}
@@ -228,8 +236,6 @@ export function FormBStep1() {
       ) : null}
 
       {staleNotice ? <SuccessNote message={staleNotice} /> : null}
-
-      {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
 
       {formBId && contactEmailSaved === false && contactEmail.trim() ? (
         <p className="auth-note" role="note">
@@ -262,6 +268,7 @@ export function FormBStep1() {
           <div className="form-grid">
             <label>
               Type of research
+              <RequiredMark />
               <select value={researchType} onChange={(e) => setResearchType(e.target.value)}>
                 <option value="">Select research type</option>
                 {RESEARCH_TYPES.map((option) => (
@@ -274,6 +281,7 @@ export function FormBStep1() {
 
             <label>
               Principal investigator
+              <RequiredMark />
               <input
                 value={principalInvestigator}
                 onChange={(e) => setPrincipalInvestigator(e.target.value)}
@@ -282,16 +290,19 @@ export function FormBStep1() {
 
             <label>
               Designation
+              <RequiredMark />
               <input value={designation} onChange={(e) => setDesignation(e.target.value)} />
             </label>
 
             <label>
               Department / Division / Lab
+              <RequiredMark />
               <input value={department} onChange={(e) => setDepartment(e.target.value)} />
             </label>
 
             <label>
               Contact email
+              <RequiredMark />
               <input
                 type="email"
                 value={contactEmail}
@@ -301,11 +312,13 @@ export function FormBStep1() {
 
             <label>
               Contact phone
+              <RequiredMark />
               <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
             </label>
 
             <label>
               Qualifications
+              <RequiredMark />
               <input
                 value={qualifications}
                 onChange={(e) => setQualifications(e.target.value)}
@@ -314,15 +327,16 @@ export function FormBStep1() {
 
             <label className="full-width">
               Experience in laboratory animal experimentation
+              <RequiredMark />
               <textarea value={experience} onChange={(e) => setExperience(e.target.value)} />
             </label>
           </div>
 
-          <div className="wizard-actions">
+          <WizardActionBar validationError={validationError} actionRef={validationRef}>
             <button type="button" className="btn" onClick={handleNext} disabled={loading}>
               {loading ? "Saving..." : "Save and continue"}
             </button>
-          </div>
+          </WizardActionBar>
         </>
       ) : null}
     </div>

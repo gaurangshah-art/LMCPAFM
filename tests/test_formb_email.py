@@ -206,6 +206,30 @@ def test_meeting_invitation_queues_when_ready(client, iaec_auth_headers, monkeyp
     assert res.json()["queued"] is True
 
 
+def test_meeting_invitation_sync_returns_sent_to(client, iaec_auth_headers, monkeypatch):
+    from database.database import SessionLocal
+
+    db = SessionLocal()
+    _meeting, form_b = _seed_invitation_ready_form_b(db)
+    db.close()
+
+    monkeypatch.setenv("IAEC_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("IAEC_SENDER_EMAIL", "iaec@lmcp.ac.in")
+    monkeypatch.setattr(
+        "crud.formb_email._send_email_with_attachment",
+        lambda *args, **kwargs: None,
+    )
+
+    res = client.post(
+        f"/iaec/form-b/{form_b.id}/send-meeting-invitation/sync",
+        headers=iaec_auth_headers,
+    )
+    assert res.status_code == 200, res.text
+    payload = res.json()
+    assert payload["ok"] is True
+    assert payload["sent_to"] == "pi@lmcp.ac.in"
+
+
 def test_meeting_invitation_without_protocol_number(client, iaec_auth_headers, monkeypatch):
     from database.database import SessionLocal
 

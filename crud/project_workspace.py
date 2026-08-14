@@ -63,6 +63,8 @@ def get_project_workspace(
     return {
         "project": project,
         "form_b_id": form_b.id if form_b else None,
+        "form_b_submitted": form_b.submitted_at is not None if form_b else False,
+        "form_b_submitted_at": form_b.submitted_at if form_b else None,
         "investigators": investigators,
         "planning": planning,
         "groups": groups,

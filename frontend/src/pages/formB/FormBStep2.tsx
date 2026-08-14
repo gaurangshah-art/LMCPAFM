@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { readStoredFormBId, saveFormBStep2 } from "../../api/formbApi";
+import { saveFormBStep2 } from "../../api/formbApi";
 import { getApiErrorMessage } from "../../api/errors";
 import { LoadingState } from "../../components/common/LoadingState";
 import {
@@ -13,8 +13,13 @@ import {
   parseFundingProofReferences,
 } from "../../constants/formBStep2";
 import { DraftRestoreBanner } from "../../components/common/DraftRestoreBanner";
+import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
+import { RequiredMark } from "../../components/common/RequiredMark";
+import { WizardActionBar } from "../../components/common/WizardActionBar";
 import { useFormDraftPersistence } from "../../hooks/useFormDraftPersistence";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
 import { validateDateOnOrAfter } from "../../utils/businessValidation";
 
 const EMPTY = {
@@ -34,7 +39,8 @@ const EMPTY = {
 export function FormBStep2() {
   const navigate = useNavigate();
   const validationRef = useRef<HTMLDivElement | null>(null);
-  const [formBId] = useState<number | null>(readStoredFormBId());
+  const { formBId, validating: resolvingFormB, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, resolvingFormB);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -201,7 +207,7 @@ export function FormBStep2() {
     }
   }
 
-  if (loadingSaved) {
+  if (loadingSaved || resolvingFormB) {
     return <LoadingState label="Loading project details..." />;
   }
 
@@ -215,6 +221,8 @@ export function FormBStep2() {
       {restoreOffer ? (
         <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />
       ) : null}
+
+      <FormRequiredLegend />
 
       {!formBId && (
         <p className="error-text">Form B ID not found. Please complete Step 1 first.</p>
@@ -230,10 +238,12 @@ export function FormBStep2() {
           <div className="form-grid">
             <label className="full-width">
               Project / Dissertation / Thesis title
+              <RequiredMark />
               <input value={form.title} onChange={(e) => updateField("title", e.target.value)} />
             </label>
             <label>
               Duration (months)
+              <RequiredMark />
               <select
                 value={form.durationMonths}
                 onChange={(e) => updateField("durationMonths", e.target.value)}
@@ -248,6 +258,7 @@ export function FormBStep2() {
             </label>
             <label>
               Proposed start date
+              <RequiredMark />
               <input
                 type="date"
                 value={form.proposedStartDate}
@@ -256,6 +267,7 @@ export function FormBStep2() {
             </label>
             <label>
               Proposed completion date
+              <RequiredMark />
               <input
                 type="date"
                 value={form.proposedCompletionDate}
@@ -264,6 +276,7 @@ export function FormBStep2() {
             </label>
             <label>
               Funding agency
+              <RequiredMark />
               <select
                 value={form.fundingAgency}
                 onChange={(e) => updateField("fundingAgency", e.target.value)}
@@ -278,6 +291,7 @@ export function FormBStep2() {
             </label>
             <label className="full-width">
               Funding agency complete address
+              <RequiredMark />
               <textarea
                 value={form.fundingAddress}
                 onChange={(e) => updateField("fundingAddress", e.target.value)}
@@ -288,7 +302,10 @@ export function FormBStep2() {
               className={`full-width checkbox-group${showFundingProofError ? " field-invalid" : ""}`}
               id="funding-proof-reference"
             >
-              <legend>Funding proof reference *</legend>
+              <legend>
+                Funding proof reference
+                <RequiredMark />
+              </legend>
               {showLegacyFundingNote ? (
                 <p className="field-help">
                   A previous free-text funding note was saved earlier. Please select the
@@ -328,7 +345,8 @@ export function FormBStep2() {
             ) : null}
 
             <label className="full-width">
-              Study plan summary *
+              Study plan summary
+              <RequiredMark />
               <span className="field-help">Brief about the project in 1–2 lines.</span>
               <textarea
                 value={form.summary}
@@ -337,21 +355,24 @@ export function FormBStep2() {
               />
             </label>
             <label className="full-width">
-              Objectives *
+              Objectives
+              <RequiredMark />
               <textarea
                 value={form.objectives}
                 onChange={(e) => updateField("objectives", e.target.value)}
               />
             </label>
             <label className="full-width">
-              Expected outcomes *
+              Expected outcomes
+              <RequiredMark />
               <textarea
                 value={form.expectedOutcomes}
                 onChange={(e) => updateField("expectedOutcomes", e.target.value)}
               />
             </label>
             <label className="full-width">
-              Study plan note *
+              Study plan note
+              <RequiredMark />
               <span className="field-help">
                 Brief about the project in 1–2 lines. Detailed experimental groups are entered in the
                 next step (Step 2b).
@@ -365,17 +386,14 @@ export function FormBStep2() {
             </label>
           </div>
 
-          <div ref={validationRef} className="wizard-actions">
-            {validationError ? (
-              <p className="error-text wizard-validation-error full-width">{validationError}</p>
-            ) : null}
+          <WizardActionBar validationError={validationError} actionRef={validationRef}>
             <button type="button" className="btn-secondary" onClick={() => navigate("/form-b/step-1")}>
               ← Back
             </button>
             <button type="button" className="btn" onClick={() => void handleNext()} disabled={loading}>
               {loading ? "Saving…" : "Save & Next →"}
             </button>
-          </div>
+          </WizardActionBar>
         </>
       )}
     </div>

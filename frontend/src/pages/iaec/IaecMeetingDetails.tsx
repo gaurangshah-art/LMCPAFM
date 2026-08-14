@@ -73,8 +73,8 @@ export function IaecMeetingDetails() {
     setSendingInvitationId(formBId);
     setActionMessage(null);
     try {
-      await sendFormBMeetingInvitation(formBId);
-      setActionMessage(`Invitation queued for "${projectTitle}".`);
+      const result = await sendFormBMeetingInvitation(formBId);
+      setActionMessage(`Invitation sent to ${result.sent_to}.`);
     } catch (error) {
       setActionMessage(getApiErrorMessage(error));
     } finally {
