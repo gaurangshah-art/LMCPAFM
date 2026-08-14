@@ -219,7 +219,7 @@ export function IaecDashboard() {
                 Generate protocol
               </button>
             ) : null}
-            {row.is_submitted && row.meeting_id && row.protocol_number && isApprovedDecision(row.decision) ? (
+            {row.is_submitted && row.meeting_id ? (
               <button
                 type="button"
                 className="btn btn-sm"
@@ -241,8 +241,8 @@ export function IaecDashboard() {
       <header className="section-header">
         <h2>IAEC Dashboard</h2>
         <p>
-          Assign Form B submissions to meetings, record decisions, generate protocol numbers, and
-          send invitations.
+          Assign Form B submissions to meetings, send invitations, record decisions, and generate
+          protocol numbers after approval.
         </p>
       </header>
 

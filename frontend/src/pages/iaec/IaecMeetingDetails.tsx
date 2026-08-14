@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiClient } from "../../api/client";
+import { sendFormBMeetingInvitation } from "../../api/iaecApi";
 import { formatDisplayDate } from "../../utils/dateFormat";
 import { getApiErrorMessage } from "../../api/errors";
 
@@ -33,6 +34,8 @@ export function IaecMeetingDetails() {
   const [assignedProjects, setAssignedProjects] = useState<
     MeetingDetailsResponse["assigned_projects"]
   >([]);
+  const [sendingInvitationId, setSendingInvitationId] = useState<number | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!meetingId) return;
@@ -64,6 +67,21 @@ export function IaecMeetingDetails() {
     };
   }, [meetingId]);
 
+  async function handleSendInvitation(formBId: number, projectTitle: string) {
+    if (!window.confirm(`Send meeting invitation email for "${projectTitle}"?`)) return;
+
+    setSendingInvitationId(formBId);
+    setActionMessage(null);
+    try {
+      await sendFormBMeetingInvitation(formBId);
+      setActionMessage(`Invitation queued for "${projectTitle}".`);
+    } catch (error) {
+      setActionMessage(getApiErrorMessage(error));
+    } finally {
+      setSendingInvitationId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="page-card">
@@ -92,6 +110,7 @@ export function IaecMeetingDetails() {
       </header>
 
       {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
+      {actionMessage ? <p className="muted-text">{actionMessage}</p> : null}
 
       <section className="dashboard-section">
         <h3>Assigned Form B Projects</h3>
@@ -105,7 +124,7 @@ export function IaecMeetingDetails() {
                 <th>Investigator</th>
                 <th>Status</th>
                 <th>Protocol</th>
-                <th />
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -116,13 +135,23 @@ export function IaecMeetingDetails() {
                   <td>{project.status || "-"}</td>
                   <td>{project.protocol_number || "Pending"}</td>
                   <td>
-                    <button
-                      type="button"
-                      className="btn-small"
-                      onClick={() => navigate(`/iaec/project/${project.project_id}/review`)}
-                    >
-                      Review
-                    </button>
+                    <div className="table-actions">
+                      <button
+                        type="button"
+                        className="btn-small"
+                        onClick={() => navigate(`/iaec/project/${project.project_id}/review`)}
+                      >
+                        Review
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-small"
+                        disabled={sendingInvitationId === project.form_b_id}
+                        onClick={() => void handleSendInvitation(project.form_b_id, project.title)}
+                      >
+                        {sendingInvitationId === project.form_b_id ? "Sending…" : "Send invitation"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -18,8 +18,10 @@ from models.user import User
 from utils.date_format import format_display_date
 
 
-def _build_meeting_invitation_email_subject(protocol_number: str) -> str:
-    return f"IAEC Meeting Invitation – Protocol {protocol_number}"
+def _build_meeting_invitation_email_subject(context) -> str:
+    if context.protocol_number:
+        return f"IAEC Meeting Invitation – Protocol {context.protocol_number}"
+    return f"IAEC Meeting Invitation – {context.title}"
 
 
 def _build_meeting_invitation_email_body(context) -> str:
@@ -29,10 +31,20 @@ def _build_meeting_invitation_email_body(context) -> str:
     lines = [
         f"Dear {context.principal_investigator},",
         "",
-        f"Your Form B submission for project '{context.title}' has been assigned protocol number '{context.protocol_number}'.",
-        "Please find attached the final Form B PDF with protocol number.",
-        "You are invited to participate in the IAEC meeting and present the protocol.",
     ]
+
+    if context.protocol_number:
+        lines.extend([
+            f"Your Form B submission for project '{context.title}' has been assigned protocol number '{context.protocol_number}'.",
+            "Please find attached the Form B PDF with protocol number.",
+        ])
+    else:
+        lines.extend([
+            f"Your Form B submission for project '{context.title}' has been scheduled for IAEC review.",
+            "Please find attached your submitted Form B PDF.",
+        ])
+
+    lines.append("You are invited to participate in the IAEC meeting and present the protocol.")
 
     if context.meeting_date:
         lines.extend([
@@ -234,6 +246,12 @@ def build_form_b_meeting_invitation_context(db: Session, form_b_id: int):
 
 
 def validate_form_b_meeting_invitation_ready(db: Session, form_b_id: int):
+    form_b = get_form_b_by_id(db, form_b_id)
+    if form_b.submitted_at is None:
+        raise CRUDValidationError(
+            "Only fully submitted Form B applications can receive meeting invitations."
+        )
+
     context = build_form_b_meeting_invitation_context(db, form_b_id)
 
     if not context.principal_investigator_email:
@@ -243,8 +261,6 @@ def validate_form_b_meeting_invitation_ready(db: Session, form_b_id: int):
         )
     if not context.meeting_id:
         raise CRUDValidationError("Form B is not assigned to a meeting.")
-    if not context.protocol_number:
-        raise CRUDValidationError("Protocol number is not assigned.")
     if not os.getenv("IAEC_SMTP_HOST") or not os.getenv("IAEC_SENDER_EMAIL"):
         raise CRUDValidationError(
             "Email settings are not configured. Set IAEC_SMTP_HOST and IAEC_SENDER_EMAIL in the backend environment."
@@ -253,11 +269,17 @@ def validate_form_b_meeting_invitation_ready(db: Session, form_b_id: int):
     return context
 
 
+def _invitation_attachment_filename(context) -> str:
+    if context.protocol_number:
+        return f"form_b_{context.protocol_number.replace('/', '_')}.pdf"
+    return f"form_b_{context.form_b_id}.pdf"
+
+
 def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> None:
     context = validate_form_b_meeting_invitation_ready(db, form_b_id)
 
     pdf_bytes = render_form_b_application_pdf(db, context.project_id)
-    subject = _build_meeting_invitation_email_subject(context.protocol_number)
+    subject = _build_meeting_invitation_email_subject(context)
     body = _build_meeting_invitation_email_body(context)
 
     _send_email_with_attachment(
@@ -265,7 +287,7 @@ def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> None:
         subject=subject,
         body=body,
         attachment_bytes=pdf_bytes,
-        attachment_filename=f"form_b_{context.protocol_number.replace('/', '_')}.pdf",
+        attachment_filename=_invitation_attachment_filename(context),
     )
 
 
