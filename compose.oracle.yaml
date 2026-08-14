@@ -4,7 +4,7 @@
 
 services:
   backend:
-    ports:
+    ports: !override
       - "127.0.0.1:${PORT:-8000}:8000"
     volumes:
       - ${LMCPAFM_DATA_DIR:-/opt/lmcpafm/data}:/data
@@ -15,9 +15,9 @@ services:
       LMCP_LOGO_PATH: /app/static/branding/lmcp-logo.png
 
   frontend:
-    ports:
+    ports: !override
       - "127.0.0.1:${FRONTEND_PROD_PORT:-8080}:80"
 
   postgres:
-    ports:
+    ports: !override
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
