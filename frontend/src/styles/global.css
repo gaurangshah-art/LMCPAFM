@@ -881,6 +881,22 @@ tbody tr:last-child td {
   margin: 0.5rem 0;
 }
 
+.notice-banner {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fffbeb;
+}
+
+.notice-banner p {
+  margin: 0 0 0.75rem;
+}
+
+.warning-banner {
+  border-color: #f59e0b;
+}
+
 .tab-button {
   border: 1px solid var(--border);
   background: #fff;

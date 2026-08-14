@@ -1,4 +1,5 @@
 import { apiClient, setAccessToken } from "./client";
+import { setStoredAccessToken } from "../auth/session";
 import type {
   InvestigatorRegisterRequest,
   InvestigatorRegisterResponse,
@@ -22,6 +23,13 @@ export async function registerInvestigator(
     "/auth/register-investigator",
     payload,
   );
+  return data;
+}
+
+export async function refreshSession(): Promise<TokenResponse> {
+  const { data } = await apiClient.post<TokenResponse>("/auth/refresh");
+  setAccessToken(data.access_token);
+  setStoredAccessToken(data.access_token);
   return data;
 }
 

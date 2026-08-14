@@ -74,3 +74,30 @@ def test_login_invalid_password_returns_401(client, admin_auth_headers):
 
     assert login_res.status_code == 401, login_res.text
     assert login_res.json()["detail"] == "Invalid credentials"
+
+
+def test_refresh_session_returns_new_token(client, admin_auth_headers):
+    unique_email = f"refresh_{uuid4().hex[:8]}@example.com"
+    user_payload = {
+        "name": "Refresh User",
+        "email": unique_email,
+        "password": "StrongPass@123",
+        "roles": ["staff"],
+        "status": True,
+    }
+
+    create_res = client.post("/users/", json=user_payload, headers=admin_auth_headers)
+    assert create_res.status_code == 201, create_res.text
+
+    login_res = client.post(
+        "/auth/login",
+        json={"email": unique_email, "password": "StrongPass@123"},
+    )
+    assert login_res.status_code == 200, login_res.text
+    token = login_res.json()["access_token"]
+
+    refresh_res = client.post("/auth/refresh", headers={"Authorization": f"Bearer {token}"})
+    assert refresh_res.status_code == 200, refresh_res.text
+    data = refresh_res.json()
+    assert data["access_token"]
+    assert data["token_type"] == "bearer"

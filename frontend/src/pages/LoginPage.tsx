@@ -16,7 +16,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface LoginPageProps {
-  onAuthenticated: (accessToken: string) => Promise<void>;
+  onAuthenticated: (accessToken: string, returnTo?: string | null) => Promise<void>;
 }
 
 export function LoginPage({ onAuthenticated }: LoginPageProps) {
@@ -24,6 +24,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
 
   const expired = new URLSearchParams(location.search).get("expired") === "1";
   const registered = new URLSearchParams(location.search).get("registered") === "1";
+  const returnTo = new URLSearchParams(location.search).get("returnTo");
 
   const {
     register,
@@ -51,7 +52,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
     try {
       const token = await login(values);
 
-      await onAuthenticated(token.access_token);
+      await onAuthenticated(token.access_token, returnTo);
 
       succeed("Authenticated successfully.");
 
@@ -70,7 +71,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
 
       {/* ⭐ Show session expired message */}
       {expired && (
-        <ErrorAlert message="Your session has expired. Please log in again." />
+        <ErrorAlert message="Your session has expired. Please log in again. Any work you saved to the server or restored from this browser is still available." />
       )}
 
       {registered && (

@@ -2,10 +2,13 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getCurrentUser } from "../api/authApi";
 import { getAccessToken, setAccessToken } from "../api/client";
+import { SessionMonitor } from "../components/common/SessionMonitor";
 import {
+  clearReturnToPath,
   clearStoredSession,
   getStoredAccessToken,
   hasStoredAccessToken,
+  readReturnToPath,
   setStoredAccessToken,
 } from "../auth/session";
 import type { User } from "../api/types";
@@ -113,7 +116,7 @@ export default function App() {
     };
   }, []);
 
-  async function handleAuthenticated(accessToken: string) {
+  async function handleAuthenticated(accessToken: string, preferredReturnTo?: string | null) {
     setStoredAccessToken(accessToken);
     setAccessToken(accessToken);
     setIsAuthLoading(true);
@@ -122,10 +125,13 @@ export default function App() {
       const user = await getCurrentUser();
       setCurrentUser(user);
 
-      const primaryRole = user.roles[0];
-      let redirectPath = primaryRole ? (roleHome[primaryRole] ?? "/") : "/";
+      const returnTo = preferredReturnTo ?? readReturnToPath();
+      clearReturnToPath();
 
-      if (user.roles.includes("investigator")) {
+      const primaryRole = user.roles[0];
+      let redirectPath = returnTo ?? (primaryRole ? (roleHome[primaryRole] ?? "/") : "/");
+
+      if (!returnTo && user.roles.includes("investigator")) {
         try {
           const profile = await getMyInvestigatorProfile();
           if (!profile.is_complete) {
@@ -155,6 +161,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <SessionMonitor currentUser={currentUser} />
       <Navbar
         currentUser={currentUser}
         isAuthLoading={isAuthLoading}

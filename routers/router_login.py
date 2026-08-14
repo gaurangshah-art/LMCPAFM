@@ -12,6 +12,7 @@ from schemas.schemas_auth import (
     LoginRequest,
     TokenResponse,
 )
+from dependencies.auth import get_current_user
 from utils.security import create_access_token, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -75,4 +76,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         action="auth.login",
         details=f"Successful login for {user.email}",
     )
+    return TokenResponse(access_token=token)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_session(current_user: User = Depends(get_current_user)):
+    """Issue a new access token while the current one is still valid."""
+    token = create_access_token({"sub": str(current_user.id), "email": current_user.email})
     return TokenResponse(access_token=token)

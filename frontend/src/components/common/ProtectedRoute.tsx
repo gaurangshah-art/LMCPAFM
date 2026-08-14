@@ -23,7 +23,8 @@ export function ProtectedRoute({
 
   // Not logged in → redirect to login
   if (!currentUser) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    const returnTo = encodeURIComponent(`${location.pathname}${location.search}`);
+    return <Navigate to={`/login?returnTo=${returnTo}`} replace />;
   }
 
   // Role restriction exists → enforce it

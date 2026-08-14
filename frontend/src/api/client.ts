@@ -1,5 +1,5 @@
 import axios from "axios";
-import { clearStoredSession, getStoredAccessToken } from "../auth/session";
+import { clearStoredSession, getStoredAccessToken, stashReturnToPath } from "../auth/session";
 
 const defaultBaseUrl = "http://127.0.0.1:8000";
 
@@ -45,7 +45,7 @@ api.interceptors.response.use(
     originalRequest._retry = true;
 
     const requestUrl = String(originalRequest.url ?? "");
-    if (requestUrl.includes("/auth/login")) {
+    if (requestUrl.includes("/auth/login") || requestUrl.includes("/auth/refresh")) {
       return Promise.reject(error);
     }
 
@@ -53,7 +53,13 @@ api.interceptors.response.use(
     setAccessToken(null);
 
     if (!window.location.pathname.startsWith("/login")) {
-      window.location.replace("/login?expired=1");
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      stashReturnToPath(returnTo);
+      const params = new URLSearchParams({ expired: "1" });
+      if (returnTo && !returnTo.startsWith("/login")) {
+        params.set("returnTo", returnTo);
+      }
+      window.location.replace(`/login?${params.toString()}`);
     }
 
     return Promise.reject(error);

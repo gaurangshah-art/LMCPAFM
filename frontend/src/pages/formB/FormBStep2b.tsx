@@ -30,6 +30,8 @@ import {
   FATE_TYPE_OPTIONS,
 } from "../../constants/formBStudyPlan";
 import { LoadingState } from "../../components/common/LoadingState";
+import { DraftRestoreBanner } from "../../components/common/DraftRestoreBanner";
+import { useFormDraftPersistence } from "../../hooks/useFormDraftPersistence";
 
 const PHASE_CODES = [
   { value: "pilot", label: "Pilot" },
@@ -196,6 +198,23 @@ export function FormBStep2b() {
   );
 
   const animalSummary = useMemo(() => computeAnimalSummary(phases), [phases]);
+
+  const step2bDraft = useMemo(
+    () => ({ designRationale, animalRationale, phases }),
+    [designRationale, animalRationale, phases],
+  );
+
+  const { restoreOffer, acceptRestore, dismissRestore, clearDraft } = useFormDraftPersistence({
+    formBId,
+    stepKey: "step2b",
+    draft: step2bDraft,
+    hydrated: !loadingSaved,
+    applyDraft: (saved) => {
+      setDesignRationale(saved.designRationale);
+      setAnimalRationale(saved.animalRationale);
+      setPhases(saved.phases);
+    },
+  });
 
   useEffect(() => {
     if (totalAnimals <= 0) return;
@@ -510,6 +529,7 @@ export function FormBStep2b() {
         phases: payloadPhases,
         animal_rationale: serializeAnimalRationale(animalRationale),
       });
+      clearDraft();
       if (nextPath) navigate(nextPath);
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));
@@ -562,6 +582,10 @@ export function FormBStep2b() {
           Step 3 is needed.
         </p>
       </header>
+
+      {restoreOffer ? (
+        <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />
+      ) : null}
 
       {!formBId && <p className="error-text">Form B ID not found. Please complete Step 1 first.</p>}
       {errorMessage ? <p className="error-text">{errorMessage}</p> : null}

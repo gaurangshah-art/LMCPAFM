@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   getFormBReview,
@@ -13,6 +13,8 @@ import { LoadingState } from "../../components/common/LoadingState";
 import { SuccessNote } from "../../components/common/SuccessNote";
 import { InstitutionalFieldsPanel } from "../../components/forms/InstitutionalFieldsPanel";
 import { RESEARCH_TYPES } from "../../constants/institution";
+import { DraftRestoreBanner } from "../../components/common/DraftRestoreBanner";
+import { useFormDraftPersistence } from "../../hooks/useFormDraftPersistence";
 import { useStoredFormBId } from "../../hooks/useStoredFormBId";
 
 export function FormBStep1() {
@@ -34,6 +36,46 @@ export function FormBStep1() {
   const [experience, setExperience] = useState("");
   const [researchType, setResearchType] = useState("");
   const [contactEmailSaved, setContactEmailSaved] = useState<boolean | null>(null);
+
+  const step1Draft = useMemo(
+    () => ({
+      principalInvestigator,
+      designation,
+      department,
+      contactEmail,
+      contactPhone,
+      qualifications,
+      experience,
+      researchType,
+    }),
+    [
+      principalInvestigator,
+      designation,
+      department,
+      contactEmail,
+      contactPhone,
+      qualifications,
+      experience,
+      researchType,
+    ],
+  );
+
+  const { restoreOffer, acceptRestore, dismissRestore, clearDraft } = useFormDraftPersistence({
+    formBId,
+    stepKey: "step1",
+    draft: step1Draft,
+    hydrated: !prefillLoading && !validating,
+    applyDraft: (saved) => {
+      setPrincipalInvestigator(saved.principalInvestigator);
+      setDesignation(saved.designation);
+      setDepartment(saved.department);
+      setContactEmail(saved.contactEmail);
+      setContactPhone(saved.contactPhone);
+      setQualifications(saved.qualifications);
+      setExperience(saved.experience);
+      setResearchType(saved.researchType);
+    },
+  });
 
   function applyAutofill(autofill: FormBStep1Autofill) {
     setInstitutional(autofill);
@@ -152,6 +194,7 @@ export function FormBStep1() {
         research_type: researchType,
       });
       setContactEmailSaved(true);
+      clearDraft();
 
       navigate("/form-b/step-2");
     } catch (error) {
@@ -171,6 +214,10 @@ export function FormBStep1() {
         <h2>Form B – Step 1</h2>
         <p>Section I: Establishment details and principal investigator information.</p>
       </header>
+
+      {restoreOffer ? (
+        <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />
+      ) : null}
 
       {!profileComplete ? (
         <p className="auth-note" role="note">

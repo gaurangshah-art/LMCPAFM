@@ -12,6 +12,8 @@ import {
   FUNDING_PROOF_REFERENCE_OPTIONS,
   parseFundingProofReferences,
 } from "../../constants/formBStep2";
+import { DraftRestoreBanner } from "../../components/common/DraftRestoreBanner";
+import { useFormDraftPersistence } from "../../hooks/useFormDraftPersistence";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
 import { validateDateOnOrAfter } from "../../utils/businessValidation";
 
@@ -77,6 +79,14 @@ export function FormBStep2() {
     setShowLegacyFundingNote(hadLegacyText);
     setHydrated(true);
   }, [saved, hydrated]);
+
+  const { restoreOffer, acceptRestore, dismissRestore, clearDraft } = useFormDraftPersistence({
+    formBId,
+    stepKey: "step2",
+    draft: form,
+    hydrated,
+    applyDraft: setForm,
+  });
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -179,6 +189,7 @@ export function FormBStep2() {
         expected_outcomes: form.expectedOutcomes.trim(),
         study_plan_annexure_reference: form.annexureReference.trim(),
       });
+      clearDraft();
 
       navigate("/form-b/step-2b");
     } catch (error) {
@@ -200,6 +211,10 @@ export function FormBStep2() {
         <h2>Form B – Step 2</h2>
         <p>Section II: Project protocol details.</p>
       </header>
+
+      {restoreOffer ? (
+        <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />
+      ) : null}
 
       {!formBId && (
         <p className="error-text">Form B ID not found. Please complete Step 1 first.</p>
