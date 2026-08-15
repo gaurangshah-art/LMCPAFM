@@ -53,7 +53,6 @@ import { StaffFacilityPage } from "../pages/StaffFacilityPage";
 import { FormCPage } from "../pages/FormCPage";
 import { IAECProjectViewPage } from "../pages/IAECProjectViewPage";
 import { IAECProjectEditPage } from "../pages/IAECProjectEditPage";
-import { IAECWorkflowDashboardPage } from "../pages/IAECWorkflowDashboardPage";
 import { ProjectWorkspacePage } from "../pages/ProjectWorkspacePage";
 import { ExperimentEntryPage } from "../pages/experiment/ExperimentEntryPage";
 import { ExperimentLogsEntryPage } from "../pages/experiment/ExperimentLogsEntryPage";
@@ -306,7 +305,7 @@ export default function App() {
               <ProtectedRoute
                 currentUser={currentUser}
                 isAuthLoading={isAuthLoading}
-                allowedRoles={["iaec", "investigator"]}
+                allowedRoles={["iaec", "investigator", "staff", "admin"]}
               >
                 <IaecApprovalCertificate currentUser={currentUser!} />
               </ProtectedRoute>
@@ -315,15 +314,7 @@ export default function App() {
 
           <Route
             path="/iaec/workflow"
-            element={
-              <ProtectedRoute
-                currentUser={currentUser}
-                isAuthLoading={isAuthLoading}
-                allowedRoles={["iaec"]}
-              >
-                <IAECWorkflowDashboardPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/iaec-dashboard" replace />}
           />
 
           <Route
@@ -417,14 +408,14 @@ export default function App() {
             }
           />
 
-          {/* REQUISITIONS — investigator */}
+          {/* REQUISITIONS — investigator, staff, iaec */}
           <Route
             path="/requisitions"
             element={
               <ProtectedRoute
                 currentUser={currentUser}
                 isAuthLoading={isAuthLoading}
-                allowedRoles={["investigator"]}
+                allowedRoles={["investigator", "staff", "iaec"]}
               >
                 <RequisitionPage currentUser={currentUser} />
               </ProtectedRoute>
@@ -598,7 +589,7 @@ export default function App() {
               <ProtectedRoute
                 currentUser={currentUser}
                 isAuthLoading={isAuthLoading}
-                allowedRoles={["staff"]}
+                allowedRoles={["staff", "iaec"]}
               >
                 <AllocationPage currentUser={currentUser} />
               </ProtectedRoute>

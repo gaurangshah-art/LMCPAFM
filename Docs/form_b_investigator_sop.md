@@ -99,8 +99,10 @@ Register → Login → Complete Profile → Step 1 → Step 2 → Step 2b → St
 After submission:
 
 ```
-Submitted → IAEC review → Meeting assignment → Protocol number → IAEC decision → Approval certificate (if approved)
+Submitted → IAEC review → Meeting assignment → Meeting invitation (optional) → IAEC decision → Protocol number → Approval certificate (if approved)
 ```
+
+After submission, opening any Form B wizard step redirects to the **read-only view** at `/form-b/view?formBId=…` where the investigator can review data and download the Form B PDF but **cannot edit**.
 
 **Important rule:** You must click **Save and continue** (or equivalent save action) on **each step**. Data shown from autofill or previously entered in the browser is **not saved** until you explicitly save that step.
 
@@ -459,11 +461,11 @@ On success you are redirected to the **Investigator Dashboard** with project sta
 
 | Stage | What happens | Your action |
 |-------|--------------|-------------|
-| **Submitted** | IAEC secretariat reviews completeness | Monitor dashboard status |
+| **Submitted** | IAEC secretariat reviews completeness | Monitor dashboard status; Form B is read-only |
 | **Meeting assigned** | Form B scheduled on an IAEC meeting | Ensure Step 1 contact email is correct |
-| **Protocol number generated** | Official number e.g. `LMCP/IAEC/YYYY/meeting/serial` | Note protocol number from dashboard |
 | **Meeting invitation email** | Sent to PI contact email with Form B PDF attached | Check inbox; contact IAEC if not received |
 | **IAEC decision** | Approved, approved with revisions, amended count, or rejected | View decision on dashboard / project workspace |
+| **Protocol number generated** | Official number e.g. `LMCP/IAEC/YYYY/meeting/serial` | Note protocol number from dashboard |
 | **Approval certificate** | Available when approved | Download from project workspace when permitted |
 
 **You may not begin animal experimentation until written IAEC approval is received** (Declaration 9).
@@ -514,7 +516,8 @@ Supported upload format: **PDF** (recommended).
 | Step 7 certificate error | Reference entered but file missing | Upload matching certificate |
 | Submit blocked — faculty | No faculty on team | Add LMCP faculty member on Step 2 |
 | Submit blocked — missing step | Step not saved | Open missing step and save |
-| Cannot edit after submit | Normal behaviour | Contact IAEC for approved amendments |
+| Cannot edit after submit | Normal behaviour | Open **View submitted Form B** from project workspace; contact IAEC for approved amendments |
+| Wizard opens then redirects to view page | Form B already submitted | Expected — use read-only view and PDF download |
 | Form B ID not found | Browser storage cleared | Open project from Investigator Dashboard |
 
 ---

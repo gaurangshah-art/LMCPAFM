@@ -15,7 +15,6 @@ const navItems: NavItem[] = [
   { to: "/users", label: "Users", roles: ["staff"] },
   { to: "/admin-dashboard", label: "Superadmin", roles: ["admin"] },
   { to: "/iaec-dashboard", label: "IAEC Dashboard", roles: ["iaec"] },
-  { to: "/iaec/workflow", label: "IAEC Workflow", roles: ["iaec"] },
   { to: "/iaec-projects", label: "IAEC Projects", roles: ["iaec"] },
   { to: "/admin/masters", label: "Master Data", roles: ["admin"] },
   { to: "/form-b/step-1", label: "New Form B", roles: ["investigator"] },

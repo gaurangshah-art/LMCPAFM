@@ -115,20 +115,22 @@ Investigator submits Form B
         ↓
 IAEC reviews completeness (Form B PDF, attachments, Annexure I)
         ↓
-Create IAEC meeting (number + date)
+Create IAEC meeting (number, date, time, venue)
         ↓
 Assign Form B to meeting
+        ↓
+Send meeting invitation email to PI (optional; may be sent before or after protocol)
         ↓
 Record meeting decision
         ↓
 [If approved] Generate LMCP/IAEC protocol number
         ↓
-Send meeting invitation email to PI (with Form B PDF)
-        ↓
 PI may begin work only after written approval (Declaration 9)
         ↓
 [Later] Provisional → Final → Signed hard-copy certificate
 ```
+
+**Note:** **Send invitation** is available as soon as Form B is assigned to a meeting. Protocol number and approved decision are **not** required to send the invitation; the email text and PDF attachment adapt whether a protocol number exists yet.
 
 **Primary workspace:** **IAEC Dashboard** at `/iaec-dashboard`
 
@@ -143,12 +145,11 @@ PI may begin work only after written approval (Declaration 9)
 |-----------|-----|---------|
 | IAEC Dashboard | `/iaec-dashboard` | Main Form B workflow hub |
 | IAEC Projects | `/iaec-projects` | List/create projects |
-| IAEC Workflow | `/iaec/workflow` | Legacy project list (see note below) |
 | Form C | `/form-c` | Breeding & stock register (read-only) |
 | Allocations | `/allocations` | Issue animals against approved requisitions |
 | Requisitions | `/requisitions` | View/create requisitions (if needed) |
 
-**Note on IAEC Workflow page:** `/iaec/workflow` shows Approve/Reject buttons that call legacy endpoints. **Use IAEC Dashboard** for the current Form B decision workflow (assign meeting → record decision → generate protocol).
+**Note:** The old **IAEC Workflow** menu item (`/iaec/workflow`) redirects to **IAEC Dashboard**. Use the dashboard for all Form B decisions (assign meeting → send invitation → record decision → generate protocol).
 
 ---
 
@@ -182,7 +183,7 @@ PI may begin work only after written approval (Declaration 9)
    - Hazardous-agent certificates if applicable  
    - At least one LMCP faculty on investigator team  
 
-**If incomplete:** Contact the investigator. Form B cannot be edited by IAEC through the wizard; investigator must amend before resubmission (if still in draft) or follow institutional amendment procedure.
+**If incomplete:** Contact the investigator. After submission, Form B is **read-only** for the investigator; they cannot edit wizard steps. If still in draft (not submitted), the investigator can amend and resubmit.
 
 ---
 
@@ -196,6 +197,8 @@ PI may begin work only after written approval (Declaration 9)
 |-------|----------|-------|
 | Meeting number | **Yes** | e.g. `8` — used in protocol number |
 | Meeting date | **Yes** | ISO date |
+| Meeting time | **Yes** | e.g. `10:30` — shown in invitation email |
+| Venue | **Yes** | e.g. `IAEC Conference Room` — shown in invitation email |
 | Minutes | No | Optional text; can be added later |
 
 **Action:** Click **Create meeting** → returns to IAEC Dashboard.
@@ -224,7 +227,7 @@ Without a meeting number, protocol generation **will fail**.
 
 **Prerequisite:** Meeting must exist (Step 5.4).
 
-**After assignment:** The **Record decision** button becomes available.
+**After assignment:** **Record decision**, **Send invitation**, and (after approval) **Generate protocol** buttons become available.
 
 ---
 
@@ -282,38 +285,40 @@ Without a meeting number, protocol generation **will fail**.
 - Sets `project.status` to `approved` (if not already set)  
 - Syncs **experiment groups** from the Form B study plan (Annexure I)  
 
-**After generation:** **Send invitation** button becomes available.
+**After generation:** Protocol number appears in dashboard and on Form B PDF. Send a follow-up invitation if the PI was notified before the protocol was issued.
 
 ---
 
 ### 5.8 Step 6 — Send meeting invitation email
 
-**Where:** IAEC Dashboard → **Send invitation**.
+**Where:** IAEC Dashboard → **Send invitation** (also available on **Meeting details** for each assigned Form B).
 
 **Prerequisites:**
 
 | # | Check |
 |---|-------|
-| 1 | Protocol number generated |
-| 2 | Approved decision recorded |
-| 3 | PI contact email resolvable (Form B Step 1, saved) |
-| 4 | SMTP configured on server |
+| 1 | Form B submitted and assigned to a meeting |
+| 2 | PI contact email resolvable (Form B Step 1, saved) |
+| 3 | SMTP configured on server |
+
+Protocol number and approved decision are **not** required. If a protocol number exists, it is included in the email subject and body.
 
 **Email contents:**
 
-- Meeting date and number  
-- Protocol number  
+- Meeting date, time, venue, and number  
+- Protocol number (if already generated)  
 - Form B application PDF attachment  
-- Optional Google Form link for PPT upload (`IAEC_PPT_GOOGLE_FORM_URL`)  
-- Support contact (`IAEC_SUPPORT_CONTACT`)  
+- Google Form link for PPT upload (`IAEC_PPT_GOOGLE_FORM_URL`) when configured  
+- Support contact (`IAEC_SUPPORT_CONTACT`) when configured  
 
-**Action:** Confirm → email is queued for delivery.
+**Action:** Confirm → email is sent **immediately**. The UI shows **“Invitation sent to …@lmcp.ac.in”** on success, or an SMTP error if delivery fails.
 
 **If email fails:**
 
 - Verify investigator saved contact email on Form B Step 1 (not just profile prefilled)  
-- Verify SMTP settings in `.env`  
-- Check PI email is `@lmcp.ac.in` institutional address  
+- Verify SMTP settings in `.env` (`IAEC_SMTP_HOST`, `IAEC_SENDER_EMAIL`, credentials)  
+- Check PI inbox and spam folder  
+- Check backend logs: `docker compose logs backend --tail 50`
 
 ---
 
@@ -321,7 +326,7 @@ Without a meeting number, protocol generation **will fail**.
 
 **View meeting details:** `/iaec/meetings/:meetingId`
 
-Shows all Form B applications assigned to that meeting with links to review.
+Shows all Form B applications assigned to that meeting with links to review and **Send invitation** per project. Meeting assignment is done on the **IAEC Dashboard**, not on this page.
 
 **Download meeting summary PDF:** IAEC Dashboard → **IAEC meetings** section → **Download summary** for a meeting.
 
@@ -345,7 +350,7 @@ Produces a PDF listing all projects, investigators, protocol numbers, and decisi
 
 1. **View** certificate data (establishment, CPCSEA no., protocol, PI, meeting, decision, animal usage).  
 2. **Download system PDF** — provisional or final depending on project state.  
-3. **Upload signed certificate** (IAEC, staff, or admin) — PDF/JPG/PNG after digital final requirements are met.
+3. **Upload signed certificate** (IAEC, staff, or admin) — PDF/JPG/PNG after digital final requirements are met. Frontend route `/iaec/project/:projectId/certificate` allows **iaec**, **staff**, and **admin** roles (in addition to investigator view/download).
 
 **Signed upload prerequisites:**
 
@@ -402,9 +407,9 @@ Detailed animal-issue procedures are typically performed by **facility staff**; 
 | 1 | Review submitted Form B | IAEC Dashboard / Project review |
 | 2 | Create meeting | `/iaec/meetings/new` |
 | 3 | Assign Form B to meeting | IAEC Dashboard |
-| 4 | Record decision | IAEC Dashboard |
-| 5 | Generate protocol | IAEC Dashboard |
-| 6 | Send invitation | IAEC Dashboard |
+| 4 | Send invitation (optional; before or after decision) | IAEC Dashboard or Meeting details |
+| 5 | Record decision | IAEC Dashboard |
+| 6 | Generate protocol (after approved decision) | IAEC Dashboard |
 | 7 | Download meeting summary | IAEC Dashboard |
 | 8 | Monitor certificates | `/iaec/project/:id/certificate` |
 
@@ -583,9 +588,10 @@ For routine certificate workflow, IAEC secretariat should perform uploads. Super
 | Cannot assign meeting | No meetings created | Create meeting first |
 | Generate protocol disabled | No approved decision | Record approved decision |
 | Generate protocol fails | Meeting missing number | Edit meeting or recreate with number |
-| Send invitation fails | SMTP not configured | Set `IAEC_SMTP_*` in `.env` |
+| Send invitation fails | SMTP not configured | Set `IAEC_SMTP_*` in `.env`; restart backend |
 | Send invitation fails | No PI email | Investigator must save Step 1 contact email |
-| PI did not receive email | Wrong/unsaved email | Verify Form B Step 1; resend |
+| Send invitation fails | SMTP auth / relay error | UI shows delivery error; check logs and Gmail app password |
+| PI did not receive email | Wrong/unsaved email or spam | Verify Form B Step 1; check spam; resend from dashboard |
 | Certificate shows provisional only | Experiment work incomplete | PI must complete groups, allocations, logs |
 | Cannot upload signed cert | Final requirements not met | Complete experiment workflow first |
 
@@ -666,6 +672,7 @@ For routine certificate workflow, IAEC secretariat should perform uploads. Super
 | Based on | Application behaviour as implemented in LMCPAFM |
 | Review cycle | Update when IAEC workflow, roles, or certificate logic changes |
 | Maintainer | LMCPAFM system administrator |
+| Version | 1.1 — Aug 2026: invitation before protocol, sync email, meeting time/venue, Form B read-only after submit |
 
 For technical failures, contact the LMCPAFM system administrator. For ethical/regulatory questions, contact the IAEC Chairperson / Member Secretary.
 
