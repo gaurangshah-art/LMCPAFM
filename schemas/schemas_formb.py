@@ -493,6 +493,7 @@ class FormBReviewRead(BaseModel):
 class FormBInvitationSendRead(BaseModel):
     ok: bool = True
     sent_to: str
+    protocol_number: str
 
 
 class FormBAttachmentRead(BaseModel):

@@ -252,29 +252,38 @@ def _get_decision_for_form_b_meeting(
     )
 
 
-def generate_form_b_protocol_number(db: Session, form_b_id: int) -> tuple[FormB, str]:
-    form_b = get_form_b_by_id(db, form_b_id)
-    _assert_form_b_submitted_for_iaec(form_b)
+def _assign_protocol_number(
+    db: Session,
+    form_b: FormB,
+    *,
+    require_approved_decision: bool,
+    finalize_approval: bool,
+) -> str:
     project = _get_project_for_form_b(db, form_b)
     if project is None:
         raise CRUDNotFoundError("Linked IAEC project not found")
 
     existing = _normalize_protocol_number(project.protocol_number)
     if existing:
-        raise CRUDValidationError("Protocol number already exists for this project")
+        return existing
 
     if form_b.meeting_id is None:
-        raise CRUDValidationError("Form B must be assigned to an IAEC meeting before generating a protocol number")
+        raise CRUDValidationError(
+            "Form B must be assigned to an IAEC meeting before generating a protocol number"
+        )
 
     meeting = _get_meeting_or_raise(db, form_b.meeting_id)
     if not meeting.meeting_number or not str(meeting.meeting_number).strip():
-        raise CRUDValidationError("IAEC meeting must have a meeting number before generating protocol numbers")
-
-    decision = _get_decision_for_form_b_meeting(db, form_b.id, meeting.id)
-    if decision is None or decision.decision not in APPROVED_CERTIFICATE_DECISIONS:
         raise CRUDValidationError(
-            "Protocol number can only be generated after an approved IAEC meeting decision"
+            "IAEC meeting must have a meeting number before generating protocol numbers"
         )
+
+    if require_approved_decision:
+        decision = _get_decision_for_form_b_meeting(db, form_b.id, meeting.id)
+        if decision is None or decision.decision not in APPROVED_CERTIFICATE_DECISIONS:
+            raise CRUDValidationError(
+                "Protocol number can only be generated after an approved IAEC meeting decision"
+            )
 
     year = meeting.date.year
     serial = _count_protocols_for_meeting(db, meeting.id) + 1
@@ -282,9 +291,60 @@ def generate_form_b_protocol_number(db: Session, form_b_id: int) -> tuple[FormB,
 
     try:
         project.protocol_number = protocol_number
-        project.approval_date = meeting.date
-        if not project.status:
+        if finalize_approval:
+            project.approval_date = meeting.date
             project.status = "approved"
+            from crud.formb_study_plan import sync_experiment_groups_from_study_plan
+
+            sync_experiment_groups_from_study_plan(db, project.id)
+        db.commit()
+        db.refresh(form_b)
+        db.refresh(project)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise CRUDDatabaseError(str(exc)) from exc
+
+    return protocol_number
+
+
+def ensure_form_b_protocol_number_for_invitation(db: Session, form_b_id: int) -> str:
+    form_b = get_form_b_by_id(db, form_b_id)
+    _assert_form_b_submitted_for_iaec(form_b)
+    return _assign_protocol_number(
+        db,
+        form_b,
+        require_approved_decision=False,
+        finalize_approval=False,
+    )
+
+
+def finalize_form_b_protocol_approval(db: Session, form_b_id: int) -> tuple[FormB, str]:
+    form_b = get_form_b_by_id(db, form_b_id)
+    _assert_form_b_submitted_for_iaec(form_b)
+    project = _get_project_for_form_b(db, form_b)
+    if project is None:
+        raise CRUDNotFoundError("Linked IAEC project not found")
+
+    protocol_number = _normalize_protocol_number(project.protocol_number)
+    if not protocol_number:
+        raise CRUDValidationError("Generate or send a meeting invitation to assign a protocol number first")
+
+    if form_b.meeting_id is None:
+        raise CRUDValidationError("Form B must be assigned to an IAEC meeting")
+
+    meeting = _get_meeting_or_raise(db, form_b.meeting_id)
+    decision = _get_decision_for_form_b_meeting(db, form_b.id, meeting.id)
+    if decision is None or decision.decision not in APPROVED_CERTIFICATE_DECISIONS:
+        raise CRUDValidationError(
+            "Protocol approval can only be finalized after an approved IAEC meeting decision"
+        )
+
+    if (project.status or "").strip().lower() == "approved":
+        return form_b, protocol_number
+
+    try:
+        project.approval_date = meeting.date
+        project.status = "approved"
         from crud.formb_study_plan import sync_experiment_groups_from_study_plan
 
         sync_experiment_groups_from_study_plan(db, project.id)
@@ -295,6 +355,29 @@ def generate_form_b_protocol_number(db: Session, form_b_id: int) -> tuple[FormB,
         db.rollback()
         raise CRUDDatabaseError(str(exc)) from exc
 
+    return form_b, protocol_number
+
+
+def generate_form_b_protocol_number(db: Session, form_b_id: int) -> tuple[FormB, str]:
+    form_b = get_form_b_by_id(db, form_b_id)
+    _assert_form_b_submitted_for_iaec(form_b)
+    project = _get_project_for_form_b(db, form_b)
+    if project is None:
+        raise CRUDNotFoundError("Linked IAEC project not found")
+
+    existing = _normalize_protocol_number(project.protocol_number)
+    if existing:
+        if (project.status or "").strip().lower() != "approved":
+            return finalize_form_b_protocol_approval(db, form_b_id)
+        raise CRUDValidationError("Protocol number already exists for this project")
+
+    protocol_number = _assign_protocol_number(
+        db,
+        form_b,
+        require_approved_decision=True,
+        finalize_approval=True,
+    )
+    db.refresh(form_b)
     return form_b, protocol_number
 
 

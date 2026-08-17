@@ -442,8 +442,8 @@ def send_form_b_meeting_invitation_sync(
     _user=Depends(require_iaec),
 ):
     try:
-        sent_to = send_form_b_meeting_invitation_email(db, form_b_id)
-        return {"ok": True, "sent_to": sent_to}
+        result = send_form_b_meeting_invitation_email(db, form_b_id)
+        return {"ok": True, **result}
     except CRUDNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except CRUDValidationError as exc:

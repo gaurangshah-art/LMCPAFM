@@ -311,7 +311,9 @@ Protocol number and approved decision are **not** required. If a protocol number
 - Google Form link for PPT upload (`IAEC_PPT_GOOGLE_FORM_URL`) when configured  
 - Support contact (`IAEC_SUPPORT_CONTACT`) when configured  
 
-**Action:** Confirm → email is sent **immediately**. The UI shows **“Invitation sent to …@lmcp.ac.in”** on success, or an SMTP error if delivery fails.
+**Action:** Confirm → the system **assigns the LMCP/IAEC protocol number** (if not already set), sends the email **immediately**, and returns the recipient and protocol number. The UI shows **“Invitation sent to …@lmcp.ac.in”** and **“Protocol number: LMCP/IAEC/…”** on success, or an SMTP error if delivery fails.
+
+**Dashboard updates:** After a successful send, **IAEC Dashboard** and the **investigator dashboard** show the protocol number in the project/Form B row (investigator may need to refresh the page).
 
 **If email fails:**
 

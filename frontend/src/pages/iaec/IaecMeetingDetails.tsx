@@ -37,34 +37,23 @@ export function IaecMeetingDetails() {
   const [sendingInvitationId, setSendingInvitationId] = useState<number | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  useEffect(() => {
+  async function loadMeetingDetails() {
     if (!meetingId) return;
+    try {
+      const { data } = await apiClient.get<MeetingDetailsResponse>(
+        `/iaec/meeting/${meetingId}/details`,
+      );
+      setMeeting(data.meeting);
+      setAssignedProjects(data.assigned_projects);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { data } = await apiClient.get<MeetingDetailsResponse>(
-          `/iaec/meeting/${meetingId}/details`,
-        );
-        if (!cancelled) {
-          setMeeting(data.meeting);
-          setAssignedProjects(data.assigned_projects);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setErrorMessage(getApiErrorMessage(error));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+  useEffect(() => {
+    void loadMeetingDetails();
   }, [meetingId]);
 
   async function handleSendInvitation(formBId: number, projectTitle: string) {
@@ -74,7 +63,10 @@ export function IaecMeetingDetails() {
     setActionMessage(null);
     try {
       const result = await sendFormBMeetingInvitation(formBId);
-      setActionMessage(`Invitation sent to ${result.sent_to}.`);
+      setActionMessage(
+        `Invitation sent to ${result.sent_to}. Protocol number: ${result.protocol_number}`,
+      );
+      await loadMeetingDetails();
     } catch (error) {
       setActionMessage(getApiErrorMessage(error));
     } finally {

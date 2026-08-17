@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError
 from crud.formb_documents import render_form_b_application_pdf
-from crud.formb_internal import get_form_b_by_id
+from crud.formb_internal import ensure_form_b_protocol_number_for_invitation, get_form_b_by_id
 from database.database import SessionLocal
 from database.lmcpafm_models import FormBInvestigator, IAECMeeting, IAECProject
 from models.investigator_profile import InvestigatorProfile
@@ -114,7 +114,7 @@ def _send_email_with_attachment(
         filename=attachment_filename,
     )
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=60) as server:
         if smtp_use_tls:
             server.starttls()
         if smtp_username and smtp_password:
@@ -279,8 +279,10 @@ def _invitation_attachment_filename(context) -> str:
     return f"form_b_{context.form_b_id}.pdf"
 
 
-def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> str:
-    context = validate_form_b_meeting_invitation_ready(db, form_b_id)
+def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> dict[str, str]:
+    validate_form_b_meeting_invitation_ready(db, form_b_id)
+    protocol_number = ensure_form_b_protocol_number_for_invitation(db, form_b_id)
+    context = build_form_b_meeting_invitation_context(db, form_b_id)
 
     pdf_bytes = render_form_b_application_pdf(db, context.project_id)
     subject = _build_meeting_invitation_email_subject(context)
@@ -293,7 +295,16 @@ def send_form_b_meeting_invitation_email(db: Session, form_b_id: int) -> str:
         attachment_bytes=pdf_bytes,
         attachment_filename=_invitation_attachment_filename(context),
     )
-    return context.principal_investigator_email
+    logger.info(
+        "Meeting invitation sent for Form B #%s to %s (protocol %s)",
+        form_b_id,
+        context.principal_investigator_email,
+        protocol_number,
+    )
+    return {
+        "sent_to": context.principal_investigator_email,
+        "protocol_number": protocol_number,
+    }
 
 
 def _send_invitation_background(form_b_id: int) -> None:

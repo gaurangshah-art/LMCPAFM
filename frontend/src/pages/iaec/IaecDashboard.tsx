@@ -103,7 +103,10 @@ export function IaecDashboard() {
     setSendingInvitationId(formBId);
     try {
       const result = await sendFormBMeetingInvitation(formBId);
-      alert(`Meeting invitation sent to ${result.sent_to}.`);
+      alert(
+        `Meeting invitation sent to ${result.sent_to}.\nProtocol number: ${result.protocol_number}`,
+      );
+      await loadDashboard();
     } catch (err) {
       alert(getApiErrorMessage(err));
     } finally {
