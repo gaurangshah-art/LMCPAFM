@@ -7,7 +7,7 @@ export function getApiErrorMessage(error: unknown): string {
       return "Network error — check that the backend is running and reachable.";
     }
     if (error.code === "ECONNABORTED") {
-      return "Request timed out. Try again with a smaller file.";
+      return "Request timed out. If uploading a file, try a smaller file; otherwise wait and retry.";
     }
 
     const detail = error.response?.data?.detail;

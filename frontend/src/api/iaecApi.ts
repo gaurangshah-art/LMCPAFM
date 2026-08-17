@@ -283,6 +283,8 @@ export async function sendFormBMeetingInvitation(
 ): Promise<{ ok: boolean; sent_to: string; protocol_number: string }> {
   const { data } = await apiClient.post<{ ok: boolean; sent_to: string; protocol_number: string }>(
     `/iaec/form-b/${formBId}/send-meeting-invitation/sync`,
+    undefined,
+    { timeout: 120000 },
   );
   return data;
 }
