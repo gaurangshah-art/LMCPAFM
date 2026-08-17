@@ -1,3 +1,4 @@
+from datetime import date
 from uuid import uuid4
 
 
@@ -14,12 +15,13 @@ def _seed_room(client, admin_auth_headers, suffix: str):
 def test_environment_log_and_operations_summary(client, staff_auth_headers, admin_auth_headers):
     suffix = uuid4().hex[:6]
     room_id = _seed_room(client, admin_auth_headers, suffix)
+    today = date.today().isoformat()
 
     env_res = client.post(
         "/facility/environment-logs",
         json={
             "room_id": room_id,
-            "date": "2026-07-29",
+            "date": today,
             "temperature_c": 22.5,
             "humidity_pct": 55,
             "hvac_status": "normal",

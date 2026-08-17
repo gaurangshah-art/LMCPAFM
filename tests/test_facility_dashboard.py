@@ -1,3 +1,4 @@
+from datetime import date
 from uuid import uuid4
 
 from database.database import SessionLocal
@@ -67,6 +68,7 @@ def test_autoclave_requires_room(client, staff_auth_headers, admin_auth_headers)
 def test_room_dashboard_marks_stale_care(client, staff_auth_headers, admin_auth_headers):
     suffix = uuid4().hex[:6]
     room_id = _seed_facility_room(client, admin_auth_headers, suffix)
+    today = date.today().isoformat()
 
     dash_before = client.get("/facility/dashboard/rooms?stale_days=7", headers=staff_auth_headers)
     assert dash_before.status_code == 200
@@ -78,7 +80,7 @@ def test_room_dashboard_marks_stale_care(client, staff_auth_headers, admin_auth_
         json={
             "log_type": "room_sanitize",
             "room_id": room_id,
-            "date": "2026-07-28",
+            "date": today,
             "details": "Floor mop and UV cycle",
         },
         headers=staff_auth_headers,
@@ -87,7 +89,7 @@ def test_room_dashboard_marks_stale_care(client, staff_auth_headers, admin_auth_
     dash_after = client.get("/facility/dashboard/rooms?stale_days=7", headers=staff_auth_headers)
     row_after = next(item for item in dash_after.json()["rooms"] if item["room_id"] == room_id)
     assert row_after["care_stale"] is False
-    assert row_after["last_care_date"] == "2026-07-28"
+    assert row_after["last_care_date"] == today
 
 
 def test_pi_dashboard_groups_by_protocol(client, staff_auth_headers, iaec_auth_headers, admin_auth_headers):
