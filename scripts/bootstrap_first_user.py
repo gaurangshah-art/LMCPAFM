@@ -9,6 +9,9 @@ from database.database import SessionLocal, init_db
 from database import lmcpafm_models  # noqa: F401
 from database import lmcpafm_requisition_allocation  # noqa: F401
 from database import lmcpafm_experiments  # noqa: F401
+import models.role  # noqa: F401
+import models.investigator_profile  # noqa: F401
+import models.activity_log  # noqa: F401
 from models.role import Role
 from models.user import User
 from utils.security import hash_password
@@ -79,7 +82,6 @@ def main() -> int:
             existing.name = args.name
             existing.password_hash = hash_password(args.password)
             existing.status = status
-            existing.role = role_names[0]
             existing.roles = db_roles
             db.commit()
             print(f"Updated existing user {args.email}.")
@@ -90,7 +92,6 @@ def main() -> int:
             email=args.email,
             password_hash=hash_password(args.password),
             status=status,
-            role=role_names[0],
         )
         user.roles = db_roles
         db.add(user)

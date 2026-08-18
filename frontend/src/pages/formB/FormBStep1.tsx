@@ -1,16 +1,41 @@
-// src/pages/formB/FormBStep1.tsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { api } from "../../api/client";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  getFormBReview,
+  getFormBStep1Autofill,
+  saveFormBStep1,
+  startFormB,
+  type FormBStep1Autofill,
+} from "../../api/formbApi";
+import {
+  getApiErrorMessage,
+  isFormBAccessDeniedError,
+  isFormBNotFoundError,
+  isRecoverableStoredFormBError,
+} from "../../api/errors";
+import { LoadingState } from "../../components/common/LoadingState";
+import { SuccessNote } from "../../components/common/SuccessNote";
+import { InstitutionalFieldsPanel } from "../../components/forms/InstitutionalFieldsPanel";
+import { RESEARCH_TYPES } from "../../constants/institution";
+import { DraftRestoreBanner } from "../../components/common/DraftRestoreBanner";
+import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
+import { RequiredMark } from "../../components/common/RequiredMark";
+import { WizardActionBar } from "../../components/common/WizardActionBar";
+import { useFormDraftPersistence } from "../../hooks/useFormDraftPersistence";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
+import { useWizardValidation } from "../../hooks/useWizardValidation";
 
 export function FormBStep1() {
   const navigate = useNavigate();
 
-  const [formBId, setFormBId] = useState<number | null>(null);
+  const { formBId, setFormBId, validating, staleNotice, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, validating);
   const [loading, setLoading] = useState(false);
+  const [prefillLoading, setPrefillLoading] = useState(true);
+  const [profileComplete, setProfileComplete] = useState(true);
+  const [institutional, setInstitutional] = useState<FormBStep1Autofill | null>(null);
 
-  const [establishmentName, setEstablishmentName] = useState("");
-  const [registrationNumber, setRegistrationNumber] = useState("");
   const [principalInvestigator, setPrincipalInvestigator] = useState("");
   const [designation, setDesignation] = useState("");
   const [department, setDepartment] = useState("");
@@ -18,102 +43,258 @@ export function FormBStep1() {
   const [contactPhone, setContactPhone] = useState("");
   const [qualifications, setQualifications] = useState("");
   const [experience, setExperience] = useState("");
+  const [researchType, setResearchType] = useState("");
+  const [contactEmailSaved, setContactEmailSaved] = useState<boolean | null>(null);
+  const { validationRef, validationError, showValidationError, clearValidationError } =
+    useWizardValidation();
+
+  const step1Draft = useMemo(
+    () => ({
+      principalInvestigator,
+      designation,
+      department,
+      contactEmail,
+      contactPhone,
+      qualifications,
+      experience,
+      researchType,
+    }),
+    [
+      principalInvestigator,
+      designation,
+      department,
+      contactEmail,
+      contactPhone,
+      qualifications,
+      experience,
+      researchType,
+    ],
+  );
+
+  const { restoreOffer, acceptRestore, dismissRestore, clearDraft } = useFormDraftPersistence({
+    formBId,
+    stepKey: "step1",
+    draft: step1Draft,
+    hydrated: !prefillLoading && !validating,
+    applyDraft: (saved) => {
+      setPrincipalInvestigator(saved.principalInvestigator);
+      setDesignation(saved.designation);
+      setDepartment(saved.department);
+      setContactEmail(saved.contactEmail);
+      setContactPhone(saved.contactPhone);
+      setQualifications(saved.qualifications);
+      setExperience(saved.experience);
+      setResearchType(saved.researchType);
+    },
+  });
+
+  function applyAutofill(autofill: FormBStep1Autofill) {
+    setInstitutional(autofill);
+    setPrincipalInvestigator(autofill.principal_investigator ?? "");
+    setDesignation(autofill.designation ?? "");
+    setDepartment(autofill.department ?? "");
+    setContactEmail(autofill.contact_email ?? "");
+    setContactPhone(autofill.contact_phone ?? "");
+    setQualifications(autofill.qualifications ?? "");
+    setExperience(autofill.experience ?? "");
+    setProfileComplete(autofill.profile_complete);
+  }
+
+  useEffect(() => {
+    if (validating) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const autofill = await getFormBStep1Autofill();
+        if (cancelled) return;
+        applyAutofill(autofill);
+
+        if (formBId) {
+          const review = await getFormBReview(formBId);
+          const step1 = review.step1;
+          if (!cancelled && step1) {
+            setResearchType(String(step1.research_type ?? ""));
+            setPrincipalInvestigator(String(step1.principal_investigator ?? autofill.principal_investigator ?? ""));
+            setDesignation(String(step1.designation ?? autofill.designation ?? ""));
+            setDepartment(String(step1.department ?? autofill.department ?? ""));
+            setContactEmail(String(step1.contact_email ?? autofill.contact_email ?? ""));
+            setContactPhone(String(step1.contact_phone ?? ""));
+            setQualifications(String(step1.qualifications ?? autofill.qualifications ?? ""));
+            setExperience(String(step1.experience ?? autofill.experience ?? ""));
+            setContactEmailSaved(Boolean(String(step1.contact_email ?? "").trim()));
+          } else {
+            setContactEmailSaved(false);
+          }
+        }
+      } catch (error) {
+        if (!cancelled && !isRecoverableStoredFormBError(error)) {
+          showValidationError(getApiErrorMessage(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setPrefillLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formBId, validating]);
 
   async function handleStartFormB() {
     setLoading(true);
+    clearValidationError();
     try {
-      const res = await api.post("/form-b/start");
-      setFormBId(res.data.id);
-    } catch {
-      alert("Failed to start Form B.");
+      const autofill = await getFormBStep1Autofill();
+      applyAutofill(autofill);
+      if (!autofill.profile_complete) {
+        showValidationError("Complete your investigator profile before starting Form B.");
+        return;
+      }
+
+      const started = await startFormB();
+      setFormBId(started.id);
+    } catch (error) {
+      showValidationError(getApiErrorMessage(error));
     } finally {
       setLoading(false);
     }
   }
 
   function validateStep1() {
-    if (!establishmentName.trim()) return "Establishment name is required.";
-    if (!registrationNumber.trim()) return "Registration number is required.";
+    if (!researchType) return "Type of research is required.";
     if (!principalInvestigator.trim()) return "Principal investigator is required.";
-    if (!designation) return "Designation is required.";
-    if (!department) return "Department is required.";
+    if (!designation.trim()) return "Designation is required.";
+    if (!department.trim()) return "Department is required.";
     if (!contactEmail.trim()) return "Contact email is required.";
     if (!contactPhone.trim()) return "Contact phone is required.";
-    if (!qualifications) return "Qualifications are required.";
+    if (!qualifications.trim()) return "Qualifications are required.";
+    if (!experience.trim()) return "Experience in laboratory animal experimentation is required.";
     return null;
   }
 
   async function handleNext() {
     if (!formBId) {
-      alert("Form B not started yet.");
+      showValidationError("Form B has not been started yet.");
       return;
     }
 
     const error = validateStep1();
     if (error) {
-      alert(error);
+      showValidationError(error);
       return;
     }
 
+    clearValidationError();
     setLoading(true);
     try {
-      await api.post("/form-b/step-1", {
+      await saveFormBStep1({
         form_b_id: formBId,
-        establishment_name: establishmentName,
-        registration_number: registrationNumber,
-        principal_investigator: principalInvestigator,
-        designation,
-        department,
-        contact_email: contactEmail,
-        contact_phone: contactPhone,
-        qualifications,
-        experience,
+        principal_investigator: principalInvestigator.trim(),
+        designation: designation.trim(),
+        department: department.trim(),
+        contact_email: contactEmail.trim(),
+        contact_phone: contactPhone.trim(),
+        qualifications: qualifications.trim(),
+        experience: experience.trim(),
+        research_type: researchType,
       });
+      setContactEmailSaved(true);
+      clearDraft();
 
       navigate("/form-b/step-2");
-    } catch {
-      alert("Failed to save Step 1.");
+    } catch (error) {
+      if (isFormBAccessDeniedError(error) || isFormBNotFoundError(error)) {
+        setFormBId(null);
+        navigate("/form-b/step-1?new=1", { replace: true });
+        showValidationError(
+          "This Form B could not be saved. Click Start Form B to begin a new application.",
+        );
+      } else {
+        showValidationError(getApiErrorMessage(error));
+      }
     } finally {
       setLoading(false);
     }
+  }
+
+  if (prefillLoading || validating) {
+    return <LoadingState label="Loading investigator details for Form B..." />;
   }
 
   return (
     <div className="page-card">
       <header className="section-header">
         <h2>Form B – Step 1</h2>
-        <p>Investigator & Establishment Details</p>
+        <p>Section I: Establishment details and principal investigator information.</p>
       </header>
 
-      {!formBId && (
-        <button className="btn" onClick={handleStartFormB} disabled={loading}>
-          Start Form B
-        </button>
-      )}
+      {restoreOffer ? (
+        <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />
+      ) : null}
 
-      {formBId && (
+      <FormRequiredLegend />
+
+      {!profileComplete ? (
+        <p className="auth-note" role="note">
+          Your investigator profile is incomplete.{" "}
+          <Link to="/investigator-profile?complete=1">Complete your profile</Link> before
+          starting Form B.
+        </p>
+      ) : null}
+
+      {staleNotice ? <SuccessNote message={staleNotice} /> : null}
+
+      {formBId && contactEmailSaved === false && contactEmail.trim() ? (
+        <p className="auth-note" role="note">
+          Contact email is prefilled from your profile but not saved on this Form B yet. Click{" "}
+          <strong>Save and continue</strong> so IAEC meeting invitations can use it.
+        </p>
+      ) : null}
+
+      {!formBId ? (
+        <button type="button" className="btn" onClick={handleStartFormB} disabled={loading}>
+          {loading ? "Starting..." : "Start Form B"}
+        </button>
+      ) : null}
+
+      {formBId ? (
         <>
-          <p><strong>Form B internal ID:</strong> {formBId}</p>
+          <p>
+            <strong>Form B ID:</strong> {formBId}
+          </p>
+
+          <InstitutionalFieldsPanel
+            establishmentName={institutional?.establishment_name ?? undefined}
+            establishmentAddress={institutional?.establishment_address ?? undefined}
+            registrationNumber={institutional?.registration_number ?? undefined}
+            registrationDate={institutional?.registration_date ?? undefined}
+            animalHousingLocation={institutional?.animal_housing_location ?? undefined}
+            experimentLocation={institutional?.experiment_location ?? undefined}
+          />
 
           <div className="form-grid">
             <label>
-              Establishment Name
-              <input
-                value={establishmentName}
-                onChange={(e) => setEstablishmentName(e.target.value)}
-              />
+              Type of research
+              <RequiredMark />
+              <select value={researchType} onChange={(e) => setResearchType(e.target.value)}>
+                <option value="">Select research type</option>
+                {RESEARCH_TYPES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label>
-              Registration Number
-              <input
-                value={registrationNumber}
-                onChange={(e) => setRegistrationNumber(e.target.value)}
-              />
-            </label>
-
-            <label>
-              Principal Investigator
+              Principal investigator
+              <RequiredMark />
               <input
                 value={principalInvestigator}
                 onChange={(e) => setPrincipalInvestigator(e.target.value)}
@@ -122,41 +303,19 @@ export function FormBStep1() {
 
             <label>
               Designation
-              <select
-                value={designation}
-                onChange={(e) => setDesignation(e.target.value)}
-              >
-                <option value="">Select designation</option>
-                <option value="Professor">Professor</option>
-                <option value="Associate Professor">Associate Professor</option>
-                <option value="Assistant Professor">Assistant Professor</option>
-                <option value="Lecturer">Lecturer</option>
-                <option value="Research Scholar">Research Scholar</option>
-                <option value="Scientist">Scientist</option>
-                <option value="Post-Doctoral Fellow">Post-Doctoral Fellow</option>
-                <option value="Other">Other</option>
-              </select>
+              <RequiredMark />
+              <input value={designation} onChange={(e) => setDesignation(e.target.value)} />
             </label>
 
             <label>
-              Department
-              <select
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-              >
-                <option value="">Select department</option>
-                <option value="Pharmacology">Pharmacology</option>
-                <option value="Pharmaceutics">Pharmaceutics</option>
-                <option value="Pharmaceutical Chemistry">Pharmaceutical Chemistry</option>
-                <option value="Pharmacognosy">Pharmacognosy</option>
-                <option value="Biotechnology">Biotechnology</option>
-                <option value="Microbiology">Microbiology</option>
-                <option value="Other">Other</option>
-              </select>
+              Department / Division / Lab
+              <RequiredMark />
+              <input value={department} onChange={(e) => setDepartment(e.target.value)} />
             </label>
 
             <label>
-              Contact Email
+              Contact email
+              <RequiredMark />
               <input
                 type="email"
                 value={contactEmail}
@@ -165,47 +324,34 @@ export function FormBStep1() {
             </label>
 
             <label>
-              Contact Phone
-              <input
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-              />
+              Contact phone
+              <RequiredMark />
+              <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
             </label>
 
             <label>
               Qualifications
-              <select
+              <RequiredMark />
+              <input
                 value={qualifications}
                 onChange={(e) => setQualifications(e.target.value)}
-              >
-                <option value="">Select qualifications</option>
-                <option value="B.Pharm">B.Pharm</option>
-                <option value="M.Pharm">M.Pharm</option>
-                <option value="Pharm.D">Pharm.D</option>
-                <option value="PhD">PhD</option>
-                <option value="MSc">MSc</option>
-                <option value="MBBS">MBBS</option>
-                <option value="MVSc">MVSc</option>
-                <option value="Other">Other</option>
-              </select>
-            </label>
-
-            <label>
-              Experience in animal work
-              <textarea
-                value={experience}
-                onChange={(e) => setExperience(e.target.value)}
               />
             </label>
+
+            <label className="full-width">
+              Experience in laboratory animal experimentation
+              <RequiredMark />
+              <textarea value={experience} onChange={(e) => setExperience(e.target.value)} />
+            </label>
           </div>
 
-          <div className="wizard-actions">
-            <button className="btn" onClick={handleNext} disabled={loading}>
-              Save & Next →
+          <WizardActionBar validationError={validationError} actionRef={validationRef}>
+            <button type="button" className="btn" onClick={handleNext} disabled={loading}>
+              {loading ? "Saving..." : "Save and continue"}
             </button>
-          </div>
+          </WizardActionBar>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

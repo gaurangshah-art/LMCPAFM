@@ -1,4 +1,10 @@
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
+
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +15,7 @@ from database import lmcpafm_models
 from database import lmcpafm_requisition_allocation
 import models.role  # ensure Role and user_roles are registered
 import models.investigator_profile  # ensure InvestigatorProfile is registered
+import models.activity_log  # ensure ActivityLog is registered
 
 from routers.router_iaec import router as iaec_router
 from routers.router_requisition_allocation import router as req_alloc_router
@@ -19,7 +26,13 @@ from routers.experiments import router as experiments_router
 from routers.router_lookups import router as lookups_router, lookup_router as approved_lookups_router
 from routers.router_users import router as users_router
 from routers.router_login import router as auth_router
+from routers.router_inventory import router as inventory_router
+from routers.router_investigator_profile import router as investigator_profile_router
 from routers.formb_internal import router as formb_internal_router
+from routers.router_admin import router as admin_router
+from routers.router_admin_facility import router as admin_facility_router
+from routers.router_admin_masters import router as admin_masters_router
+from routers.router_facility import router as facility_router
 
 def _cors_origins() -> list[str]:
     configured = os.getenv("CORS_ALLOW_ORIGINS")
@@ -79,8 +92,14 @@ app.include_router(iaec_router)
 app.include_router(req_alloc_router)
 app.include_router(formd_router)
 app.include_router(formb_internal_router)
+app.include_router(admin_router)
+app.include_router(admin_facility_router)
+app.include_router(admin_masters_router)
+app.include_router(facility_router)
 app.include_router(disposal_router)
 app.include_router(experiments_router)
 app.include_router(lookups_router)
 app.include_router(approved_lookups_router)
 app.include_router(users_router)
+app.include_router(inventory_router)
+app.include_router(investigator_profile_router)

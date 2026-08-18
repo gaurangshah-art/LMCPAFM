@@ -77,29 +77,45 @@ export function AllocationViewPage() {
   const [experiments, setExperiments] = useState<AnimalExperiment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prevAllocationId, setPrevAllocationId] = useState(allocationId);
 
-  async function loadAll() {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const alloc = await getAllocation(allocationId);
-      setAllocation(toAllocationView(alloc));
-
-      const req = await getRequisitionById(alloc.requisition_id);
-      setRequisition(toRequisitionView(req as LoadedRequisition));
-
-      const exp = await getExperimentsByAllocation(allocationId);
-      setExperiments(exp);
-    } catch {
-      setError("Failed to load allocation.");
-    } finally {
-      setLoading(false);
-    }
+  if (prevAllocationId !== allocationId) {
+    setPrevAllocationId(allocationId);
+    setLoading(true);
   }
 
   useEffect(() => {
-    void loadAll();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setError(null);
+
+        const alloc = await getAllocation(allocationId);
+        if (cancelled) return;
+        setAllocation(toAllocationView(alloc));
+
+        const req = await getRequisitionById(alloc.requisition_id);
+        if (cancelled) return;
+        setRequisition(toRequisitionView(req as LoadedRequisition));
+
+        const exp = await getExperimentsByAllocation(allocationId);
+        if (cancelled) return;
+        setExperiments(exp);
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load allocation.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [allocationId]);
 
   if (loading) return <LoadingState label="Loading allocation..." />;

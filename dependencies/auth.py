@@ -43,31 +43,22 @@ def get_current_user(
     return user
 
 
-def _user_role_names(user: User) -> set[str]:
-    """
-    Supports both:
-    - new multi-role model: user.roles -> [Role(name=...)]
-    - legacy single-role model: user.role -> "staff"
-    """
-    names: set[str] = set()
+def user_role_names(user: User) -> list[str]:
+    """Return system role names from the user_roles association."""
+    return [
+        str(role.name)
+        for role in (getattr(user, "roles", []) or [])
+        if getattr(role, "name", None)
+    ]
 
-    # Multi-role relation (preferred)
-    for r in getattr(user, "roles", []) or []:
-        role_name = getattr(r, "name", None)
-        if role_name:
-            names.add(str(role_name))
 
-    # Legacy fallback
-    legacy_role = getattr(user, "role", None)
-    if legacy_role:
-        names.add(str(legacy_role))
-
-    return names
+def _user_role_name_set(user: User) -> set[str]:
+    return set(user_role_names(user))
 
 
 def _require_role(expected_role: str):
     def checker(current_user: User = Depends(get_current_user)) -> User:
-        if expected_role not in _user_role_names(current_user):
+        if expected_role not in _user_role_name_set(current_user):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Forbidden",
@@ -81,8 +72,8 @@ def require_any_role(*allowed_roles: str):
     allowed = set(allowed_roles)
 
     def checker(current_user: User = Depends(get_current_user)) -> User:
-        user_roles = _user_role_names(current_user)
-        if user_roles.isdisjoint(allowed):
+        roles = _user_role_name_set(current_user)
+        if roles.isdisjoint(allowed):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Forbidden",
@@ -95,3 +86,5 @@ def require_any_role(*allowed_roles: str):
 require_investigator = _require_role("investigator")
 require_iaec = _require_role("iaec")
 require_staff = _require_role("staff")
+require_admin = _require_role("admin")
+require_admin_or_staff = require_any_role("admin", "staff")

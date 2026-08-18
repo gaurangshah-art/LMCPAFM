@@ -35,29 +35,43 @@ export function RequisitionViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
+  const [prevRequisitionId, setPrevRequisitionId] = useState(requisitionId);
 
-  async function loadAll() {
-    try {
-      setLoading(true);
-
-      const r = await getRequisitionById(requisitionId);
-      setReq(r as unknown as Requisition);
-
-      const alloc = await getAllocationsByRequisition(requisitionId);
-      setAllocations(alloc);
-
-      const exp = await getExperimentsByRequisition(requisitionId);
-      setExperiments(exp);
-
-    } catch {
-      setError("Failed to load requisition.");
-    } finally {
-      setLoading(false);
-    }
+  if (prevRequisitionId !== requisitionId) {
+    setPrevRequisitionId(requisitionId);
+    setLoading(true);
   }
 
   useEffect(() => {
-    void loadAll();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const r = await getRequisitionById(requisitionId);
+        if (cancelled) return;
+        setReq(r as unknown as Requisition);
+
+        const alloc = await getAllocationsByRequisition(requisitionId);
+        if (cancelled) return;
+        setAllocations(alloc);
+
+        const exp = await getExperimentsByRequisition(requisitionId);
+        if (cancelled) return;
+        setExperiments(exp);
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load requisition.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [requisitionId]);
 
   async function handleAddComment() {

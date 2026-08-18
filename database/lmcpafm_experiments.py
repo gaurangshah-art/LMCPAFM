@@ -29,6 +29,10 @@ class Experiment(BaseRA):
     # Link to allocation (important for Form-D)
     allocation_id: Mapped[int] = mapped_column(ForeignKey("animal_allocation.id"), nullable=False)
 
+    experiment_group_id: Mapped[int] = mapped_column(
+        ForeignKey("experiment_group.id"), nullable=False
+    )
+
     # Human-friendly experiment date used by schemas/CRUD
     date: Mapped[Date] = mapped_column(Date, nullable=False)
 
@@ -45,6 +49,7 @@ class Experiment(BaseRA):
     # Relationships
     protocol: Mapped["IAECProject"] = relationship(back_populates="experiments")
     allocation: Mapped["AnimalAllocation"] = relationship(back_populates="experiments")
+    experiment_group: Mapped["ExperimentGroup"] = relationship()
     animals: Mapped[list["ExperimentAnimal"]] = relationship(
         back_populates="experiment"
     )

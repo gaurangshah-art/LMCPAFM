@@ -1,10 +1,21 @@
-import { Navigate, Route, Routes, NavLink } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getCurrentUser } from "../api/authApi";
 import { getAccessToken, setAccessToken } from "../api/client";
+import { SessionMonitor } from "../components/common/SessionMonitor";
+import {
+  clearReturnToPath,
+  clearStoredSession,
+  getStoredAccessToken,
+  hasStoredAccessToken,
+  readReturnToPath,
+  setStoredAccessToken,
+  setStoredUserId,
+} from "../auth/session";
 import type { User } from "../api/types";
 
 import { Navbar } from "../components/layout/Navbar";
+import { InstitutionBanner } from "../components/common/InstitutionBanner";
 import { ProtectedRoute } from "../components/common/ProtectedRoute";
 
 import { DashboardPage } from "../pages/DashboardPage";
@@ -14,49 +25,129 @@ import { AllocationPage } from "../pages/AllocationPage";
 import { ExperimentGroupPage } from "../pages/ExperimentGroupPage";
 import { ExperimentPage } from "../pages/ExperimentPage";
 import { LoginPage } from "../pages/LoginPage";
+import { RegisterInvestigatorPage } from "../pages/RegisterInvestigatorPage";
 import { UsersPage } from "../pages/UsersPage";
 import { NotAuthorizedPage } from "../pages/NotAuthorizedPage";
-import { IAECWorkflowDashboardPage } from "../pages/IAECWorkflowDashboardPage";
-import { InvestigatorDashboardPage } from "../pages/InvestigatorDashboardPage";
+import { IaecDashboard } from "../pages/iaec/IaecDashboard";
 import { RequisitionViewPage } from "../pages/RequisitionViewPage";
 import { AllocationViewPage } from "../pages/AllocationViewPage";
+import { InvestigatorProfilePage } from "../pages/InvestigatorProfilePage";
+import { InvestigatorProfileGate } from "../components/common/InvestigatorProfileGate";
+import { getMyInvestigatorProfile } from "../api/investigatorProfileApi";
+import { FormBStep1 } from "../pages/formB/FormBStep1";
+import { FormBStep2 } from "../pages/formB/FormBStep2";
+import { FormBStep2b } from "../pages/formB/FormBStep2b";
+import { FormBStep4 } from "../pages/formB/FormBStep4";
+import { FormBStep5 } from "../pages/formB/FormBStep5";
+import { FormBStep6 } from "../pages/formB/FormBStep6";
+import { FormBStep7 } from "../pages/formB/FormBStep7";
+import { FormBReview } from "../pages/formB/FormBReview";
+import { FormBViewPage } from "../pages/formB/FormBViewPage";
+import { IaecCreateMeeting } from "../pages/iaec/IaecCreateMeeting";
+import { IaecMeetingDetails } from "../pages/iaec/IaecMeetingDetails";
+import { IaecProjectReview } from "../pages/iaec/IaecProjectReview";
+import { IaecApprovalCertificate } from "../pages/iaec/IaecApprovalCertificate";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
+import { AdminMasterDataPage } from "../pages/AdminMasterDataPage";
+import { AdminFacilityPage } from "../pages/AdminFacilityPage";
+import { StaffFacilityPage } from "../pages/StaffFacilityPage";
+import { FormCPage } from "../pages/FormCPage";
+import { IAECProjectViewPage } from "../pages/IAECProjectViewPage";
+import { IAECProjectEditPage } from "../pages/IAECProjectEditPage";
+import { ProjectWorkspacePage } from "../pages/ProjectWorkspacePage";
+import { ExperimentEntryPage } from "../pages/experiment/ExperimentEntryPage";
+import { ExperimentLogsEntryPage } from "../pages/experiment/ExperimentLogsEntryPage";
+import { ExperimentLogsViewPage } from "../pages/experiment/ExperimentLogsViewPage";
+import { FinalReportEntryPage } from "../pages/final/FinalReportEntryPage";
+import { FinalReportViewPage } from "../pages/final/FinalReportViewPage";
 
-
-const accessTokenKey = "lmcpafm.access-token";
-const refreshTokenKey = "lmcpafm.refresh-token";
 
 const roleHome: Record<string, string> = {
   iaec: "/iaec-projects",
   staff: "/allocations",
-  investigator: "/requisitions",
-  admin: "/users",
+  investigator: "/",
+  admin: "/admin-dashboard",
 };
+
+function UsersRoute({ currentUser }: { currentUser: User | null }) {
+  if (currentUser?.roles.includes("admin")) {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
+
+  return <UsersPage currentUser={currentUser} />;
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(hasStoredAccessToken);
 
   useEffect(() => {
-    const storedAccessToken = window.localStorage.getItem(accessTokenKey);
-    const storedRefreshToken = window.localStorage.getItem(refreshTokenKey);
+    const storedAccessToken = getStoredAccessToken();
 
-    if (!storedAccessToken || !storedRefreshToken) {
+    if (!storedAccessToken) {
       setIsAuthLoading(false);
       return;
     }
 
     setAccessToken(storedAccessToken);
-    void hydrateCurrentUser();
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!cancelled) {
+          setCurrentUser(user);
+          setStoredUserId(user.id);
+        }
+      } catch {
+        if (!cancelled) {
+          clearStoredSession();
+          setAccessToken(null);
+          setCurrentUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAuthLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  async function hydrateCurrentUser() {
+  async function handleAuthenticated(accessToken: string, preferredReturnTo?: string | null) {
+    setStoredAccessToken(accessToken);
+    setAccessToken(accessToken);
+    setIsAuthLoading(true);
+
     try {
       const user = await getCurrentUser();
       setCurrentUser(user);
+      setStoredUserId(user.id);
+
+      const returnTo = preferredReturnTo ?? readReturnToPath();
+      clearReturnToPath();
+
+      const primaryRole = user.roles[0];
+      let redirectPath = returnTo ?? (primaryRole ? (roleHome[primaryRole] ?? "/") : "/");
+
+      if (!returnTo && user.roles.includes("investigator")) {
+        try {
+          const profile = await getMyInvestigatorProfile();
+          if (!profile.is_complete) {
+            redirectPath = "/investigator-profile?complete=1";
+          }
+        } catch {
+          redirectPath = "/investigator-profile?complete=1";
+        }
+      }
+
+      window.location.replace(redirectPath);
     } catch {
-      window.localStorage.removeItem(accessTokenKey);
-      window.localStorage.removeItem(refreshTokenKey);
+      clearStoredSession();
       setAccessToken(null);
       setCurrentUser(null);
     } finally {
@@ -64,25 +155,8 @@ export default function App() {
     }
   }
 
-  async function handleAuthenticated(accessToken: string, refreshToken: string) {
-    window.localStorage.setItem(accessTokenKey, accessToken);
-    window.localStorage.setItem(refreshTokenKey, refreshToken);
-
-    setAccessToken(accessToken);
-    await hydrateCurrentUser();
-
-    if (currentUser && currentUser.roles.length > 0) {
-      const primaryRole = currentUser.roles[0];
-      const redirectPath = roleHome[primaryRole] ?? "/";
-      window.location.replace(redirectPath);
-    } else {
-      window.location.replace("/");
-    }
-  }
-
   function handleLogout() {
-    window.localStorage.removeItem(accessTokenKey);
-    window.localStorage.removeItem(refreshTokenKey);
+    clearStoredSession();
     setAccessToken(null);
     setCurrentUser(null);
     setIsAuthLoading(false);
@@ -90,28 +164,16 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <SessionMonitor currentUser={currentUser} />
       <Navbar
         currentUser={currentUser}
         isAuthLoading={isAuthLoading}
         onLogout={handleLogout}
-      >
-        {currentUser?.roles.includes("iaec") && (
-          <>
-            <NavLink to="/iaec-dashboard">IAEC Dashboard</NavLink>
-            <NavLink to="/iaec-projects">IAEC Projects</NavLink>
-          </>
-        )}
-            {currentUser?.roles.includes("investigator") && (
-  <>
-            <NavLink to="/investigator-dashboard">My Dashboard</NavLink>
-            <NavLink to="/requisitions">Requisitions</NavLink>
-            <NavLink to="/experiment-groups">Experiment Groups</NavLink>
-            <NavLink to="/experiments">Experiments</NavLink>
-        </>
-    )}
-      </Navbar>
+      />
 
       <main className="page-container">
+        <InstitutionBanner />
+        <InvestigatorProfileGate currentUser={currentUser}>
         <Routes>
           {/* LOGIN */}
           <Route
@@ -121,6 +183,17 @@ export default function App() {
                 <Navigate to="/" replace />
               ) : (
                 <LoginPage onAuthenticated={handleAuthenticated} />
+              )
+            }
+          />
+
+          <Route
+            path="/register-investigator"
+            element={
+              getAccessToken() && currentUser ? (
+                <Navigate to="/" replace />
+              ) : (
+                <RegisterInvestigatorPage />
               )
             }
           />
@@ -135,7 +208,7 @@ export default function App() {
             }
           />
 
-          {/* USERS — staff + admin */}
+          {/* USERS — staff (admins redirect to superadmin dashboard) */}
           <Route
             path="/users"
             element={
@@ -144,7 +217,21 @@ export default function App() {
                 isAuthLoading={isAuthLoading}
                 allowedRoles={["staff", "admin"]}
               >
-                <UsersPage currentUser={currentUser} />
+                <UsersRoute currentUser={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* PROJECT WORKSPACE */}
+          <Route
+            path="/projects/:projectId"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator", "iaec", "staff", "admin"]}
+              >
+                <ProjectWorkspacePage currentUser={currentUser!} />
               </ProtectedRoute>
             }
           />
@@ -163,7 +250,6 @@ export default function App() {
             }
           />
 
-          {/* IAEC WORKFLOW DASHBOARD */}
           <Route
             path="/iaec-dashboard"
             element={
@@ -172,37 +258,333 @@ export default function App() {
                 isAuthLoading={isAuthLoading}
                 allowedRoles={["iaec"]}
               >
-                <IAECWorkflowDashboardPage />
+                <IaecDashboard />
               </ProtectedRoute>
             }
           />
 
-          {/* REQUISITIONS — investigator */}
           <Route
-            path="/requisitions"
+            path="/iaec/meetings/new"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec"]}
+              >
+                <IaecCreateMeeting />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/meetings/:meetingId"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec"]}
+              >
+                <IaecMeetingDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/project/:projectId/review"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec"]}
+              >
+                <IaecProjectReview />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/project/:projectId/certificate"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec", "investigator", "staff", "admin"]}
+              >
+                <IaecApprovalCertificate currentUser={currentUser!} />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/workflow"
+            element={<Navigate to="/iaec-dashboard" replace />}
+          />
+
+          <Route
+            path="/iaec-projects/:id"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec", "investigator", "staff", "admin"]}
+              >
+                <IAECProjectViewPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec-projects/:id/edit"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec"]}
+              >
+                <IAECProjectEditPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/experiments/entry/:allocationId"
             element={
               <ProtectedRoute
                 currentUser={currentUser}
                 isAuthLoading={isAuthLoading}
                 allowedRoles={["investigator"]}
               >
+                <ExperimentEntryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/experiments/logs/:allocationId"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator", "staff", "iaec"]}
+              >
+                <ExperimentLogsViewPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/experiments/logs/:allocationId/entry"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator"]}
+              >
+                <ExperimentLogsEntryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/final-report/:allocationId"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator", "staff", "iaec"]}
+              >
+                <FinalReportViewPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/final-report/:allocationId/entry"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator"]}
+              >
+                <FinalReportEntryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* REQUISITIONS — investigator, staff, iaec */}
+          <Route
+            path="/requisitions"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator", "staff", "iaec"]}
+              >
                 <RequisitionPage currentUser={currentUser} />
               </ProtectedRoute>
             }
           />
             <Route
-  path="/investigator-dashboard"
-  element={
-    <ProtectedRoute
-      currentUser={currentUser}
-      isAuthLoading={isAuthLoading}
-      allowedRoles={["investigator"]}
-    >
-      <InvestigatorDashboardPage currentUser={currentUser} />
-    </ProtectedRoute>
-  }
-/>
+              path="/form-b/step-1"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep1 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-2"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep2 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-2b"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep2b />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-3"
+              element={<Navigate to="/form-b/step-2b" replace />}
+            />
+
+            <Route
+              path="/form-b/step-4"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep4 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-5"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep5 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-6"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep6 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/step-7"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBStep7 />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/review"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBReview />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/form-b/view"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <FormBViewPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/investigator-profile"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <InvestigatorProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/investigator-dashboard"
+              element={
+                <ProtectedRoute
+                  currentUser={currentUser}
+                  isAuthLoading={isAuthLoading}
+                  allowedRoles={["investigator"]}
+                >
+                  <Navigate to="/" replace />
+                </ProtectedRoute>
+              }
+            />
   
+          <Route
+            path="/form-c"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["staff", "iaec", "admin"]}
+              >
+                <FormCPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* ALLOCATIONS — staff */}
           <Route
             path="/allocations"
@@ -210,7 +592,7 @@ export default function App() {
               <ProtectedRoute
                 currentUser={currentUser}
                 isAuthLoading={isAuthLoading}
-                allowedRoles={["staff"]}
+                allowedRoles={["staff", "iaec"]}
               >
                 <AllocationPage currentUser={currentUser} />
               </ProtectedRoute>
@@ -255,45 +637,71 @@ export default function App() {
             }
               />
 
-              <Route
-                path="/admin-dashboard"
-                element={
-                  <ProtectedRoute
-                    currentUser={currentUser}
-                    isAuthLoading={isAuthLoading}
-                    allowedRoles={["admin"]}
-                  >
-                    <AdminDashboardPage />
-                  </ProtectedRoute>
-                }
-              />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["admin"]}
+              >
+                {currentUser ? <AdminDashboardPage currentUser={currentUser} /> : null}
+              </ProtectedRoute>
+            }
+          />
 
-                {/* ADMIN DASHBOARD */}
-                <Route
-                  path="/admin-dashboard"
-                  element={
-                    <ProtectedRoute
-                      currentUser={currentUser}
-                      isAuthLoading={isAuthLoading}
-                      allowedRoles={["admin"]}
-                    >
-                      <AdminDashboardPage />
-                    </ProtectedRoute>
-                  }
-                />  
-                  {/* EXPERIMENTS — investigator */}
-                  <Route
-                    path="/experiments"
-                    element={
-                      <ProtectedRoute
-                        currentUser={currentUser}
-                        isAuthLoading={isAuthLoading}
-                        allowedRoles={["investigator"]}
-                      >
-                        <ExperimentPage />
-                      </ProtectedRoute>
-                    }
-                  />
+          <Route
+            path="/facility"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["staff", "admin"]}
+              >
+                <StaffFacilityPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/facility"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["admin"]}
+              >
+                <AdminFacilityPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/masters"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["admin"]}
+              >
+                <AdminMasterDataPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* EXPERIMENTS — investigator */}
+          <Route
+            path="/experiments"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["investigator"]}
+              >
+                <ExperimentPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* NOT AUTHORIZED */}
           <Route path="/not-authorized" element={<NotAuthorizedPage />} />
@@ -301,6 +709,7 @@ export default function App() {
           {/* FALLBACK */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </InvestigatorProfileGate>
       </main>
     </div>
   );

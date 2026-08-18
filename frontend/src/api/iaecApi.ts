@@ -2,10 +2,21 @@ import { apiClient } from "./client";
 import type {
   IAECProject,
   IAECProjectCreate,
+  InvestigatorProjectSummary,
   ExperimentGroup,
   ExperimentGroupCreate,
+  ExperimentGroupUpdate,
+  ExperimentPlanningStatus,
+  ProjectWorkspace,
+  ExperimentGroupAssignmentSummary,
   AnimalExperiment,
   AnimalExperimentCreate,
+  IAECMeetingRecord,
+  IAECMeetingCreate,
+  FormBWithMeeting,
+  FormBFinalizeApprovalResult,
+  FormBMeetingDecisionUpsert,
+  IAECApprovalCertificate,
 } from "./types";
 
 export async function createProject(payload: IAECProjectCreate): Promise<IAECProject> {
@@ -18,12 +29,67 @@ export async function getProjects(): Promise<IAECProject[]> {
   return data;
 }
 
-// ⭐ NEW — required by InvestigatorDashboardPage
-export async function getProjectsByInvestigator(investigatorId: number): Promise<IAECProject[]> {
-  const { data } = await apiClient.get<IAECProject[]>(
-    `/iaec/project/investigator/${investigatorId}`
+// ⭐ Investigator dashboard summaries (Form B + project metadata)
+export async function getInvestigatorProjectSummaries(
+  investigatorId: number,
+): Promise<InvestigatorProjectSummary[]> {
+  const { data } = await apiClient.get<InvestigatorProjectSummary[]>(
+    `/iaec/project/investigator/${investigatorId}`,
   );
   return data;
+}
+
+/** @deprecated Use getInvestigatorProjectSummaries for dashboard views. */
+export async function getProjectsByInvestigator(
+  investigatorId: number,
+): Promise<InvestigatorProjectSummary[]> {
+  return getInvestigatorProjectSummaries(investigatorId);
+}
+
+export async function getProjectCertificate(projectId: number): Promise<IAECApprovalCertificate> {
+  const { data } = await apiClient.get<IAECApprovalCertificate>(
+    `/iaec/project/${projectId}/certificate`,
+  );
+  return data;
+}
+
+export async function downloadProjectCertificate(projectId: number): Promise<void> {
+  const response = await apiClient.get(`/iaec/project/${projectId}/certificate/download`, {
+    responseType: "blob",
+  });
+  const blobUrl = window.URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = `iaec_certificate_${projectId}.pdf`;
+  link.click();
+  window.URL.revokeObjectURL(blobUrl);
+}
+
+export async function uploadSignedProjectCertificate(
+  projectId: number,
+  file: File,
+): Promise<import("./types").ProjectSignedCertificate> {
+  const body = new FormData();
+  body.append("file", file);
+  const { data } = await apiClient.post(`/iaec/project/${projectId}/certificate/signed`, body, {
+    timeout: 120000,
+  });
+  return data;
+}
+
+export async function downloadSignedProjectCertificate(
+  projectId: number,
+  filename: string,
+): Promise<void> {
+  const response = await apiClient.get(`/iaec/project/${projectId}/certificate/signed/download`, {
+    responseType: "blob",
+  });
+  const blobUrl = window.URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(blobUrl);
 }
 
 export async function createGroup(payload: ExperimentGroupCreate): Promise<ExperimentGroup> {
@@ -31,9 +97,56 @@ export async function createGroup(payload: ExperimentGroupCreate): Promise<Exper
   return data;
 }
 
+export async function resyncExperimentGroups(
+  projectId: number,
+): Promise<import("./types").ExperimentGroupResyncResult> {
+  const { data } = await apiClient.post<import("./types").ExperimentGroupResyncResult>(
+    `/iaec/project/${projectId}/resync-experiment-groups`,
+  );
+  return data;
+}
+
 export async function getGroupsByProject(projectId: number): Promise<ExperimentGroup[]> {
   const { data } = await apiClient.get<ExperimentGroup[]>(`/iaec/group/${projectId}`);
   return data;
+}
+
+export async function getExperimentPlanningStatus(
+  projectId: number,
+): Promise<ExperimentPlanningStatus> {
+  const { data } = await apiClient.get<ExperimentPlanningStatus>(
+    `/iaec/project/${projectId}/experiment-planning`,
+  );
+  return data;
+}
+
+export async function getProjectWorkspace(projectId: number): Promise<ProjectWorkspace> {
+  const { data } = await apiClient.get<ProjectWorkspace>(`/iaec/project/${projectId}/workspace`);
+  return data;
+}
+
+export async function assignGroupAnimals(
+  groupId: number,
+  animalIds: number[],
+): Promise<ExperimentGroupAssignmentSummary> {
+  const { data } = await apiClient.post<ExperimentGroupAssignmentSummary>(
+    `/iaec/group/${groupId}/assign-animals`,
+    { animal_ids: animalIds },
+  );
+  return data;
+}
+
+export async function downloadGroupCageLabels(groupId: number): Promise<void> {
+  const response = await apiClient.get(`/facility/labels/groups/${groupId}/cages/download`, {
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "application/pdf" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `group_cage_labels_${groupId}.pdf`;
+  link.click();
+  window.URL.revokeObjectURL(url);
 }
 
 export async function createIAECExperiment(payload: AnimalExperimentCreate): Promise<AnimalExperiment> {
@@ -103,9 +216,9 @@ export async function addProjectComment(
 
 export async function updateGroup(
   groupId: number,
-  payload: Partial<ExperimentGroupCreate>
+  payload: ExperimentGroupUpdate,
 ): Promise<ExperimentGroup> {
-  const { data } = await apiClient.put<ExperimentGroup>(`/iaec/group/${groupId}`, payload);
+  const { data } = await apiClient.patch<ExperimentGroup>(`/iaec/group/${groupId}`, payload);
   return data;
 }
 
@@ -130,4 +243,73 @@ export async function updateIAECExperiment(
 
 export async function deleteIAECExperiment(experimentId: number): Promise<void> {
   await apiClient.delete(`/iaec/experiment/${experimentId}`);
+}
+
+// -----------------------------
+// IAEC MEETINGS
+// -----------------------------
+
+export async function getMeetings(): Promise<IAECMeetingRecord[]> {
+  const { data } = await apiClient.get<IAECMeetingRecord[]>("/iaec/meeting");
+  return data;
+}
+
+export async function createMeeting(payload: IAECMeetingCreate): Promise<IAECMeetingRecord> {
+  const { data } = await apiClient.post<IAECMeetingRecord>("/iaec/meeting", payload);
+  return data;
+}
+
+// -----------------------------
+// FORM B — IAEC MEETING WORKFLOW
+// -----------------------------
+
+export async function getFormBWithMeeting(): Promise<FormBWithMeeting[]> {
+  const { data } = await apiClient.get<FormBWithMeeting[]>("/iaec/form-b-with-meeting");
+  return data;
+}
+
+export async function assignFormBMeeting(
+  formBId: number,
+  meetingId: number | null
+): Promise<void> {
+  await apiClient.patch(`/iaec/form-b/${formBId}/meeting`, { meeting_id: meetingId });
+}
+
+export async function generateFormBProtocolNumber(formBId: number): Promise<{ protocol_number: string }> {
+  const { data } = await apiClient.post<{ protocol_number: string }>(
+    `/iaec/form-b/${formBId}/protocol-number`
+  );
+  return data;
+}
+
+export async function finalizeFormBApproval(formBId: number): Promise<FormBFinalizeApprovalResult> {
+  const { data } = await apiClient.post<FormBFinalizeApprovalResult>(
+    `/iaec/form-b/${formBId}/finalize-approval`,
+  );
+  return data;
+}
+
+export async function upsertFormBMeetingDecision(
+  formBId: number,
+  payload: FormBMeetingDecisionUpsert
+): Promise<void> {
+  await apiClient.put(`/iaec/form-b/${formBId}/decision`, payload);
+}
+
+export async function sendFormBMeetingInvitation(
+  formBId: number,
+): Promise<{ ok: boolean; sent_to: string; protocol_number: string }> {
+  const { data } = await apiClient.post<{ ok: boolean; sent_to: string; protocol_number: string }>(
+    `/iaec/form-b/${formBId}/send-meeting-invitation/sync`,
+    undefined,
+    { timeout: 120000 },
+  );
+  return data;
+}
+
+export async function downloadMeetingSummaryPdf(meetingId: number): Promise<Blob> {
+  const { data } = await apiClient.get(`/iaec/meeting/${meetingId}/summary/download`, {
+    responseType: "blob",
+  });
+  return data;
 }
