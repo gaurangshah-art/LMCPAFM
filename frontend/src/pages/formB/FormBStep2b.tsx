@@ -848,7 +848,7 @@ export function FormBStep2b() {
               {phase.groups.map((group, groupIndex) => {
                 const dose = group.dosing[0] ?? emptyDosing();
                 return (
-                  <div key={`${phase.sequence_order}-${group.group_code}`} className="page-section nested-section">
+                  <div key={`phase-${phaseIndex}-group-${groupIndex}`} className="page-section nested-section">
                     <h4>{group.group_name || "Untitled group"} (n={group.animal_count})</h4>
                     <div className="form-grid">
                       <label>
@@ -858,7 +858,6 @@ export function FormBStep2b() {
                           onChange={(e) =>
                             updateGroup(phaseIndex, groupIndex, {
                               group_name: e.target.value,
-                              group_code: e.target.value.slice(0, 20) || group.group_code,
                             })
                           }
                         />
