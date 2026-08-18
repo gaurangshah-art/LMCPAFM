@@ -928,7 +928,43 @@ tbody tr:last-child td {
 }
 
 .compact-info-card p {
-  margin: 0.15rem 0;
+  margin: 0.25rem 0;
+}
+
+.plain-list {
+  margin: 0.75rem 0;
+  padding-left: 1.25rem;
+}
+
+.plain-list li {
+  margin-bottom: 0.35rem;
+}
+
+.planning-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.planning-compare-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.75rem;
+  background: var(--surface-2);
+}
+
+.planning-compare-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.25rem;
+}
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .info-card p {

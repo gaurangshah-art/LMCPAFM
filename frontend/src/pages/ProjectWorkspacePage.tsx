@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getApiErrorMessage } from "../api/errors";
-import { getProjectWorkspace } from "../api/iaecApi";
+import { previewStudyPlanAnnexurePdf } from "../api/formbApi";
+import { getProjectWorkspace, resyncExperimentGroups } from "../api/iaecApi";
 import type { ProjectWorkspace, User } from "../api/types";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
+import { SuccessNote } from "../components/common/SuccessNote";
+import { ExperimentGroupPlanningGuide } from "../components/facility/ExperimentGroupPlanningGuide";
 import { ExperimentForm } from "../components/forms/ExperimentForm";
 import { ExperimentGroupForm } from "../components/forms/ExperimentGroupForm";
 import { RequisitionForm } from "../components/forms/RequisitionForm";
-import { ExperimentGroupTable } from "../components/tables/ExperimentGroupTable";
+import { ExperimentGroupManageTable } from "../components/tables/ExperimentGroupManageTable";
 import { GroupAssignmentPanel } from "../components/facility/GroupAssignmentPanel";
 import { DataTable } from "../components/tables/DataTable";
 import { formatDisplayDate } from "../utils/dateFormat";
@@ -45,6 +48,10 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("overview");
+  const [annexureDownloading, setAnnexureDownloading] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
+  const [resyncMessage, setResyncMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function loadWorkspace() {
     if (!numericProjectId || Number.isNaN(numericProjectId)) {
@@ -83,6 +90,53 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
       setActiveTab(defaultTab);
     }
   }, [workspace, defaultTab]);
+
+  async function handleDownloadAnnexure() {
+    if (!workspace?.form_b_id) {
+      return;
+    }
+    setAnnexureDownloading(true);
+    setActionError(null);
+    try {
+      await previewStudyPlanAnnexurePdf(workspace.form_b_id);
+    } catch (error) {
+      setActionError(getApiErrorMessage(error));
+    } finally {
+      setAnnexureDownloading(false);
+    }
+  }
+
+  async function handleResyncFromAnnexure() {
+    if (!numericProjectId || Number.isNaN(numericProjectId)) {
+      return;
+    }
+    if (
+      !window.confirm(
+        "Re-apply Annexure I study groups to linked experiment groups? Groups with assigned animals or experiment logs will be skipped.",
+      )
+    ) {
+      return;
+    }
+
+    setResyncing(true);
+    setActionError(null);
+    setResyncMessage(null);
+    try {
+      const result = await resyncExperimentGroups(numericProjectId);
+      const skippedNote =
+        result.skipped.length > 0
+          ? ` ${result.skipped.length} group(s) skipped because animals or logs are linked.`
+          : "";
+      setResyncMessage(
+        `Re-sync complete: ${result.created} created, ${result.updated} updated.${skippedNote}`,
+      );
+      await loadWorkspace();
+    } catch (error) {
+      setActionError(getApiErrorMessage(error));
+    } finally {
+      setResyncing(false);
+    }
+  }
 
   if (loading) return <LoadingState label="Loading project workspace..." />;
   if (error) return <ErrorAlert message={error} />;
@@ -131,12 +185,16 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
 
       {activeTab === "overview" ? (
         <>
-          <PageSection title="Workflow Progress" subtitle="Approval → groups → requisition → allocation → logs">
+          <PageSection title="Workflow Progress" subtitle="Approval → confirm groups → requisition → allocation → logs">
             <div className="workflow-grid">
               <WorkflowStep
-                label="Experiment groups planned"
+                label="Experiment groups confirmed (IAEC-approved plan)"
                 complete={workflow.planning_complete}
-                detail={planning.message ?? undefined}
+                detail={
+                  workflow.planning_complete
+                    ? planning.message ?? undefined
+                    : "Groups are seeded from Annexure I. Adjust them here to match IAEC instructions before requesting animals."
+                }
               />
               <WorkflowStep
                 label="Requisition submitted"
@@ -181,26 +239,48 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
 
       {activeTab === "plan" ? (
         <>
-          <PageSection title="Planning Summary" subtitle="Total planned animals must stay within IAEC approval">
-            <div className="info-card compact-info-card">
-              <p>Approved animals: {planning.approved_animal_count ?? "—"}</p>
-              <p>Planned total: {planning.planned_animal_total}</p>
-              <p>Remaining capacity: {planning.remaining_animals ?? "—"}</p>
+          <PageSection title="Plan experiment groups" subtitle="Confirm or adjust the IAEC-approved operational plan">
+            <ExperimentGroupPlanningGuide
+              planning={planning}
+              formBId={workspace.form_b_id}
+              onDownloadAnnexure={workspace.form_b_id ? handleDownloadAnnexure : undefined}
+              annexureDownloading={annexureDownloading}
+            />
+          </PageSection>
+
+          {actionError ? <ErrorAlert message={actionError} /> : null}
+          {resyncMessage ? <SuccessNote message={resyncMessage} /> : null}
+
+          <PageSection title="Planning status">
+            <div
+              className={`info-card compact-info-card ${workflow.can_create_requisition ? "" : "warning-card"}`}
+            >
               <p>{planning.message}</p>
+            </div>
+            <div className="wizard-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={resyncing}
+                onClick={() => void handleResyncFromAnnexure()}
+              >
+                {resyncing ? "Re-syncing…" : "Re-sync from Annexure I"}
+              </button>
             </div>
           </PageSection>
 
-          <PageSection title="Create Experiment Group">
+          <PageSection title="Create experiment group" subtitle="Add a group if IAEC approved an arm not in Annexure I">
             <ExperimentGroupForm
               defaultProjectId={numericProjectId}
               onCreated={() => void loadWorkspace()}
             />
           </PageSection>
 
-          <PageSection title="Existing Groups">
-            <ExperimentGroupTable
+          <PageSection title="Existing groups" subtitle="Edit planned counts and names to match IAEC approval">
+            <ExperimentGroupManageTable
               groups={workspace.groups}
               assignments={workspace.group_assignments}
+              onChanged={() => void loadWorkspace()}
             />
           </PageSection>
         </>

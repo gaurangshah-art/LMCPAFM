@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../../api/errors";
 import {
-  clearStoredFormBId,
   downloadFormBAttachment,
   getFormBReview,
   listFormBAttachments,
@@ -72,7 +71,6 @@ export function FormBReview() {
     setErrorMessage(null);
     try {
       await submitFormB(formBId);
-      clearStoredFormBId();
       navigate("/investigator-dashboard", { replace: true });
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error));

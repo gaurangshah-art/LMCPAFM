@@ -7,7 +7,12 @@ import {
   startFormB,
   type FormBStep1Autofill,
 } from "../../api/formbApi";
-import { getApiErrorMessage, isFormBNotFoundError } from "../../api/errors";
+import {
+  getApiErrorMessage,
+  isFormBAccessDeniedError,
+  isFormBNotFoundError,
+  isRecoverableStoredFormBError,
+} from "../../api/errors";
 import { LoadingState } from "../../components/common/LoadingState";
 import { SuccessNote } from "../../components/common/SuccessNote";
 import { InstitutionalFieldsPanel } from "../../components/forms/InstitutionalFieldsPanel";
@@ -126,7 +131,7 @@ export function FormBStep1() {
           }
         }
       } catch (error) {
-        if (!cancelled && !isFormBNotFoundError(error)) {
+        if (!cancelled && !isRecoverableStoredFormBError(error)) {
           showValidationError(getApiErrorMessage(error));
         }
       } finally {
@@ -204,7 +209,14 @@ export function FormBStep1() {
 
       navigate("/form-b/step-2");
     } catch (error) {
-      showValidationError(getApiErrorMessage(error));
+      if (isFormBAccessDeniedError(error) || isFormBNotFoundError(error)) {
+        setFormBId(null);
+        showValidationError(
+          "This Form B could not be saved. Click Start Form B to begin a new application.",
+        );
+      } else {
+        showValidationError(getApiErrorMessage(error));
+      }
     } finally {
       setLoading(false);
     }

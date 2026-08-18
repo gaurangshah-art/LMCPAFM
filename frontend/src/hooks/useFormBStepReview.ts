@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { getApiErrorMessage, isFormBNotFoundError } from "../api/errors";
+import {
+  getApiErrorMessage,
+  isFormBAccessDeniedError,
+  isFormBNotFoundError,
+} from "../api/errors";
 import {
   clearStoredFormBId,
   getFormBReview,
@@ -41,6 +45,11 @@ export function useFormBStepReview<T>(
             clearStoredFormBId();
             setErrorMessage(
               "Your saved Form B draft is no longer available. Return to Step 1 and click Start Form B.",
+            );
+          } else if (isFormBAccessDeniedError(error)) {
+            clearStoredFormBId();
+            setErrorMessage(
+              "Your saved Form B draft could not be opened. Return to Step 1 and click Start Form B.",
             );
           } else {
             setErrorMessage(getApiErrorMessage(error));

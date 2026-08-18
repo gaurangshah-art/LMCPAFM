@@ -735,6 +735,77 @@ def sync_experiment_groups_from_study_plan(db: Session, project_id: int) -> int:
     return created
 
 
+def resync_experiment_groups_from_study_plan(db: Session, project_id: int) -> dict:
+    from crud.experiment_group_management import group_has_blocking_dependencies
+    from crud.experiment_group_planning import validate_group_planned_count
+
+    form_b = db.query(FormB).filter(FormB.project_id == project_id).first()
+    if form_b is None:
+        return {"created": 0, "updated": 0, "skipped": []}
+
+    phases = (
+        db.query(FormBStudyPhase)
+        .options(joinedload(FormBStudyPhase.groups))
+        .filter(FormBStudyPhase.form_b_id == form_b.id)
+        .order_by(FormBStudyPhase.sequence_order.asc())
+        .all()
+    )
+    if not phases:
+        return {"created": 0, "updated": 0, "skipped": []}
+
+    created = 0
+    updated = 0
+    skipped: list[dict] = []
+
+    for phase in phases:
+        for group in phase.groups:
+            target_name = f"{phase.phase_name} – {group.group_name}"
+            existing = (
+                db.query(ExperimentGroup)
+                .filter(
+                    ExperimentGroup.project_id == project_id,
+                    ExperimentGroup.form_b_study_group_id == group.id,
+                )
+                .first()
+            )
+            if existing is None:
+                validate_group_planned_count(db, project_id, group.animal_count)
+                db.add(
+                    ExperimentGroup(
+                        project_id=project_id,
+                        name=target_name,
+                        planned_animal_count=group.animal_count,
+                        form_b_study_group_id=group.id,
+                    )
+                )
+                created += 1
+                continue
+
+            blocked, reason = group_has_blocking_dependencies(db, existing.id)
+            if blocked:
+                skipped.append(
+                    {
+                        "group_id": existing.id,
+                        "name": existing.name,
+                        "reason": reason,
+                    }
+                )
+                continue
+
+            validate_group_planned_count(
+                db,
+                project_id,
+                group.animal_count,
+                exclude_group_id=existing.id,
+            )
+            existing.name = target_name
+            existing.planned_animal_count = group.animal_count
+            updated += 1
+
+    db.flush()
+    return {"created": created, "updated": updated, "skipped": skipped}
+
+
 def compute_animal_summary(phases: list[dict]) -> dict:
     total_used = 0
     sacrificed = 0

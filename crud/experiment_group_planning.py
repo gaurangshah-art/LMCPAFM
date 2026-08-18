@@ -127,6 +127,16 @@ def assert_experiment_groups_complete(db: Session, project_id: int) -> None:
         )
 
 
+def get_annexure_i_total(db: Session, project_id: int) -> int | None:
+    form_b = db.query(FormB).filter(FormB.project_id == project_id).first()
+    if form_b is None:
+        return None
+
+    from crud.formb_study_plan import get_study_plan_total_animals
+
+    return get_study_plan_total_animals(db, form_b.id)
+
+
 def get_experiment_planning_status(db: Session, project_id: int) -> dict:
     project = db.query(IAECProject).filter(IAECProject.id == project_id).first()
     if project is None:
@@ -139,6 +149,7 @@ def get_experiment_planning_status(db: Session, project_id: int) -> dict:
         .all()
     )
     cap = get_project_animal_cap(db, project_id)
+    annexure_total = get_annexure_i_total(db, project_id)
     planned_total = sum(group.planned_animal_count or 0 for group in groups)
     is_complete = False
     message: str | None = None
@@ -152,20 +163,48 @@ def get_experiment_planning_status(db: Session, project_id: int) -> dict:
     elif cap is None:
         message = "Approved animal count is not available for this project."
     elif planned_total > cap:
-        message = f"Planned animals ({planned_total}) exceed the approved limit ({cap})."
+        message = (
+            f"Planned animals ({planned_total}) exceed the IAEC-approved limit ({cap}). "
+            "Adjust group counts to match IAEC instructions."
+        )
     else:
         is_complete = True
-        message = "Experiment group planning is complete. You may create a requisition."
+        if (
+            annexure_total is not None
+            and cap is not None
+            and annexure_total != cap
+            and planned_total == annexure_total
+        ):
+            message = (
+                "Experiment group planning is complete, but planned totals still match the original "
+                f"Annexure I ({annexure_total}) rather than the IAEC-approved limit ({cap}). "
+                "Update groups if IAEC amended the animal count."
+            )
+        elif annexure_total is not None and planned_total != annexure_total:
+            message = (
+                "Experiment group planning is complete. Planned totals differ from submitted "
+                f"Annexure I ({annexure_total}); confirm this matches IAEC-approved instructions."
+            )
+        else:
+            message = "Experiment group planning is complete. You may create a requisition."
 
     return {
         "project_id": project_id,
         "project_status": project.status,
         "approved_animal_count": cap,
+        "annexure_i_total": annexure_total,
         "planned_animal_total": planned_total,
         "remaining_animals": (cap - planned_total) if cap is not None else None,
         "group_count": len(groups),
         "is_complete": is_complete,
         "can_create_requisition": is_complete,
+        "planned_exceeds_iaec_cap": cap is not None and planned_total > cap,
+        "annexure_differs_from_iaec": (
+            annexure_total is not None and cap is not None and annexure_total != cap
+        ),
+        "planned_differs_from_annexure": (
+            annexure_total is not None and planned_total != annexure_total
+        ),
         "message": message,
     }
 

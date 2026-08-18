@@ -85,7 +85,7 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
         subtitle="Track Form B applications, IAEC project IDs, approval status, and certificates from one place."
         actions={
           <div className="quick-nav-grid dashboard-quick-actions">
-            <button type="button" className="btn" onClick={() => navigate("/form-b/step-1")}>
+            <button type="button" className="btn" onClick={() => navigate("/form-b/step-1?new=1")}>
               New Form B
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => navigate("/requisitions")}>

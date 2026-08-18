@@ -51,11 +51,29 @@ class ExperimentGroupCreate(ExperimentGroupBase):
     project_id: int
 
 
+class ExperimentGroupUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1)
+    planned_animal_count: int | None = Field(default=None, gt=0)
+
+
 class ExperimentGroup(ExperimentGroupBase):
     id: int
     project_id: int
+    form_b_study_group_id: int | None = None
     experiments: list[AnimalExperiment] = []
     model_config = ConfigDict(from_attributes=True)
+
+
+class ExperimentGroupResyncSkipped(BaseModel):
+    group_id: int
+    name: str
+    reason: str | None = None
+
+
+class ExperimentGroupResyncResult(BaseModel):
+    created: int
+    updated: int
+    skipped: list[ExperimentGroupResyncSkipped] = Field(default_factory=list)
 
 
 class ExperimentGroupAssignAnimals(BaseModel):
@@ -83,11 +101,15 @@ class ExperimentPlanningStatus(BaseModel):
     project_id: int
     project_status: str | None = None
     approved_animal_count: int | None = None
+    annexure_i_total: int | None = None
     planned_animal_total: int
     remaining_animals: int | None = None
     group_count: int
     is_complete: bool
     can_create_requisition: bool
+    planned_exceeds_iaec_cap: bool = False
+    annexure_differs_from_iaec: bool = False
+    planned_differs_from_annexure: bool = False
     message: str | None = None
 
 

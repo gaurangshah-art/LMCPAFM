@@ -57,3 +57,23 @@ export function isFormBNotFoundError(error: unknown): boolean {
   const detail = error.response?.data?.detail;
   return typeof detail === "string" && detail.toLowerCase().includes("form b not found");
 }
+
+export function isFormBAccessDeniedError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+  const detail = error.response?.data?.detail;
+  if (typeof detail !== "string") {
+    return false;
+  }
+  const normalized = detail.toLowerCase();
+  return (
+    normalized.includes("not allowed to access this form b") ||
+    normalized.includes("do not have permission to view this form b") ||
+    normalized.includes("do not have permission to edit this form b")
+  );
+}
+
+export function isRecoverableStoredFormBError(error: unknown): boolean {
+  return isFormBNotFoundError(error) || isFormBAccessDeniedError(error);
+}

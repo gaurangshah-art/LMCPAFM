@@ -10,6 +10,7 @@ import {
   hasStoredAccessToken,
   readReturnToPath,
   setStoredAccessToken,
+  setStoredUserId,
 } from "../auth/session";
 import type { User } from "../api/types";
 
@@ -97,6 +98,7 @@ export default function App() {
         const user = await getCurrentUser();
         if (!cancelled) {
           setCurrentUser(user);
+          setStoredUserId(user.id);
         }
       } catch {
         if (!cancelled) {
@@ -124,6 +126,7 @@ export default function App() {
     try {
       const user = await getCurrentUser();
       setCurrentUser(user);
+      setStoredUserId(user.id);
 
       const returnTo = preferredReturnTo ?? readReturnToPath();
       clearReturnToPath();

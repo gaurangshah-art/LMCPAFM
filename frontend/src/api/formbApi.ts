@@ -1,4 +1,12 @@
 import { apiClient } from "./client";
+import {
+  clearStoredFormBId,
+  readStoredFormBId,
+  storeFormBId,
+  FORM_B_ID_STORAGE_KEY,
+} from "../utils/formBStorage";
+
+export { clearStoredFormBId, readStoredFormBId, storeFormBId, FORM_B_ID_STORAGE_KEY };
 
 export interface FormBDetails {
   id: number;
@@ -436,19 +444,7 @@ export async function downloadFormBApplicationPdf(formBId: number): Promise<void
 
 export async function submitFormB(formBId: number): Promise<void> {
   await apiClient.post("/formb/submit", { form_b_id: formBId });
-}
-
-export const FORM_B_ID_STORAGE_KEY = "form_b_id";
-
-export function storeFormBId(formBId: number): void {
-  localStorage.setItem(FORM_B_ID_STORAGE_KEY, String(formBId));
-}
-
-export function readStoredFormBId(): number | null {
-  const raw = localStorage.getItem(FORM_B_ID_STORAGE_KEY);
-  if (!raw) return null;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : null;
+  clearStoredFormBId();
 }
 
 export interface FormBInvestigatorRecord {
@@ -514,8 +510,4 @@ export async function linkFormBInvestigator(
     { user_id: userId },
   );
   return data;
-}
-
-export function clearStoredFormBId(): void {
-  localStorage.removeItem(FORM_B_ID_STORAGE_KEY);
 }

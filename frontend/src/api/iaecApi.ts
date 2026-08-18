@@ -5,6 +5,7 @@ import type {
   InvestigatorProjectSummary,
   ExperimentGroup,
   ExperimentGroupCreate,
+  ExperimentGroupUpdate,
   ExperimentPlanningStatus,
   ProjectWorkspace,
   ExperimentGroupAssignmentSummary,
@@ -92,6 +93,15 @@ export async function downloadSignedProjectCertificate(
 
 export async function createGroup(payload: ExperimentGroupCreate): Promise<ExperimentGroup> {
   const { data } = await apiClient.post<ExperimentGroup>("/iaec/group", payload);
+  return data;
+}
+
+export async function resyncExperimentGroups(
+  projectId: number,
+): Promise<import("./types").ExperimentGroupResyncResult> {
+  const { data } = await apiClient.post<import("./types").ExperimentGroupResyncResult>(
+    `/iaec/project/${projectId}/resync-experiment-groups`,
+  );
   return data;
 }
 
@@ -205,9 +215,9 @@ export async function addProjectComment(
 
 export async function updateGroup(
   groupId: number,
-  payload: Partial<ExperimentGroupCreate>
+  payload: ExperimentGroupUpdate,
 ): Promise<ExperimentGroup> {
-  const { data } = await apiClient.put<ExperimentGroup>(`/iaec/group/${groupId}`, payload);
+  const { data } = await apiClient.patch<ExperimentGroup>(`/iaec/group/${groupId}`, payload);
   return data;
 }
 

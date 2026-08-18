@@ -30,6 +30,7 @@ from crud.formb_email import (
     validate_form_b_meeting_invitation_ready,
 )
 from crud.experiment_group_assignment import assign_animals_to_group, get_group_assignment_summary
+from crud.experiment_group_management import delete_experiment_group, update_experiment_group
 from crud.experiment_group_planning import get_experiment_planning_status
 from crud.project_signed_certificate import (
     read_signed_certificate_bytes,
@@ -48,6 +49,8 @@ from schemas.schemas_iaec import (
     InvestigatorProjectSummary,
     ExperimentGroupCreate,
     ExperimentGroup,
+    ExperimentGroupUpdate,
+    ExperimentGroupResyncResult,
     ExperimentGroupAssignAnimals,
     ExperimentGroupAssignmentSummary,
     ExperimentPlanningStatus,
@@ -184,6 +187,74 @@ def get_groups(
 ):
     _ensure_project_view(db, current_user, project_id)
     return crud_iaec.get_groups_by_project(db, project_id)
+
+
+@router.patch("/group/{group_id}", response_model=ExperimentGroup)
+def update_group(
+    group_id: int,
+    payload: ExperimentGroupUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    group = _get_group_or_404(db, group_id)
+    _ensure_project_edit(db, current_user, group.project_id)
+    if payload.name is None and payload.planned_animal_count is None:
+        raise HTTPException(status_code=400, detail="Provide a group name and/or planned animal count.")
+    try:
+        return update_experiment_group(
+            db,
+            group_id,
+            name=payload.name,
+            planned_animal_count=payload.planned_animal_count,
+        )
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except CRUDDatabaseError:
+        raise HTTPException(status_code=500, detail="Database error") from None
+
+
+@router.delete("/group/{group_id}")
+def delete_group(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    group = _get_group_or_404(db, group_id)
+    _ensure_project_edit(db, current_user, group.project_id)
+    try:
+        delete_experiment_group(db, group_id)
+        return {"ok": True}
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except CRUDDatabaseError:
+        raise HTTPException(status_code=500, detail="Database error") from None
+
+
+@router.post("/project/{project_id}/resync-experiment-groups", response_model=ExperimentGroupResyncResult)
+def resync_experiment_groups(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
+):
+    _ensure_project_edit(db, current_user, project_id)
+    from crud.experiment_group_planning import assert_project_approved_for_planning
+    from crud.formb_study_plan import resync_experiment_groups_from_study_plan
+
+    try:
+        assert_project_approved_for_planning(db, project_id)
+        result = resync_experiment_groups_from_study_plan(db, project_id)
+        db.commit()
+        return result
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except CRUDDatabaseError:
+        raise HTTPException(status_code=500, detail="Database error") from None
 
 
 @router.get("/project/{project_id}/experiment-planning", response_model=ExperimentPlanningStatus)

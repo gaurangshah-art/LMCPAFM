@@ -592,6 +592,11 @@ export function FormBStep2b() {
           for animal use. Species and counts in each group are used automatically — no separate
           Step 3 is needed.
         </p>
+        <p className="auth-note" role="note">
+          Groups defined here are your <strong>proposal</strong> for IAEC review (Annexure I). After
+          approval, they are copied into your project workspace as a starting point. If IAEC requests
+          changes, update experiment groups in the project workspace — not in this submitted Form B.
+        </p>
       </header>
 
       {restoreOffer ? (

@@ -265,19 +265,39 @@ export interface ExperimentGroup {
   project_id: number;
   name: string;
   planned_animal_count: number;
+  form_b_study_group_id?: number | null;
   purpose?: string;
   experiments: AnimalExperiment[];
+}
+
+export interface ExperimentGroupUpdate {
+  name?: string;
+  planned_animal_count?: number;
+}
+
+export interface ExperimentGroupResyncResult {
+  created: number;
+  updated: number;
+  skipped: Array<{
+    group_id: number;
+    name: string;
+    reason?: string | null;
+  }>;
 }
 
 export interface ExperimentPlanningStatus {
   project_id: number;
   project_status?: string | null;
   approved_animal_count?: number | null;
+  annexure_i_total?: number | null;
   planned_animal_total: number;
   remaining_animals?: number | null;
   group_count: number;
   is_complete: boolean;
   can_create_requisition: boolean;
+  planned_exceeds_iaec_cap?: boolean;
+  annexure_differs_from_iaec?: boolean;
+  planned_differs_from_annexure?: boolean;
   message?: string | null;
 }
 
