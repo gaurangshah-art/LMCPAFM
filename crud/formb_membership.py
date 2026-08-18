@@ -18,9 +18,39 @@ def get_form_b_membership(db: Session, user: User, form_b_id: int) -> FormBInves
         )
         .first()
     )
-    if membership is None:
-        raise CRUDValidationError("You are not allowed to access this Form B")
-    return membership
+    if membership is not None:
+        return membership
+
+    profile_membership = (
+        db.query(FormBInvestigator)
+        .filter(
+            FormBInvestigator.form_b_id == form_b_id,
+            FormBInvestigator.investigator_profile_user_id == user.id,
+        )
+        .first()
+    )
+    if profile_membership is not None:
+        if profile_membership.user_id is None:
+            profile_membership.user_id = user.id
+            db.flush()
+        return profile_membership
+
+    unlinked_pi = (
+        db.query(FormBInvestigator)
+        .filter(
+            FormBInvestigator.form_b_id == form_b_id,
+            FormBInvestigator.project_role == "principal_investigator",
+            FormBInvestigator.user_id.is_(None),
+        )
+        .first()
+    )
+    if unlinked_pi is not None and (unlinked_pi.name or "").strip().casefold() == (user.name or "").strip().casefold():
+        unlinked_pi.user_id = user.id
+        unlinked_pi.investigator_profile_user_id = user.id
+        db.flush()
+        return unlinked_pi
+
+    raise CRUDValidationError("You are not allowed to access this Form B")
 
 
 def get_member_form_b(db: Session, user: User, form_b_id: int) -> FormB:

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { isFormBAccessDeniedError, isFormBNotFoundError } from "../api/errors";
 import {
   clearStoredFormBId,
@@ -13,7 +13,7 @@ const STALE_FORM_B_MESSAGE =
   "Your previous Form B draft is no longer in the system. Click Start Form B to begin a new application.";
 
 const INACCESSIBLE_FORM_B_MESSAGE =
-  "A saved Form B from another session could not be opened. Click Start Form B to begin a new application.";
+  "This Form B belongs to another account or session. Click Start Form B to begin a new application.";
 
 function parseFormBIdParam(value: string | null): number | null {
   if (!value) {
@@ -24,6 +24,7 @@ function parseFormBIdParam(value: string | null): number | null {
 }
 
 export function useResolvedFormBId() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const userId = getStoredUserId();
   const startNewFormB = searchParams.get("new") === "1";
@@ -47,10 +48,23 @@ export function useResolvedFormBId() {
   });
   const [staleNotice, setStaleNotice] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [blockedQueryFormBId, setBlockedQueryFormBId] = useState<number | null>(null);
+
+  function resetInaccessibleFormB(message: string) {
+    clearStoredFormBId();
+    setFormBIdState(null);
+    setSubmitted(false);
+    setStaleNotice(message);
+    if (queryFormBId) {
+      setBlockedQueryFormBId(queryFormBId);
+      navigate("/form-b/step-1?new=1", { replace: true });
+    }
+  }
 
   useEffect(() => {
     if (startNewFormB) {
       clearStoredFormBId();
+      setBlockedQueryFormBId(null);
       if (!queryFormBId) {
         setFormBIdState(null);
         setSubmitted(false);
@@ -71,7 +85,7 @@ export function useResolvedFormBId() {
   }, [formBId, queryFormBId, startNewFormB, userId]);
 
   useEffect(() => {
-    if (!queryFormBId || !userId) {
+    if (!queryFormBId || !userId || blockedQueryFormBId === queryFormBId) {
       return;
     }
 
@@ -79,10 +93,13 @@ export function useResolvedFormBId() {
       storeFormBId(queryFormBId, userId);
       setFormBIdState(queryFormBId);
     }
-  }, [queryFormBId, userId]);
+  }, [blockedQueryFormBId, queryFormBId, userId]);
 
   useEffect(() => {
-    const activeId = queryFormBId ?? formBId;
+    const activeId =
+      blockedQueryFormBId && queryFormBId === blockedQueryFormBId
+        ? null
+        : queryFormBId ?? formBId;
     if (!activeId) {
       setValidating(false);
       setSubmitted(false);
@@ -101,16 +118,10 @@ export function useResolvedFormBId() {
           }
         }
       } catch (error) {
-        if (!cancelled && !queryFormBId && isFormBNotFoundError(error)) {
-          clearStoredFormBId();
-          setFormBIdState(null);
-          setSubmitted(false);
-          setStaleNotice(STALE_FORM_B_MESSAGE);
-        } else if (!cancelled && !queryFormBId && isFormBAccessDeniedError(error)) {
-          clearStoredFormBId();
-          setFormBIdState(null);
-          setSubmitted(false);
-          setStaleNotice(INACCESSIBLE_FORM_B_MESSAGE);
+        if (!cancelled && isFormBNotFoundError(error)) {
+          resetInaccessibleFormB(STALE_FORM_B_MESSAGE);
+        } else if (!cancelled && isFormBAccessDeniedError(error)) {
+          resetInaccessibleFormB(INACCESSIBLE_FORM_B_MESSAGE);
         }
       } finally {
         if (!cancelled) {
@@ -122,13 +133,14 @@ export function useResolvedFormBId() {
     return () => {
       cancelled = true;
     };
-  }, [queryFormBId, formBId]);
+  }, [blockedQueryFormBId, formBId, queryFormBId]);
 
   function setFormBId(nextId: number | null) {
     if (nextId == null) {
       clearStoredFormBId();
       setFormBIdState(null);
       setSubmitted(false);
+      setBlockedQueryFormBId(null);
       return;
     }
     if (userId) {
@@ -136,10 +148,14 @@ export function useResolvedFormBId() {
     }
     setFormBIdState(nextId);
     setStaleNotice(null);
+    setBlockedQueryFormBId(null);
   }
 
+  const resolvedFormBId =
+    blockedQueryFormBId && queryFormBId === blockedQueryFormBId ? null : queryFormBId ?? formBId;
+
   return {
-    formBId: queryFormBId ?? formBId,
+    formBId: resolvedFormBId,
     setFormBId,
     validating,
     staleNotice,

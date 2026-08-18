@@ -211,6 +211,7 @@ export function FormBStep1() {
     } catch (error) {
       if (isFormBAccessDeniedError(error) || isFormBNotFoundError(error)) {
         setFormBId(null);
+        navigate("/form-b/step-1?new=1", { replace: true });
         showValidationError(
           "This Form B could not be saved. Click Start Form B to begin a new application.",
         );
