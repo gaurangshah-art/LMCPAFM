@@ -144,15 +144,20 @@ def get_investigator_project_summaries(db: Session, user_id: int) -> list[dict]:
 
 
 def get_meeting_details(db: Session, meeting_id: int):
-    from database.lmcpafm_models import FormB, IAECMeeting
+    from database.lmcpafm_models import FormB, FormBMeetingDecision, IAECMeeting
 
     meeting = db.query(IAECMeeting).filter(IAECMeeting.id == meeting_id).first()
     if not meeting:
         raise CRUDNotFoundError(f"IAEC meeting {meeting_id} not found.")
 
     assigned = (
-        db.query(FormB, IAECProject)
+        db.query(FormB, IAECProject, FormBMeetingDecision)
         .join(IAECProject, IAECProject.id == FormB.project_id)
+        .outerjoin(
+            FormBMeetingDecision,
+            (FormBMeetingDecision.form_b_id == FormB.id)
+            & (FormBMeetingDecision.meeting_id == FormB.meeting_id),
+        )
         .filter(FormB.meeting_id == meeting_id)
         .order_by(FormB.id.asc())
         .all()
@@ -165,8 +170,9 @@ def get_meeting_details(db: Session, meeting_id: int):
             "investigator_name": project.investigator_name,
             "status": project.status,
             "protocol_number": project.protocol_number,
+            "decision": decision.decision if decision else None,
         }
-        for form_b, project in assigned
+        for form_b, project, decision in assigned
     ]
     return {"meeting": meeting, "assigned_projects": assigned_projects}
 

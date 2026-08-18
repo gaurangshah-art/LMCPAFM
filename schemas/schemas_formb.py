@@ -52,6 +52,13 @@ class FormBProtocolRead(BaseModel):
         orm_mode = True
 
 
+class FormBFinalizeApprovalRead(BaseModel):
+    form_b_id: int
+    project_id: int
+    protocol_number: str
+    project_status: str
+
+
 class FormBWithMeetingRead(BaseModel):
     form_b_id: int
     project_id: int
@@ -61,6 +68,7 @@ class FormBWithMeetingRead(BaseModel):
     meeting_date: Optional[date] = None
     meeting_number: Optional[str] = None
     protocol_number: Optional[str] = None
+    project_status: Optional[str] = None
     decision: Optional[str] = None
     approved_animal_count: Optional[int] = None
     decision_remarks: Optional[str] = None

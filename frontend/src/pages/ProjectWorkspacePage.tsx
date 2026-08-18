@@ -261,7 +261,12 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
               <button
                 type="button"
                 className="btn btn-secondary"
-                disabled={resyncing}
+                disabled={resyncing || !planning.iaec_approval_finalized}
+                title={
+                  planning.iaec_approval_finalized
+                    ? undefined
+                    : "Available after IAEC finalizes protocol approval."
+                }
                 onClick={() => void handleResyncFromAnnexure()}
               >
                 {resyncing ? "Re-syncing…" : "Re-sync from Annexure I"}

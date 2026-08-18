@@ -16,10 +16,10 @@ def _normalize_status(status: str | None) -> str:
     return (status or "").strip().lower()
 
 
-def get_project_animal_cap(db: Session, project_id: int) -> int | None:
+def get_animal_cap_info(db: Session, project_id: int) -> tuple[int | None, str | None]:
     form_b = db.query(FormB).filter(FormB.project_id == project_id).first()
     if form_b is None:
-        return None
+        return None, None
 
     if form_b.meeting_id is not None:
         decision = (
@@ -31,7 +31,7 @@ def get_project_animal_cap(db: Session, project_id: int) -> int | None:
             .first()
         )
         if decision is not None and decision.approved_animal_count is not None:
-            return decision.approved_animal_count
+            return decision.approved_animal_count, "meeting_decision"
 
     requirements = (
         db.query(FormBAnimalRequirement)
@@ -39,9 +39,14 @@ def get_project_animal_cap(db: Session, project_id: int) -> int | None:
         .all()
     )
     if requirements:
-        return sum(requirement.count for requirement in requirements)
+        return sum(requirement.count for requirement in requirements), "form_b_requirements"
 
-    return None
+    return None, None
+
+
+def get_project_animal_cap(db: Session, project_id: int) -> int | None:
+    cap, _source = get_animal_cap_info(db, project_id)
+    return cap
 
 
 def get_project_planned_total(db: Session, project_id: int, exclude_group_id: int | None = None) -> int:
@@ -148,14 +153,22 @@ def get_experiment_planning_status(db: Session, project_id: int) -> dict:
         .order_by(ExperimentGroup.id.asc())
         .all()
     )
-    cap = get_project_animal_cap(db, project_id)
+    cap, cap_source = get_animal_cap_info(db, project_id)
     annexure_total = get_annexure_i_total(db, project_id)
     planned_total = sum(group.planned_animal_count or 0 for group in groups)
     is_complete = False
     message: str | None = None
+    iaec_approval_finalized = _normalize_status(project.status) == "approved"
 
-    if _normalize_status(project.status) != "approved":
-        message = "Project is not IAEC-approved yet."
+    if not iaec_approval_finalized:
+        if cap_source == "meeting_decision" and cap is not None:
+            message = (
+                f"IAEC has recorded a meeting decision ({cap} animals), but project approval "
+                "is not finalized yet. Group planning and requisitions unlock after IAEC "
+                "finalizes the protocol approval."
+            )
+        else:
+            message = "Project is not IAEC-approved yet."
     elif not groups:
         message = "Add at least one experiment group with planned animal counts."
     elif any((group.planned_animal_count or 0) <= 0 for group in groups):
@@ -192,6 +205,8 @@ def get_experiment_planning_status(db: Session, project_id: int) -> dict:
         "project_id": project_id,
         "project_status": project.status,
         "approved_animal_count": cap,
+        "animal_cap_source": cap_source,
+        "iaec_approval_finalized": iaec_approval_finalized,
         "annexure_i_total": annexure_total,
         "planned_animal_total": planned_total,
         "remaining_animals": (cap - planned_total) if cap is not None else None,

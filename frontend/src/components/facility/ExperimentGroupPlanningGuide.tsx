@@ -17,6 +17,16 @@ export function ExperimentGroupPlanningGuide({
   const showAnnexureIaecMismatch = Boolean(planning.annexure_differs_from_iaec);
   const showPlannedCapWarning = Boolean(planning.planned_exceeds_iaec_cap);
   const showPlannedAnnexureNote = Boolean(planning.planned_differs_from_annexure);
+  const capLabel = planning.iaec_approval_finalized
+    ? "IAEC-approved limit"
+    : planning.animal_cap_source === "meeting_decision"
+      ? "IAEC decision limit (approval pending)"
+      : planning.animal_cap_source === "form_b_requirements"
+        ? "Proposed total (Form B)"
+        : "Animal limit";
+  const remainingLabel = planning.iaec_approval_finalized
+    ? "Remaining capacity"
+    : "Remaining (after decision)";
 
   return (
     <div className="info-card">
@@ -47,7 +57,7 @@ export function ExperimentGroupPlanningGuide({
           <strong>{planning.annexure_i_total ?? "—"}</strong>
         </div>
         <div className="planning-compare-card">
-          <span className="planning-compare-label">IAEC-approved limit</span>
+          <span className="planning-compare-label">{capLabel}</span>
           <strong>{planning.approved_animal_count ?? "—"}</strong>
         </div>
         <div className="planning-compare-card">
@@ -55,15 +65,24 @@ export function ExperimentGroupPlanningGuide({
           <strong>{planning.planned_animal_total}</strong>
         </div>
         <div className="planning-compare-card">
-          <span className="planning-compare-label">Remaining capacity</span>
+          <span className="planning-compare-label">{remainingLabel}</span>
           <strong>{planning.remaining_animals ?? "—"}</strong>
         </div>
       </div>
 
       {showAnnexureIaecMismatch ? (
         <p className="auth-note" role="note">
-          The IAEC-approved animal limit differs from your submitted Annexure I total. Update
-          group planned counts here to reflect IAEC instructions — do not edit the submitted Form B.
+          {planning.iaec_approval_finalized ? (
+            <>
+              The IAEC-approved animal limit differs from your submitted Annexure I total. Update
+              group planned counts here to reflect IAEC instructions — do not edit the submitted Form B.
+            </>
+          ) : (
+            <>
+              IAEC has recorded a decision that differs from your submitted Annexure I total. Group
+              planning will unlock once IAEC finalizes protocol approval.
+            </>
+          )}
         </p>
       ) : null}
 

@@ -158,11 +158,19 @@ export interface FormBWithMeeting {
   meeting_date: string | null;
   meeting_number: string | null;
   protocol_number: string | null;
+  project_status?: string | null;
   decision: string | null;
   approved_animal_count: number | null;
   decision_remarks: string | null;
   submitted_at?: string | null;
   is_submitted?: boolean;
+}
+
+export interface FormBFinalizeApprovalResult {
+  form_b_id: number;
+  project_id: number;
+  protocol_number: string;
+  project_status: string;
 }
 
 export type FormBMeetingDecisionValue =
@@ -289,6 +297,8 @@ export interface ExperimentPlanningStatus {
   project_id: number;
   project_status?: string | null;
   approved_animal_count?: number | null;
+  animal_cap_source?: "meeting_decision" | "form_b_requirements" | null;
+  iaec_approval_finalized?: boolean;
   annexure_i_total?: number | null;
   planned_animal_total: number;
   remaining_animals?: number | null;

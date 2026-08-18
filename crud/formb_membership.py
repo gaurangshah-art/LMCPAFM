@@ -194,3 +194,14 @@ def user_can_edit_project(db: Session, user_id: int, project_id: int) -> bool:
         .first()
     )
     return membership is not None
+
+
+def user_can_plan_experiment_groups(db: Session, user_id: int, project_id: int) -> bool:
+    from database.lmcpafm_models import IAECProject
+
+    project = db.query(IAECProject).filter(IAECProject.id == project_id).first()
+    if project is None:
+        return False
+    if (project.status or "").strip().lower() != "approved":
+        return False
+    return user_can_view_project(db, user_id, project_id)

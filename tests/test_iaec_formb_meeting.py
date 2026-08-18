@@ -7,6 +7,7 @@ from database.lmcpafm_models import FormB, IAECMeeting, IAECProject
 from crud.exceptions import CRUDValidationError
 from crud.formb_internal import (
     assign_form_b_meeting,
+    ensure_form_b_protocol_number_for_invitation,
     generate_form_b_protocol_number,
     upsert_form_b_meeting_decision,
 )
@@ -242,3 +243,44 @@ def test_meeting_endpoints_require_iaec_role(client):
         },
     )
     assert meeting_res.status_code == 401
+
+
+def test_finalize_approval_after_invitation_and_decision(
+    client,
+    iaec_auth_headers,
+):
+    from database.database import SessionLocal
+    from database.lmcpafm_models import IAECProject
+
+    db = SessionLocal()
+    meeting, project, form_b = _seed_form_b(db)
+    upsert_form_b_meeting_decision(
+        db,
+        form_b.id,
+        meeting.id,
+        "animal_count_amended",
+        approved_animal_count=12,
+        remarks="Reduced from Annexure I",
+    )
+    protocol_number = ensure_form_b_protocol_number_for_invitation(db, form_b.id)
+    db.close()
+
+    db = SessionLocal()
+    pending_project = db.query(IAECProject).filter(IAECProject.id == project.id).first()
+    db.close()
+    assert pending_project is not None
+    assert protocol_number
+    assert (pending_project.status or "").lower() != "approved"
+
+    finalize_res = client.post(
+        f"/iaec/form-b/{form_b.id}/finalize-approval",
+        headers=iaec_auth_headers,
+    )
+    assert finalize_res.status_code == 200, finalize_res.text
+    body = finalize_res.json()
+    assert body["protocol_number"] == protocol_number
+    assert body["project_status"] == "approved"
+
+    list_res = client.get("/iaec/form-b-with-meeting", headers=iaec_auth_headers)
+    row = next(item for item in list_res.json() if item["form_b_id"] == form_b.id)
+    assert row["project_status"] == "approved"

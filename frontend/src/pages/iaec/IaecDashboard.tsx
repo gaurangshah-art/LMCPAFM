@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   assignFormBMeeting,
   downloadMeetingSummaryPdf,
+  finalizeFormBApproval,
   generateFormBProtocolNumber,
   getFormBWithMeeting,
   getMeetings,
@@ -24,6 +25,20 @@ function isApprovedDecision(decision: string | null | undefined): decision is st
   return Boolean(decision && APPROVED_DECISIONS.includes(decision));
 }
 
+function isProjectApproved(status: string | null | undefined): boolean {
+  return (status || "").trim().toLowerCase() === "approved";
+}
+
+function canFinalizeApproval(row: FormBWithMeeting): boolean {
+  return Boolean(
+    row.is_submitted &&
+      row.meeting_id &&
+      row.protocol_number &&
+      isApprovedDecision(row.decision) &&
+      !isProjectApproved(row.project_status),
+  );
+}
+
 export function IaecDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -37,6 +52,7 @@ export function IaecDashboard() {
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [isSavingDecision, setIsSavingDecision] = useState(false);
   const [sendingInvitationId, setSendingInvitationId] = useState<number | null>(null);
+  const [finalizingApprovalId, setFinalizingApprovalId] = useState<number | null>(null);
   const [downloadingMeetingId, setDownloadingMeetingId] = useState<number | null>(null);
 
   const loadDashboard = useCallback(async () => {
@@ -94,6 +110,29 @@ export function IaecDashboard() {
       await loadDashboard();
     } catch (err) {
       alert(getApiErrorMessage(err));
+    }
+  }
+
+  async function handleFinalizeApproval(row: FormBWithMeeting) {
+    if (
+      !window.confirm(
+        `Finalize IAEC approval for "${row.project_title}"?\n\nThis sets the project to approved and copies experiment groups from Annexure I so the investigator can plan groups and request animals.`,
+      )
+    ) {
+      return;
+    }
+
+    setFinalizingApprovalId(row.form_b_id);
+    try {
+      const result = await finalizeFormBApproval(row.form_b_id);
+      alert(
+        `Approval finalized.\nProtocol: ${result.protocol_number}\nProject status: ${result.project_status}`,
+      );
+      await loadDashboard();
+    } catch (err) {
+      alert(getApiErrorMessage(err));
+    } finally {
+      setFinalizingApprovalId(null);
     }
   }
 
@@ -185,6 +224,7 @@ export function IaecDashboard() {
             : "Not assigned",
       },
       { header: "Protocol", cell: (row) => row.protocol_number ?? "—" },
+      { header: "Project status", cell: (row) => row.project_status ?? "draft" },
       { header: "Decision", cell: (row) => row.decision ?? "Not recorded" },
       {
         header: "Actions",
@@ -222,6 +262,16 @@ export function IaecDashboard() {
                 Generate protocol
               </button>
             ) : null}
+            {canFinalizeApproval(row) ? (
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={finalizingApprovalId === row.form_b_id}
+                onClick={() => void handleFinalizeApproval(row)}
+              >
+                {finalizingApprovalId === row.form_b_id ? "Finalizing…" : "Finalize approval"}
+              </button>
+            ) : null}
             {row.is_submitted && row.meeting_id ? (
               <button
                 type="button"
@@ -236,7 +286,7 @@ export function IaecDashboard() {
         ),
       },
     ],
-    [meetings, sendingInvitationId],
+    [meetings, sendingInvitationId, finalizingApprovalId],
   );
 
   return (
@@ -244,8 +294,8 @@ export function IaecDashboard() {
       <header className="section-header">
         <h2>IAEC Dashboard</h2>
         <p>
-          Assign Form B submissions to meetings, send invitations, record decisions, and generate
-          protocol numbers after approval.
+          Assign Form B submissions to meetings, send invitations, record decisions, finalize
+          approval after a meeting decision, and generate protocol numbers when needed.
         </p>
       </header>
 

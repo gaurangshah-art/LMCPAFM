@@ -10,6 +10,7 @@ from crud import crud_iaec
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
 from crud.formb_internal import (
     assign_form_b_meeting as assign_form_b_meeting_crud,
+    finalize_form_b_protocol_approval as finalize_form_b_protocol_approval_crud,
     form_b_to_protocol_read,
     form_b_to_record_read,
     generate_form_b_protocol_number as generate_form_b_protocol_number_crud,
@@ -64,6 +65,7 @@ from schemas.schemas_formb import (
     FormBRecordRead,
     FormBMeetingAssign,
     FormBProtocolRead,
+    FormBFinalizeApprovalRead,
     FormBWithMeetingRead,
     FormBMeetingDecisionUpsert,
     FormBMeetingDecisionRead,
@@ -88,10 +90,12 @@ def _ensure_project_view(db: Session, user: User, project_id: int) -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
-def _ensure_project_edit(db: Session, user: User, project_id: int) -> None:
+def _ensure_experiment_group_edit(db: Session, user: User, project_id: int) -> None:
     if not _privileged_roles(user).isdisjoint(PRIVILEGED_IAEC_ROLES):
         return
-    if not user_can_edit_project(db, user.id, project_id):
+    from crud.formb_membership import user_can_plan_experiment_groups
+
+    if not user_can_plan_experiment_groups(db, user.id, project_id):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
@@ -166,7 +170,7 @@ def create_group(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
 ):
-    _ensure_project_edit(db, current_user, group.project_id)
+    _ensure_experiment_group_edit(db, current_user, group.project_id)
     try:
         return crud_iaec.create_group(db, group)
     except CRUDNotFoundError as exc:
@@ -197,7 +201,7 @@ def update_group(
     current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
 ):
     group = _get_group_or_404(db, group_id)
-    _ensure_project_edit(db, current_user, group.project_id)
+    _ensure_experiment_group_edit(db, current_user, group.project_id)
     if payload.name is None and payload.planned_animal_count is None:
         raise HTTPException(status_code=400, detail="Provide a group name and/or planned animal count.")
     try:
@@ -222,7 +226,7 @@ def delete_group(
     current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
 ):
     group = _get_group_or_404(db, group_id)
-    _ensure_project_edit(db, current_user, group.project_id)
+    _ensure_experiment_group_edit(db, current_user, group.project_id)
     try:
         delete_experiment_group(db, group_id)
         return {"ok": True}
@@ -240,7 +244,7 @@ def resync_experiment_groups(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
 ):
-    _ensure_project_edit(db, current_user, project_id)
+    _ensure_experiment_group_edit(db, current_user, project_id)
     from crud.experiment_group_planning import assert_project_approved_for_planning
     from crud.formb_study_plan import resync_experiment_groups_from_study_plan
 
@@ -348,7 +352,7 @@ def create_experiment(
     current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
 ):
     group = _get_group_or_404(db, exp.group_id)
-    _ensure_project_edit(db, current_user, group.project_id)
+    _ensure_experiment_group_edit(db, current_user, group.project_id)
     try:
         return crud_iaec.create_experiment(db, exp)
     except CRUDNotFoundError as exc:
@@ -383,7 +387,7 @@ def assign_group_animals(
     current_user: User = Depends(require_any_role("investigator", "iaec", "admin", "staff")),
 ):
     group = _get_group_or_404(db, group_id)
-    _ensure_project_edit(db, current_user, group.project_id)
+    _ensure_experiment_group_edit(db, current_user, group.project_id)
     try:
         return assign_animals_to_group(db, group_id, payload.animal_ids)
     except CRUDNotFoundError as exc:
@@ -481,6 +485,33 @@ def generate_form_b_protocol_number(
     try:
         form_b, _protocol_number = generate_form_b_protocol_number_crud(db, form_b_id)
         return form_b_to_protocol_read(db, form_b)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except CRUDDatabaseError:
+        raise HTTPException(status_code=500, detail="Database error")
+
+
+@router.post("/form-b/{form_b_id}/finalize-approval", response_model=FormBFinalizeApprovalRead)
+def finalize_form_b_approval(
+    form_b_id: int,
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    from database.lmcpafm_models import IAECProject
+
+    try:
+        form_b, protocol_number = finalize_form_b_protocol_approval_crud(db, form_b_id)
+        project = db.query(IAECProject).filter(IAECProject.id == form_b.project_id).first()
+        if project is None:
+            raise CRUDNotFoundError("Linked IAEC project not found")
+        return {
+            "form_b_id": form_b.id,
+            "project_id": project.id,
+            "protocol_number": protocol_number,
+            "project_status": project.status or "approved",
+        }
     except CRUDNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except CRUDValidationError as exc:

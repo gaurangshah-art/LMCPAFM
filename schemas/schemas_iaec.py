@@ -101,6 +101,8 @@ class ExperimentPlanningStatus(BaseModel):
     project_id: int
     project_status: str | None = None
     approved_animal_count: int | None = None
+    animal_cap_source: str | None = None
+    iaec_approval_finalized: bool = False
     annexure_i_total: int | None = None
     planned_animal_total: int
     remaining_animals: int | None = None

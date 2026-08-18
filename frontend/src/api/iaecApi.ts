@@ -14,6 +14,7 @@ import type {
   IAECMeetingRecord,
   IAECMeetingCreate,
   FormBWithMeeting,
+  FormBFinalizeApprovalResult,
   FormBMeetingDecisionUpsert,
   IAECApprovalCertificate,
 } from "./types";
@@ -277,6 +278,13 @@ export async function assignFormBMeeting(
 export async function generateFormBProtocolNumber(formBId: number): Promise<{ protocol_number: string }> {
   const { data } = await apiClient.post<{ protocol_number: string }>(
     `/iaec/form-b/${formBId}/protocol-number`
+  );
+  return data;
+}
+
+export async function finalizeFormBApproval(formBId: number): Promise<FormBFinalizeApprovalResult> {
+  const { data } = await apiClient.post<FormBFinalizeApprovalResult>(
+    `/iaec/form-b/${formBId}/finalize-approval`,
   );
   return data;
 }

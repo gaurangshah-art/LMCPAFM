@@ -145,6 +145,7 @@ def list_form_b_with_meeting(db: Session) -> list[dict]:
             "meeting_date": meeting.date if meeting else None,
             "meeting_number": meeting.meeting_number if meeting else None,
             "protocol_number": _normalize_protocol_number(project.protocol_number),
+            "project_status": project.status,
             "decision": decision.decision if decision else None,
             "approved_animal_count": decision.approved_animal_count if decision else None,
             "decision_remarks": decision.remarks if decision else None,

@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiClient } from "../../api/client";
-import { sendFormBMeetingInvitation } from "../../api/iaecApi";
+import { finalizeFormBApproval, sendFormBMeetingInvitation } from "../../api/iaecApi";
 import { formatDisplayDate } from "../../utils/dateFormat";
 import { getApiErrorMessage } from "../../api/errors";
+
+const APPROVED_DECISIONS = ["approved", "approved_with_revisions", "animal_count_amended"];
+
+function isApprovedDecision(decision: string | null | undefined): boolean {
+  return Boolean(decision && APPROVED_DECISIONS.includes(decision));
+}
+
+function isProjectApproved(status: string | null | undefined): boolean {
+  return (status || "").trim().toLowerCase() === "approved";
+}
 
 interface MeetingDetailsResponse {
   meeting: {
@@ -21,6 +31,7 @@ interface MeetingDetailsResponse {
     investigator_name: string;
     status?: string | null;
     protocol_number?: string | null;
+    decision?: string | null;
   }>;
 }
 
@@ -35,6 +46,7 @@ export function IaecMeetingDetails() {
     MeetingDetailsResponse["assigned_projects"]
   >([]);
   const [sendingInvitationId, setSendingInvitationId] = useState<number | null>(null);
+  const [finalizingApprovalId, setFinalizingApprovalId] = useState<number | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   async function loadMeetingDetails() {
@@ -71,6 +83,30 @@ export function IaecMeetingDetails() {
       setActionMessage(getApiErrorMessage(error));
     } finally {
       setSendingInvitationId(null);
+    }
+  }
+
+  async function handleFinalizeApproval(formBId: number, projectTitle: string) {
+    if (
+      !window.confirm(
+        `Finalize IAEC approval for "${projectTitle}"? The investigator will be able to plan experiment groups and request animals.`,
+      )
+    ) {
+      return;
+    }
+
+    setFinalizingApprovalId(formBId);
+    setActionMessage(null);
+    try {
+      const result = await finalizeFormBApproval(formBId);
+      setActionMessage(
+        `Approval finalized for ${projectTitle}. Protocol ${result.protocol_number}; project status ${result.project_status}.`,
+      );
+      await loadMeetingDetails();
+    } catch (error) {
+      setActionMessage(getApiErrorMessage(error));
+    } finally {
+      setFinalizingApprovalId(null);
     }
   }
 
@@ -143,6 +179,22 @@ export function IaecMeetingDetails() {
                       >
                         {sendingInvitationId === project.form_b_id ? "Sending…" : "Send invitation"}
                       </button>
+                      {project.protocol_number &&
+                      isApprovedDecision(project.decision) &&
+                      !isProjectApproved(project.status) ? (
+                        <button
+                          type="button"
+                          className="btn-small"
+                          disabled={finalizingApprovalId === project.form_b_id}
+                          onClick={() =>
+                            void handleFinalizeApproval(project.form_b_id, project.title)
+                          }
+                        >
+                          {finalizingApprovalId === project.form_b_id
+                            ? "Finalizing…"
+                            : "Finalize approval"}
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
