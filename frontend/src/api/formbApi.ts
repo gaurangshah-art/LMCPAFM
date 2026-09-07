@@ -383,8 +383,10 @@ export async function getFormBStep1Autofill(): Promise<FormBStep1Autofill> {
   return data;
 }
 
-export async function startFormB(): Promise<FormBStartResponse> {
-  const { data } = await apiClient.post<FormBStartResponse>("/formb/start");
+export async function startFormB(forceNew = false): Promise<FormBStartResponse> {
+  const { data } = await apiClient.post<FormBStartResponse>("/formb/start", undefined, {
+    params: forceNew ? { force_new: true } : undefined,
+  });
   return data;
 }
 

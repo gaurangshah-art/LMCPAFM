@@ -84,6 +84,20 @@ export async function createFacilityCage(payload: {
   return data;
 }
 
+export async function updateFacilityCage(
+  cageId: number,
+  payload: Partial<{
+    label: string;
+    location: string;
+    room_id: number | null;
+    capacity: number;
+    status: string;
+  }>,
+): Promise<FacilityCage> {
+  const { data } = await apiClient.put<FacilityCage>(`/admin/facility/cages/${cageId}`, payload);
+  return data;
+}
+
 export async function getFacilityAnimals(params?: {
   status?: string;
   species_id?: number;

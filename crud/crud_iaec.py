@@ -85,7 +85,10 @@ def get_projects_by_investigator(db: Session, user_id: int):
         .join(FormB, FormB.project_id == IAECProject.id)
         .join(FormBInvestigator, FormBInvestigator.form_b_id == FormB.id)
         .filter(
-            FormBInvestigator.user_id == user_id,
+            or_(
+                FormBInvestigator.user_id == user_id,
+                FormBInvestigator.investigator_profile_user_id == user_id,
+            ),
             or_(
                 FormBInvestigator.can_view_status.is_(True),
                 FormBInvestigator.can_edit_forms.is_(True),
@@ -104,6 +107,24 @@ def get_projects_by_investigator(db: Session, user_id: int):
     )
 
 
+def _get_investigator_membership(db: Session, user_id: int, form_b_id: int):
+    from database.lmcpafm_models import FormBInvestigator
+
+    membership = (
+        db.query(FormBInvestigator)
+        .filter(
+            FormBInvestigator.form_b_id == form_b_id,
+            or_(
+                FormBInvestigator.user_id == user_id,
+                FormBInvestigator.investigator_profile_user_id == user_id,
+            ),
+        )
+        .order_by(FormBInvestigator.id.asc())
+        .first()
+    )
+    return membership
+
+
 def get_investigator_project_summaries(db: Session, user_id: int) -> list[dict]:
     from database.lmcpafm_models import FormB
 
@@ -120,6 +141,8 @@ def get_investigator_project_summaries(db: Session, user_id: int) -> list[dict]:
         meeting = form_b.meeting if form_b else None
         groups = project.experiment_groups or []
         experiment_count = sum(len(group.experiments or []) for group in groups)
+        membership = _get_investigator_membership(db, user_id, form_b.id) if form_b else None
+        project_role = membership.project_role if membership else None
 
         summaries.append(
             {
@@ -137,6 +160,14 @@ def get_investigator_project_summaries(db: Session, user_id: int) -> list[dict]:
                 "submitted_at": form_b.submitted_at.isoformat() if form_b and form_b.submitted_at else None,
                 "experiment_group_count": len(groups),
                 "experiment_count": experiment_count,
+                "project_role": project_role,
+                "is_principal_investigator": project_role == "principal_investigator",
+                "is_empty_draft": bool(
+                    form_b
+                    and form_b.submitted_at is None
+                    and project_role == "principal_investigator"
+                    and (project.title or "").strip() == "Draft Form B application"
+                ),
             }
         )
 

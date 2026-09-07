@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError
@@ -64,11 +64,12 @@ def read_form_b_step1_autofill(
 
 @router.post("/start", response_model=FormBStartRead)
 def create_form_b_draft(
+    force_new: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_investigator),
 ):
     try:
-        form_b = start_form_b(db, current_user)
+        form_b = start_form_b(db, current_user, force_new=force_new)
         return {"id": form_b.id, "project_id": form_b.project_id}
     except CRUDValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

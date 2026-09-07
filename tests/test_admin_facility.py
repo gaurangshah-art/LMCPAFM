@@ -28,6 +28,15 @@ def test_admin_facility_workflow(client, admin_auth_headers):
     assert cage_res.status_code == 200, cage_res.text
     cage_id = cage_res.json()["id"]
 
+    update_res = client.put(
+        f"/admin/facility/cages/{cage_id}",
+        json={"location": "Rack C1 / Shelf 2", "capacity": 5},
+        headers=admin_auth_headers,
+    )
+    assert update_res.status_code == 200, update_res.text
+    assert update_res.json()["location"] == "Rack C1 / Shelf 2"
+    assert update_res.json()["capacity"] == 5
+
     db = SessionLocal()
     try:
         species = Species(name=f"FacSpecies-{suffix}")

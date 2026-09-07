@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   getFormBReview,
   getFormBStep1Autofill,
@@ -28,6 +28,8 @@ import { useWizardValidation } from "../../hooks/useWizardValidation";
 
 export function FormBStep1() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const startNewFormB = searchParams.get("new") === "1";
 
   const { formBId, setFormBId, validating, staleNotice, submitted } = useResolvedFormBId();
   useFormBEditRouteGuard(formBId, submitted, validating);
@@ -157,7 +159,7 @@ export function FormBStep1() {
         return;
       }
 
-      const started = await startFormB();
+      const started = await startFormB(startNewFormB);
       setFormBId(started.id);
     } catch (error) {
       showValidationError(getApiErrorMessage(error));

@@ -5,6 +5,7 @@ import {
   createCareLog,
   createFacilityCage,
   createFacilityRoom,
+  updateFacilityCage,
   createProcurement,
   getBreedingRecords,
   getCareLogs,
@@ -95,7 +96,14 @@ export function AdminFacilityPage() {
   const selectedAnimal = animals.find((animal) => animal.id === selectedAnimalId) ?? null;
 
   const [roomForm, setRoomForm] = useState({ code: "", name: "", building: "", notes: "" });
-  const [cageForm, setCageForm] = useState({ label: "", location: "", room_id: "", capacity: "1" });
+  const [editingCageId, setEditingCageId] = useState<number | null>(null);
+  const [cageForm, setCageForm] = useState({
+    label: "",
+    location: "",
+    room_id: "",
+    capacity: "1",
+    status: "active",
+  });
   const [procurementForm, setProcurementForm] = useState({
     species_id: "",
     strain_id: "",
@@ -233,20 +241,54 @@ export function AdminFacilityPage() {
   }
 
   async function handleCreateCage() {
+    if (!cageForm.label.trim() || !cageForm.location.trim()) {
+      setActionMessage("Cage label and location are required.");
+      return;
+    }
+
     try {
       setActionMessage(null);
-      await createFacilityCage({
-        label: cageForm.label.trim(),
-        location: cageForm.location.trim(),
-        room_id: cageForm.room_id ? Number(cageForm.room_id) : null,
-        capacity: Number(cageForm.capacity) || 1,
-      });
-      setCageForm({ label: "", location: "", room_id: "", capacity: "1" });
-      setActionMessage("Cage created.");
+      if (editingCageId) {
+        await updateFacilityCage(editingCageId, {
+          label: cageForm.label.trim(),
+          location: cageForm.location.trim(),
+          room_id: cageForm.room_id ? Number(cageForm.room_id) : null,
+          capacity: Number(cageForm.capacity) || 1,
+          status: cageForm.status,
+        });
+        setActionMessage("Cage updated.");
+      } else {
+        await createFacilityCage({
+          label: cageForm.label.trim(),
+          location: cageForm.location.trim(),
+          room_id: cageForm.room_id ? Number(cageForm.room_id) : null,
+          capacity: Number(cageForm.capacity) || 1,
+          status: cageForm.status,
+        });
+        setActionMessage("Cage created.");
+      }
+      setEditingCageId(null);
+      setCageForm({ label: "", location: "", room_id: "", capacity: "1", status: "active" });
       await loadAll();
     } catch (submitError) {
       setActionMessage(getApiErrorMessage(submitError));
     }
+  }
+
+  function startEditCage(cage: FacilityCage) {
+    setEditingCageId(cage.id);
+    setCageForm({
+      label: cage.label,
+      location: cage.location,
+      room_id: cage.room_id != null ? String(cage.room_id) : "",
+      capacity: String(cage.capacity),
+      status: cage.status,
+    });
+  }
+
+  function cancelCageEdit() {
+    setEditingCageId(null);
+    setCageForm({ label: "", location: "", room_id: "", capacity: "1", status: "active" });
   }
 
   async function handleCreateProcurement() {
@@ -427,10 +469,10 @@ export function AdminFacilityPage() {
 
       {activeTab === "cages" ? (
         <>
-          <PageSection title="Add Cage">
+          <PageSection title={editingCageId ? "Edit Cage" : "Add Cage"}>
             <div className="form-grid">
               <label>Label<input value={cageForm.label} onChange={(e) => setCageForm({ ...cageForm, label: e.target.value })} /></label>
-              <label>Location<input value={cageForm.location} onChange={(e) => setCageForm({ ...cageForm, location: e.target.value })} /></label>
+              <label>Location<input value={cageForm.location} onChange={(e) => setCageForm({ ...cageForm, location: e.target.value })} placeholder="e.g. Rack C1 / Shelf 2" /></label>
               <label>Room
                 <select value={cageForm.room_id} onChange={(e) => setCageForm({ ...cageForm, room_id: e.target.value })}>
                   <option value="">Unassigned</option>
@@ -438,7 +480,23 @@ export function AdminFacilityPage() {
                 </select>
               </label>
               <label>Capacity<input type="number" min={1} value={cageForm.capacity} onChange={(e) => setCageForm({ ...cageForm, capacity: e.target.value })} /></label>
-              <button type="button" className="btn" onClick={() => void handleCreateCage()}>Create Cage</button>
+              <label>Status
+                <select value={cageForm.status} onChange={(e) => setCageForm({ ...cageForm, status: e.target.value })}>
+                  <option value="active">active</option>
+                  <option value="inactive">inactive</option>
+                  <option value="maintenance">maintenance</option>
+                </select>
+              </label>
+              <div className="wizard-actions full-width">
+                <button type="button" className="btn" onClick={() => void handleCreateCage()}>
+                  {editingCageId ? "Save changes" : "Create Cage"}
+                </button>
+                {editingCageId ? (
+                  <button type="button" className="btn-secondary" onClick={cancelCageEdit}>
+                    Cancel edit
+                  </button>
+                ) : null}
+              </div>
             </div>
           </PageSection>
           <PageSection title="Cages">
@@ -450,6 +508,18 @@ export function AdminFacilityPage() {
                 { header: "Animals", cell: (row) => row.animal_count },
                 { header: "Capacity", cell: (row) => row.capacity },
                 { header: "Status", cell: (row) => row.status },
+                {
+                  header: "Actions",
+                  cell: (row) => (
+                    <button
+                      type="button"
+                      className="btn-secondary btn-small"
+                      onClick={() => startEditCage(row)}
+                    >
+                      Edit
+                    </button>
+                  ),
+                },
               ]}
               rows={cages}
               emptyText="No cages defined yet."

@@ -109,12 +109,27 @@ def _sync_animal_requirements(db: Session, form_b: FormB, payload: dict) -> None
         )
 
 
-def start_form_b(db: Session, user: User) -> FormB:
+def start_form_b(db: Session, user: User, *, force_new: bool = False) -> FormB:
     profile = get_or_create_profile(db, user.id)
     if not is_profile_complete(profile):
         raise CRUDValidationError(
             "Complete your investigator profile before starting Form B."
         )
+
+    if not force_new:
+        existing = (
+            db.query(FormB)
+            .join(FormBInvestigator, FormBInvestigator.form_b_id == FormB.id)
+            .filter(
+                FormBInvestigator.user_id == user.id,
+                FormBInvestigator.project_role == "principal_investigator",
+                FormB.submitted_at.is_(None),
+            )
+            .order_by(FormB.id.desc())
+            .first()
+        )
+        if existing is not None:
+            return existing
 
     project = IAECProject(
         title="Draft Form B application",

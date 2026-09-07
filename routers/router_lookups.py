@@ -5,6 +5,8 @@ from sqlalchemy import func
 
 from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain, IAECProject, ExperimentGroup, Animal
+from dependencies.auth import get_current_user, user_role_names
+from models.user import User
 from database.lmcpafm_requisition_allocation import (
     AnimalRequisition,
     AnimalRequisitionItem,
@@ -114,13 +116,26 @@ def list_animals(db: Session = Depends(get_db)):
 
 
 @lookup_router.get("/approved-protocols", response_model=list[LookupOption])
-def approved_protocols(db: Session = Depends(get_db)):
-    rows = (
-        db.query(IAECProject)
-        .filter(func.lower(func.coalesce(IAECProject.status, "")).contains("approved"))
-        .order_by(IAECProject.id.asc())
-        .all()
-    )
+def approved_protocols(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from crud.crud_iaec import get_projects_by_investigator
+
+    roles = set(user_role_names(current_user))
+    if roles.isdisjoint({"iaec", "admin", "staff"}):
+        rows = [
+            project
+            for project in get_projects_by_investigator(db, current_user.id)
+            if (project.status or "").strip().lower() == "approved"
+        ]
+    else:
+        rows = (
+            db.query(IAECProject)
+            .filter(func.lower(func.coalesce(IAECProject.status, "")).contains("approved"))
+            .order_by(IAECProject.id.asc())
+            .all()
+        )
     return [
         LookupOption(
             id=row.id,

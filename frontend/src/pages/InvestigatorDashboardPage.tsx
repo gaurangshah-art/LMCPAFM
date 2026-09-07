@@ -26,6 +26,27 @@ function ProjectStatusBadge({ status }: { status?: string | null }) {
   return <span className={projectStatusClass(status)}>{projectStatusLabel(status)}</span>;
 }
 
+function formatProjectRole(row: InvestigatorProjectSummary): string {
+  if (row.is_principal_investigator) {
+    return "Principal investigator";
+  }
+  if (row.project_role) {
+    return row.project_role.replace(/_/g, " ");
+  }
+  return "Team member";
+}
+
+function projectTitleCell(row: InvestigatorProjectSummary) {
+  return (
+    <div>
+      <div>{row.title}</div>
+      {row.is_empty_draft ? (
+        <small className="muted-text">Unused draft — started via New Form B</small>
+      ) : null}
+    </div>
+  );
+}
+
 export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboardProps) {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<InvestigatorProjectSummary[]>([]);
@@ -145,7 +166,8 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
               header: "IAEC Protocol No.",
               cell: (row) => row.protocol_number ?? "Pending assignment",
             },
-            { header: "Title", cell: (row) => row.title },
+            { header: "Title", cell: (row) => projectTitleCell(row) },
+            { header: "Your role", cell: (row) => formatProjectRole(row) },
             {
               header: "Status",
               cell: (row) => <ProjectStatusBadge status={row.status} />,
@@ -184,7 +206,8 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
               header: "IAEC Protocol No.",
               cell: (row) => row.protocol_number ?? "—",
             },
-            { header: "Title", cell: (row) => row.title },
+            { header: "Title", cell: (row) => projectTitleCell(row) },
+            { header: "Your role", cell: (row) => formatProjectRole(row) },
             {
               header: "Approved",
               cell: (row) => formatDisplayDate(row.approval_date),

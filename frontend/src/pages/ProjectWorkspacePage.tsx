@@ -277,6 +277,9 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
           <PageSection title="Create experiment group" subtitle="Add a group if IAEC approved an arm not in Annexure I">
             <ExperimentGroupForm
               defaultProjectId={numericProjectId}
+              projectTitle={project.title}
+              disabled={!planning.iaec_approval_finalized}
+              disabledReason="Group creation unlocks after IAEC finalizes protocol approval."
               onCreated={() => void loadWorkspace()}
             />
           </PageSection>

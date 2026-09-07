@@ -144,3 +144,19 @@ def test_form_b_application_pdf_download(client, monkeypatch):
     count_match = re.search(rb"/Count\s+(\d+)", pdf_bytes)
     assert count_match is not None
     assert int(count_match.group(1)) >= 3
+
+
+def test_start_form_b_reuses_unsubmitted_pi_draft(client, monkeypatch):
+    headers, _payload = _register_and_login(client, monkeypatch, faculty=True)
+
+    first_res = client.post("/formb/start", headers=headers)
+    assert first_res.status_code == 200, first_res.text
+    first_id = first_res.json()["id"]
+
+    second_res = client.post("/formb/start", headers=headers)
+    assert second_res.status_code == 200, second_res.text
+    assert second_res.json()["id"] == first_id
+
+    forced_res = client.post("/formb/start?force_new=true", headers=headers)
+    assert forced_res.status_code == 200, forced_res.text
+    assert forced_res.json()["id"] != first_id

@@ -247,6 +247,9 @@ export interface InvestigatorProjectSummary {
   submitted_at?: string | null;
   experiment_group_count: number;
   experiment_count: number;
+  project_role?: string | null;
+  is_principal_investigator?: boolean;
+  is_empty_draft?: boolean;
 }
 
 // ---------------- FORM B ----------------

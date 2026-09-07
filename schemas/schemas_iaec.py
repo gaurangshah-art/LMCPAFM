@@ -40,6 +40,9 @@ class InvestigatorProjectSummary(BaseModel):
     submitted_at: str | None = None
     experiment_group_count: int = 0
     experiment_count: int = 0
+    project_role: str | None = None
+    is_principal_investigator: bool = False
+    is_empty_draft: bool = False
 
 
 class ExperimentGroupBase(BaseModel):
