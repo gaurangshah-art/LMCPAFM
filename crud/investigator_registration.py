@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDValidationError
+from crud.faculty_roster import assert_investigator_registration_allowed
 from crud.investigator_profile import create_profile_shell
 from models.role import Role
 from models.user import User
@@ -35,6 +36,8 @@ def register_investigator(db: Session, name: str, email: str, password: str) -> 
         raise CRUDValidationError(
             "Registration is restricted to LMCP institutional email addresses."
         )
+
+    assert_investigator_registration_allowed(db, normalized_email)
 
     existing = db.query(User).filter(User.email == normalized_email).first()
     if existing:

@@ -68,9 +68,40 @@ def test_create_user_duplicate_email_returns_400(client, admin_auth_headers):
     assert second.json()["detail"] == "Email already exists"
 
 
-def test_create_investigator_via_users_endpoint_is_blocked(client, admin_auth_headers):
+def test_admin_can_create_investigator_with_institutional_email(
+    client, admin_auth_headers, monkeypatch
+):
+    monkeypatch.setenv("LMCP_INSTITUTIONAL_EMAIL_DOMAINS", "lmcp.ac.in")
+    email = f"faculty_{uuid4().hex[:8]}@lmcp.ac.in"
     payload = {
-        "name": "Blocked Investigator",
+        "name": "Dr Pre Registered",
+        "email": email,
+        "password": "StrongPass@123",
+        "roles": ["investigator"],
+        "status": True,
+    }
+    res = client.post("/users/", json=payload, headers=admin_auth_headers)
+    assert res.status_code == 201, res.text
+    data = res.json()
+    assert data["email"] == email
+    assert data["roles"] == ["investigator"]
+
+    login_res = client.post(
+        "/auth/login",
+        json={"email": email, "password": "StrongPass@123"},
+    )
+    assert login_res.status_code == 200, login_res.text
+    headers = {"Authorization": f"Bearer {login_res.json()['access_token']}"}
+    profile_res = client.get("/investigator-profile/me", headers=headers)
+    assert profile_res.status_code == 200, profile_res.text
+    profile = profile_res.json()
+    assert profile["is_lmcp_faculty"] is True
+    assert profile["is_complete"] is False
+
+
+def test_create_investigator_requires_institutional_email(client, admin_auth_headers):
+    payload = {
+        "name": "Bad Email Investigator",
         "email": f"blocked_{uuid4().hex[:8]}@example.com",
         "password": "StrongPass@123",
         "roles": ["investigator"],
@@ -78,4 +109,4 @@ def test_create_investigator_via_users_endpoint_is_blocked(client, admin_auth_he
     }
     res = client.post("/users/", json=payload, headers=admin_auth_headers)
     assert res.status_code == 400
-    assert "self-registration" in res.json()["detail"].lower()
+    assert "institutional" in res.json()["detail"].lower()

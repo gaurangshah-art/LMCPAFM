@@ -72,8 +72,9 @@ export function RegisterInvestigatorPage() {
       <header className="section-header">
         <h2>Register as Investigator</h2>
         <p>
-          Self-registration is available only for LMCP faculty with an institutional
-          email address ({institutionalEmailHint()}).
+          Self-registration is for approved LMCP faculty only ({institutionalEmailHint()}).
+          Your email must be on the administrator&apos;s faculty roster when roster
+          enforcement is enabled.
         </p>
       </header>
 

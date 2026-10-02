@@ -655,6 +655,22 @@ class FormBInvestigator(Base):
     form_b: Mapped["FormB"] = relationship(back_populates="investigators")
 
 
+class FacultyRosterEntry(Base):
+    """Pre-approved faculty emails allowed to self-register as investigators."""
+
+    __tablename__ = "faculty_roster"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
+    name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
 class FormDRecord(Base):
     __tablename__ = "form_d_record"
 

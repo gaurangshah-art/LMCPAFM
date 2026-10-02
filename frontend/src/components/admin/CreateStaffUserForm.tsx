@@ -12,16 +12,33 @@ import { ErrorAlert } from "../common/ErrorAlert";
 import { SuccessNote } from "../common/SuccessNote";
 import { useSubmitState } from "../../hooks/useSubmitState";
 import { AssignableRoleCheckboxes } from "./AssignableRoleCheckboxes";
+import {
+  institutionalEmailHint,
+  isLmcpInstitutionalEmail,
+} from "../../utils/institutionalEmail";
 
-const schema = z.object({
-  name: z.string().trim().min(1, "Name is required."),
-  email: z.string().trim().email("Enter a valid email address."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
-  status: z.boolean(),
-  roles: z
-    .array(z.enum(ASSIGNABLE_ADMIN_ROLES))
-    .min(1, "Select at least one role."),
-});
+const schema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required."),
+    email: z.string().trim().email("Enter a valid email address."),
+    password: z.string().min(8, "Password must be at least 8 characters."),
+    status: z.boolean(),
+    roles: z
+      .array(z.enum(ASSIGNABLE_ADMIN_ROLES))
+      .min(1, "Select at least one role."),
+  })
+  .superRefine((values, ctx) => {
+    if (
+      values.roles.includes("investigator") &&
+      !isLmcpInstitutionalEmail(values.email)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Investigator email must use an institutional domain (${institutionalEmailHint()}).`,
+        path: ["email"],
+      });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -107,7 +124,11 @@ export function CreateStaffUserForm({ onCreated }: CreateStaffUserFormProps) {
           onChange={handleRolesChange}
         />
         {errors.roles ? <small className="field-error">{errors.roles.message}</small> : null}
-        <small>Investigators must self-register with an LMCP institutional email.</small>
+        <small>
+          For faculty: select <strong>investigator</strong>, use their institutional email, and set a
+          temporary password. They log in and complete Investigator Profile before starting Form B.
+          Self-registration remains available for emails not yet in the directory.
+        </small>
       </div>
       <button className="btn" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Creating..." : "Create User"}

@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from crud.activity_log import record_activity
+from crud.investigator_profile import create_profile_shell
 from database.database import get_db
 from models.role import Role
 from models.user import User
 from schemas.schemas_users import UserCreate, UserRead
+from utils.institutional_email import is_lmcp_institutional_email, normalize_email
 from utils.security import hash_password
 from dependencies.auth import (
     get_current_user,
@@ -27,7 +29,8 @@ def create_user(
     db: Session = Depends(get_db),
     _current_user: User = Depends(require_admin_or_staff),
 ):
-    existing = db.query(User).filter(User.email == payload.email).first()
+    normalized_email = normalize_email(str(payload.email))
+    existing = db.query(User).filter(User.email == normalized_email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
 
@@ -35,12 +38,11 @@ def create_user(
         raise HTTPException(status_code=400, detail="At least one role is required")
 
     role_names = [r.value for r in payload.roles]
-    if "investigator" in role_names:
+    if "investigator" in role_names and not is_lmcp_institutional_email(normalized_email):
         raise HTTPException(
             status_code=400,
-            detail="Investigator accounts must be created via self-registration.",
+            detail="Investigator accounts require an LMCP institutional email address.",
         )
-
     db_roles = db.query(Role).filter(Role.name.in_(role_names)).all()
     found_names = {r.name for r in db_roles}
 
@@ -51,14 +53,17 @@ def create_user(
             db.flush()
             db_roles.append(new_role)
     user = User(
-        name=payload.name,
-        email=payload.email,
+        name=payload.name.strip(),
+        email=normalized_email,
         password_hash=hash_password(payload.password),
         status=payload.status,
     )
     user.roles = db_roles
 
     db.add(user)
+    db.flush()
+    if "investigator" in role_names:
+        create_profile_shell(db, user)
     db.commit()
     db.refresh(user)
     record_activity(

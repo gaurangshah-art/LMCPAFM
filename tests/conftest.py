@@ -11,6 +11,7 @@ warnings.filterwarnings(
 
 # Use an in-memory SQLite DB for tests to ensure schema matches models
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+os.environ.setdefault("LMCP_FACULTY_ROSTER_ENFORCE", "false")
 
 from database.database import SessionLocal, init_db
 from main import app

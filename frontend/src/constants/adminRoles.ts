@@ -1,7 +1,7 @@
 import type { UserRole } from "../api/types";
 
 /** Roles that admins/staff can assign when creating or editing institutional accounts. */
-export const ASSIGNABLE_ADMIN_ROLES = ["admin", "iaec", "staff"] as const;
+export const ASSIGNABLE_ADMIN_ROLES = ["admin", "iaec", "staff", "investigator"] as const;
 
 export type AssignableAdminRole = (typeof ASSIGNABLE_ADMIN_ROLES)[number];
 
