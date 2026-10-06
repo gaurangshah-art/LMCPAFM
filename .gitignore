@@ -50,3 +50,9 @@ debug_e2e.py
 
 # Uploaded Form B attachments (local storage)
 data/form_b_attachments/
+
+# Industry reference SOPs (confidential — keep local only)
+Docs/source_industry/
+
+# Ad-hoc internal notes not for repository
+Docs/changes_expected.docx
