@@ -49,7 +49,7 @@ Faculty follow **`Docs/faculty_evaluation_sop.md`**. You follow **this document*
 | **URL** | https://lmcpafm-staging.lmcp.ac.in |
 | **API health** | https://lmcpafm-staging.lmcp.ac.in/api/health/ready |
 | **Server** | OCI VM `LMCPAFM1_Staging` |
-| **SSH** | `ssh -i ~/.ssh/id_ed25519 ubuntu@137.23.46.30` |
+| **SSH** | `ssh -i ~/.ssh/id_ed25519 ubuntu@80.225.253.68` |
 | **App directory** | `/opt/lmcpafm` |
 | **Data directory** | `/opt/lmcpafm/data` |
 
@@ -73,7 +73,7 @@ Complete every item. Do not invite evaluators until staging is stable.
 **Quick tests (from your PC):**
 
 ```powershell
-Test-NetConnection 137.23.46.30 -Port 443
+Test-NetConnection 80.225.253.68 -Port 443
 curl.exe -I https://lmcpafm-staging.lmcp.ac.in
 curl.exe -s https://lmcpafm-staging.lmcp.ac.in/api/health/ready
 ```
@@ -210,7 +210,7 @@ Monitor **Admin Dashboard → User directory** for new registrations.
 **Daily admin checks:**
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 ubuntu@137.23.46.30
+ssh -i ~/.ssh/id_ed25519 ubuntu@80.225.253.68
 cd /opt/lmcpafm
 sudo docker compose -f compose.yaml -f compose.postgres.yaml -f compose.prod.yaml -f compose.oracle.yaml ps
 sudo docker compose logs backend --tail 30
@@ -246,7 +246,7 @@ sudo docker compose logs backend --tail 30
 When a fix is merged to the deployment branch:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 ubuntu@137.23.46.30
+ssh -i ~/.ssh/id_ed25519 ubuntu@80.225.253.68
 cd /opt/lmcpafm
 git pull
 sudo docker compose -f compose.yaml -f compose.postgres.yaml -f compose.prod.yaml -f compose.oracle.yaml up -d --build
@@ -378,7 +378,7 @@ sudo journalctl -u nginx --no-pager -n 30
 
 | Task | Command |
 |:-----|:--------|
-| SSH to staging | `ssh -i ~/.ssh/id_ed25519 ubuntu@137.23.46.30` |
+| SSH to staging | `ssh -i ~/.ssh/id_ed25519 ubuntu@80.225.253.68` |
 | Start stack | `cd /opt/lmcpafm && sudo docker compose -f compose.yaml -f compose.postgres.yaml -f compose.prod.yaml -f compose.oracle.yaml up -d` |
 | Rebuild after pull | add `up -d --build` |
 | Service status | `sudo docker compose ... ps` |
