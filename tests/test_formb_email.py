@@ -318,6 +318,39 @@ def test_meeting_invitation_email_includes_schedule(client, iaec_auth_headers, m
     assert "23/07/2026" in body
 
 
+def test_meeting_iaec_review_pack_email(client, iaec_auth_headers, monkeypatch):
+    from database.database import SessionLocal
+
+    db = SessionLocal()
+    meeting, form_b = _seed_invitation_ready_form_b(db)
+    db.close()
+
+    sent: dict = {}
+
+    def fake_send(to_emails, subject, body, attachments):
+        sent["to"] = to_emails
+        sent["subject"] = subject
+        sent["attachments"] = attachments
+
+    monkeypatch.setenv("IAEC_SMTP_HOST", "smtp.test")
+    monkeypatch.setenv("IAEC_SENDER_EMAIL", "iaec@lmcp.ac.in")
+    monkeypatch.setenv("IAEC_MEMBER_EMAILS", "member1@lmcp.ac.in,member2@lmcp.ac.in")
+    monkeypatch.setattr("crud.formb_email._send_email_with_attachments", fake_send)
+
+    res = client.post(
+        f"/iaec/meeting/{meeting.id}/send-member-review-packs/sync",
+        headers=iaec_auth_headers,
+    )
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["protocol_count"] == 1
+    assert data["attachment_count"] == 1
+    assert "member1@lmcp.ac.in" in data["sent_to"]
+    assert len(sent["attachments"]) == 1
+    assert sent["attachments"][0][1] == "IAEC_Meeting_4_Review_Pack.pdf"
+    assert sent["attachments"][0][0].startswith(b"%PDF")
+
+
 def test_meeting_summary_pdf_download(client, iaec_auth_headers):
     from database.database import SessionLocal
 

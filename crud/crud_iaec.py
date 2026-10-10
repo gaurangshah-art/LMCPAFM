@@ -205,7 +205,22 @@ def get_meeting_details(db: Session, meeting_id: int):
         }
         for form_b, project, decision in assigned
     ]
-    return {"meeting": meeting, "assigned_projects": assigned_projects}
+    from crud.iaec_members import get_meeting_attendance
+
+    return {
+        "meeting": {
+            "id": meeting.id,
+            "date": meeting.date,
+            "meeting_number": meeting.meeting_number,
+            "meeting_time": meeting.meeting_time,
+            "venue": meeting.venue,
+            "minutes": meeting.minutes,
+            "minutes_item1": getattr(meeting, "minutes_item1", "") or "",
+            "minutes_item2": getattr(meeting, "minutes_item2", "") or "",
+        },
+        "assigned_projects": assigned_projects,
+        "attendance": get_meeting_attendance(db, meeting_id),
+    }
 
 
 def create_experiment(db: Session, experiment: AnimalExperimentCreate):

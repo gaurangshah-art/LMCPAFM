@@ -45,7 +45,7 @@ def attachment_bytes_to_pdf(
             from PIL import Image
 
             image = Image.open(BytesIO(content))
-            pdf = FPDF()
+            pdf = FPDF(unit="mm", format="A4")
             pdf.set_auto_page_break(auto=False)
             pdf.add_page()
             pdf.set_font("Helvetica", "B", 12)
@@ -69,7 +69,7 @@ def attachment_bytes_to_pdf(
         except Exception:
             pass
 
-    pdf = FPDF()
+    pdf = FPDF(unit="mm", format="A4")
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 8, _safe_text(title), ln=True)

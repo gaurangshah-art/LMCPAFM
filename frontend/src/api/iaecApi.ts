@@ -13,6 +13,8 @@ import type {
   AnimalExperimentCreate,
   IAECMeetingRecord,
   IAECMeetingCreate,
+  IAECMemberRecord,
+  IAECMeetingAttendanceRecord,
   FormBWithMeeting,
   FormBFinalizeApprovalResult,
   FormBMeetingDecisionUpsert,
@@ -311,5 +313,97 @@ export async function downloadMeetingSummaryPdf(meetingId: number): Promise<Blob
   const { data } = await apiClient.get(`/iaec/meeting/${meetingId}/summary/download`, {
     responseType: "blob",
   });
+  return data;
+}
+
+export async function downloadScheduleVPdf(meetingId: number): Promise<Blob> {
+  const { data } = await apiClient.get(`/iaec/meeting/${meetingId}/schedule-v/download`, {
+    responseType: "blob",
+  });
+  return data;
+}
+
+export async function sendMeetingIaecReviewPacks(meetingId: number): Promise<{
+  ok: boolean;
+  sent_to: string[];
+  attachment_count: number;
+  protocol_count: number;
+  protocols: string[];
+}> {
+  const { data } = await apiClient.post<{
+    ok: boolean;
+    sent_to: string[];
+    attachment_count: number;
+    protocol_count: number;
+    protocols: string[];
+  }>(`/iaec/meeting/${meetingId}/send-member-review-packs/sync`, undefined, {
+    timeout: 300000,
+  });
+  return data;
+}
+
+export async function downloadFormBReviewPackPdf(projectId: number): Promise<Blob> {
+  const { data } = await apiClient.get(
+    `/iaec/project/${projectId}/form-b/review-pack/download`,
+    { responseType: "blob" },
+  );
+  return data;
+}
+
+export async function updateMeeting(
+  meetingId: number,
+  payload: {
+    minutes?: string;
+    minutes_item1?: string;
+    minutes_item2?: string;
+  },
+): Promise<IAECMeetingRecord> {
+  const { data } = await apiClient.patch<IAECMeetingRecord>(
+    `/iaec/meeting/${meetingId}`,
+    payload,
+  );
+  return data;
+}
+
+export async function saveMeetingAttendance(
+  meetingId: number,
+  entries: Array<{ member_id: number; present: boolean }>,
+): Promise<IAECMeetingAttendanceRecord[]> {
+  const { data } = await apiClient.put<IAECMeetingAttendanceRecord[]>(
+    `/iaec/meeting/${meetingId}/attendance`,
+    entries,
+  );
+  return data;
+}
+
+export async function getIaecMembers(activeOnly = false): Promise<IAECMemberRecord[]> {
+  const { data } = await apiClient.get<IAECMemberRecord[]>("/iaec/members", {
+    params: { active_only: activeOnly },
+  });
+  return data;
+}
+
+export async function createIaecMember(payload: {
+  full_name: string;
+  designation: string;
+  display_order?: number;
+}): Promise<IAECMemberRecord> {
+  const { data } = await apiClient.post<IAECMemberRecord>("/iaec/members", payload);
+  return data;
+}
+
+export async function updateIaecMember(
+  memberId: number,
+  payload: Partial<{
+    full_name: string;
+    designation: string;
+    display_order: number;
+    active: boolean;
+  }>,
+): Promise<IAECMemberRecord> {
+  const { data } = await apiClient.patch<IAECMemberRecord>(
+    `/iaec/members/${memberId}`,
+    payload,
+  );
   return data;
 }

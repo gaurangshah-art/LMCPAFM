@@ -15,6 +15,7 @@ class _FormCPDF(BrandedPDF):
 def render_form_c_pdf(db: Session) -> bytes:
     data = get_form_c_data(db)
     pdf = _FormCPDF()
+    pdf.set_margins(12, 38, 12)
     pdf.set_auto_page_break(auto=True, margin=12)
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
@@ -27,16 +28,19 @@ def render_form_c_pdf(db: Session) -> bytes:
         pdf.set_font("Helvetica", "B", 11)
         pdf.cell(0, 7, title, ln=True)
         pdf.set_font("Helvetica", "B", 8)
-        col_w = 190 / len(headers)
+        col_w = pdf.epw / len(headers)
+        pdf.set_x(pdf.l_margin)
         for header in headers:
             pdf.cell(col_w, 6, header, border=1)
         pdf.ln()
         pdf.set_font("Helvetica", "", 8)
         if not rows:
-            pdf.cell(190, 6, "No records", border=1, ln=True)
+            pdf.set_x(pdf.l_margin)
+            pdf.cell(pdf.epw, 6, "No records", border=1, ln=True)
             pdf.ln(2)
             return
         for row in rows:
+            pdf.set_x(pdf.l_margin)
             for key in keys:
                 pdf.cell(col_w, 6, _safe_text(row.get(key)), border=1)
             pdf.ln()

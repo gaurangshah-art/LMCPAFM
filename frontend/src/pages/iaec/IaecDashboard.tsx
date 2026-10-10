@@ -310,6 +310,9 @@ export function IaecDashboard() {
               <button type="button" className="btn" onClick={() => navigate("/iaec/meetings/new")}>
                 + New meeting
               </button>
+              <button type="button" className="btn-secondary" onClick={() => navigate("/iaec/members")}>
+                IAEC members
+              </button>
             </div>
             <DataTable
               columns={reviewColumns}

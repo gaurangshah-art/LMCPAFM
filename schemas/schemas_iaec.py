@@ -170,4 +170,50 @@ class IAECMeetingRead(BaseModel):
     meeting_time: str | None = None
     venue: str | None = None
     minutes: str
+    minutes_item1: str = ""
+    minutes_item2: str = ""
     model_config = ConfigDict(from_attributes=True)
+
+
+class IAECMeetingUpdate(BaseModel):
+    minutes: str | None = None
+    minutes_item1: str | None = None
+    minutes_item2: str | None = None
+
+
+class IAECMemberCreate(BaseModel):
+    full_name: str = Field(..., min_length=1, max_length=200)
+    designation: str = Field(..., min_length=1, max_length=200)
+    display_order: int = 0
+    user_id: int | None = None
+
+
+class IAECMemberUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=200)
+    designation: str | None = Field(default=None, min_length=1, max_length=200)
+    display_order: int | None = None
+    active: bool | None = None
+    user_id: int | None = None
+
+
+class IAECMemberRead(BaseModel):
+    id: int
+    full_name: str
+    designation: str
+    display_order: int
+    active: bool
+    user_id: int | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class IAECMeetingAttendanceEntry(BaseModel):
+    member_id: int
+    present: bool = True
+
+
+class IAECMeetingAttendanceRead(BaseModel):
+    member_id: int
+    full_name: str
+    designation: str
+    active: bool
+    present: bool

@@ -504,6 +504,14 @@ class FormBInvitationSendRead(BaseModel):
     protocol_number: str
 
 
+class MeetingIaecReviewPackSendRead(BaseModel):
+    ok: bool = True
+    sent_to: list[str]
+    attachment_count: int
+    protocol_count: int
+    protocols: list[str]
+
+
 class FormBAttachmentRead(BaseModel):
     id: int
     form_b_id: int

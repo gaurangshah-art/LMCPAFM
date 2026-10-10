@@ -45,6 +45,7 @@ import { FormBReview } from "../pages/formB/FormBReview";
 import { FormBViewPage } from "../pages/formB/FormBViewPage";
 import { IaecCreateMeeting } from "../pages/iaec/IaecCreateMeeting";
 import { IaecMeetingDetails } from "../pages/iaec/IaecMeetingDetails";
+import { IaecMembersPage } from "../pages/iaec/IaecMembersPage";
 import { IaecProjectReview } from "../pages/iaec/IaecProjectReview";
 import { IaecApprovalCertificate } from "../pages/iaec/IaecApprovalCertificate";
 import { AdminDashboardPage } from "../pages/AdminDashboardPage";
@@ -285,6 +286,19 @@ export default function App() {
                 allowedRoles={["iaec"]}
               >
                 <IaecMeetingDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/iaec/members"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["iaec", "admin"]}
+              >
+                <IaecMembersPage />
               </ProtectedRoute>
             }
           />

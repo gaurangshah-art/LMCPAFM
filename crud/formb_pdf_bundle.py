@@ -9,7 +9,12 @@ from database.lmcpafm_models import FormB, FormBAttachment, IAECProject
 from utils.pdf_merge import attachment_bytes_to_pdf, merge_pdf_documents
 
 
-def render_form_b_complete_pdf(db: Session, project_id: int) -> bytes:
+def render_form_b_complete_pdf(
+    db: Session,
+    project_id: int,
+    *,
+    include_iaec_checklist: bool = False,
+) -> bytes:
     from crud.formb_documents import render_study_plan_annexure_pdf
     project = db.query(IAECProject).filter(IAECProject.id == project_id).first()
     if project is None:
@@ -19,7 +24,13 @@ def render_form_b_complete_pdf(db: Session, project_id: int) -> bytes:
     if form_b is None:
         raise CRUDNotFoundError("Form B not found for project")
 
-    parts: list[bytes] = [render_cpcsea_form_b_application_pdf(db, project_id)]
+    parts: list[bytes] = []
+    if include_iaec_checklist:
+        from crud.formb_iaec_review_checklist_pdf import render_iaec_form_b_review_checklist_pdf
+
+        parts.append(render_iaec_form_b_review_checklist_pdf(db, project_id))
+
+    parts.append(render_cpcsea_form_b_application_pdf(db, project_id))
 
     try:
         parts.append(render_study_plan_annexure_pdf(db, form_b.id))

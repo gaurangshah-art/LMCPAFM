@@ -27,8 +27,11 @@ from crud.formb_documents import (
 )
 from crud.formb_email import (
     queue_form_b_meeting_invitation_email,
+    queue_meeting_iaec_review_pack_email,
     send_form_b_meeting_invitation_email,
+    send_meeting_iaec_review_pack_email,
     validate_form_b_meeting_invitation_ready,
+    validate_meeting_iaec_review_pack_ready,
 )
 from crud.experiment_group_assignment import assign_animals_to_group, get_group_assignment_summary
 from crud.experiment_group_management import delete_experiment_group, update_experiment_group
@@ -60,6 +63,12 @@ from schemas.schemas_iaec import (
     AnimalExperiment,
     IAECMeetingCreate,
     IAECMeetingRead,
+    IAECMeetingUpdate,
+    IAECMemberCreate,
+    IAECMemberRead,
+    IAECMemberUpdate,
+    IAECMeetingAttendanceEntry,
+    IAECMeetingAttendanceRead,
 )
 from schemas.schemas_formb import (
     FormBRecordRead,
@@ -72,6 +81,7 @@ from schemas.schemas_formb import (
     FormBMeetingSummaryRead,
     FormBMeetingCertificateRead,
     FormBInvitationSendRead,
+    MeetingIaecReviewPackSendRead,
 )
 
 router = APIRouter(prefix="/iaec", tags=["IAEC"])
@@ -431,11 +441,151 @@ def create_meeting(
         meeting_time=payload.meeting_time.strip(),
         venue=payload.venue.strip(),
         minutes=payload.minutes,
+        minutes_item1="",
+        minutes_item2=payload.minutes or "",
     )
     db.add(meeting)
     db.commit()
     db.refresh(meeting)
     return meeting
+
+
+@router.patch("/meeting/{meeting_id}", response_model=IAECMeetingRead)
+def update_meeting(
+    meeting_id: int,
+    payload: IAECMeetingUpdate,
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    meeting = db.query(IAECMeeting).filter(IAECMeeting.id == meeting_id).first()
+    if meeting is None:
+        raise HTTPException(status_code=404, detail="Meeting not found.")
+    if payload.minutes is not None:
+        meeting.minutes = payload.minutes
+    if payload.minutes_item1 is not None:
+        meeting.minutes_item1 = payload.minutes_item1
+    if payload.minutes_item2 is not None:
+        meeting.minutes_item2 = payload.minutes_item2
+    db.commit()
+    db.refresh(meeting)
+    return meeting
+
+
+@router.get("/members", response_model=list[IAECMemberRead])
+def list_iaec_members(
+    active_only: bool = False,
+    db: Session = Depends(get_db),
+    _user=Depends(require_any_role("iaec", "admin")),
+):
+    from crud.iaec_members import list_iaec_members as list_members
+
+    return list_members(db, active_only=active_only)
+
+
+@router.post("/members", response_model=IAECMemberRead)
+def create_iaec_member(
+    payload: IAECMemberCreate,
+    db: Session = Depends(get_db),
+    _user=Depends(require_any_role("iaec", "admin")),
+):
+    from crud.iaec_members import create_iaec_member as create_member
+    from crud.exceptions import CRUDValidationError
+
+    try:
+        return create_member(
+            db,
+            full_name=payload.full_name,
+            designation=payload.designation,
+            display_order=payload.display_order,
+            user_id=payload.user_id,
+        )
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.patch("/members/{member_id}", response_model=IAECMemberRead)
+def update_iaec_member(
+    member_id: int,
+    payload: IAECMemberUpdate,
+    db: Session = Depends(get_db),
+    _user=Depends(require_any_role("iaec", "admin")),
+):
+    from crud.iaec_members import update_iaec_member as update_member
+    from crud.exceptions import CRUDNotFoundError
+
+    try:
+        return update_member(
+            db,
+            member_id,
+            full_name=payload.full_name,
+            designation=payload.designation,
+            display_order=payload.display_order,
+            active=payload.active,
+            user_id=payload.user_id,
+        )
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/meeting/{meeting_id}/attendance", response_model=list[IAECMeetingAttendanceRead])
+def read_meeting_attendance(
+    meeting_id: int,
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    from crud.iaec_members import get_meeting_attendance
+    from crud.exceptions import CRUDNotFoundError
+
+    try:
+        return get_meeting_attendance(db, meeting_id)
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put("/meeting/{meeting_id}/attendance", response_model=list[IAECMeetingAttendanceRead])
+def save_meeting_attendance(
+    meeting_id: int,
+    payload: list[IAECMeetingAttendanceEntry],
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    from crud.iaec_members import save_meeting_attendance as save_attendance
+    from crud.exceptions import CRUDNotFoundError, CRUDValidationError
+
+    try:
+        return save_attendance(
+            db,
+            meeting_id,
+            [entry.model_dump() for entry in payload],
+        )
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/meeting/{meeting_id}/schedule-v/download")
+def download_schedule_v_pdf(
+    meeting_id: int,
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    from fastapi.responses import Response
+    from crud.iaec_schedule_v_pdf import render_schedule_v_pdf
+
+    try:
+        pdf_bytes = render_schedule_v_pdf(db, meeting_id)
+        meeting = db.query(IAECMeeting).filter(IAECMeeting.id == meeting_id).first()
+        label = meeting.meeting_number if meeting and meeting.meeting_number else meeting_id
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="IAEC_Schedule_V_Meeting_{label}.pdf"'
+            },
+        )
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/form-b-with-meeting", response_model=list[FormBWithMeetingRead])
@@ -557,6 +707,46 @@ def send_form_b_meeting_invitation_sync(
         ) from exc
 
 
+@router.post("/meeting/{meeting_id}/send-member-review-packs")
+def send_meeting_iaec_review_packs(
+    meeting_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    try:
+        validate_meeting_iaec_review_pack_ready(db, meeting_id)
+        queue_meeting_iaec_review_pack_email(background_tasks, meeting_id)
+        return {"ok": True, "queued": True}
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post(
+    "/meeting/{meeting_id}/send-member-review-packs/sync",
+    response_model=MeetingIaecReviewPackSendRead,
+)
+def send_meeting_iaec_review_packs_sync(
+    meeting_id: int,
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    try:
+        result = send_meeting_iaec_review_pack_email(db, meeting_id)
+        return {"ok": True, **result}
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except smtplib.SMTPException as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Email delivery failed: {exc}",
+        ) from exc
+
+
 @router.put("/form-b/{form_b_id}/decision", response_model=FormBMeetingDecisionRead)
 def upsert_form_b_meeting_decision(
     form_b_id: int,
@@ -655,6 +845,31 @@ def read_project_form_b(
     if form_b is None:
         raise HTTPException(status_code=404, detail="Form B not found for project")
     return form_b_to_record_read(db, form_b)
+
+
+@router.get("/project/{project_id}/form-b/review-pack/download")
+def download_form_b_iaec_review_pack(
+    project_id: int,
+    db: Session = Depends(get_db),
+    _user=Depends(require_iaec),
+):
+    from fastapi.responses import Response
+
+    from crud.formb_pdf_bundle import render_form_b_complete_pdf
+
+    try:
+        pdf_bytes = render_form_b_complete_pdf(db, project_id, include_iaec_checklist=True)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="IAEC_Form_B_Review_Project_{project_id}.pdf"'
+                )
+            },
+        )
+    except CRUDNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/project/{project_id}/certificate")

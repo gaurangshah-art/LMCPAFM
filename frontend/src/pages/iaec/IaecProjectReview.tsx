@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getProjectById } from "../../api/iaecApi";
+import { downloadFormBReviewPackPdf, getProjectById } from "../../api/iaecApi";
 import { apiClient } from "../../api/client";
 import { getApiErrorMessage } from "../../api/errors";
 import type { IAECProject } from "../../api/types";
@@ -21,6 +21,7 @@ export function IaecProjectReview() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [project, setProject] = useState<IAECProject | null>(null);
   const [formB, setFormB] = useState<FormBRecord | null>(null);
+  const [downloadingPack, setDownloadingPack] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -92,11 +93,35 @@ export function IaecProjectReview() {
         <button
           type="button"
           className="btn"
+          disabled={downloadingPack}
+          onClick={() => {
+            if (!projectId) return;
+            setDownloadingPack(true);
+            setErrorMessage(null);
+            void downloadFormBReviewPackPdf(Number(projectId))
+              .then((blob) => {
+                const url = URL.createObjectURL(blob);
+                const anchor = document.createElement("a");
+                anchor.href = url;
+                anchor.download = `IAEC_Form_B_Review_Project_${projectId}.pdf`;
+                anchor.click();
+                URL.revokeObjectURL(url);
+              })
+              .catch((error) => setErrorMessage(getApiErrorMessage(error)))
+              .finally(() => setDownloadingPack(false));
+          }}
+        >
+          {downloadingPack ? "Preparing PDF…" : "Download review pack (checklist + Form B)"}
+        </button>
+        <button
+          type="button"
+          className="btn"
           onClick={() => navigate(`/iaec/project/${projectId}/certificate`)}
         >
           View Certificate
         </button>
       </div>
+      {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
     </div>
   );
 }

@@ -15,6 +15,9 @@ def _safe_text(value) -> str:
 class BrandedPDF(FPDF):
     """FPDF base class with LMCP logo and college name in the page header."""
 
+    def __init__(self, orientation: str = "P", unit: str = "mm", format: str | tuple = "A4", **kwargs):
+        super().__init__(orientation=orientation, unit=unit, format=format, **kwargs)
+
     def header(self):
         logo_path = get_logo_path()
         top_y = 8

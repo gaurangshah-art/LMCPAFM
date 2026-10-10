@@ -366,6 +366,31 @@ class IAECMeeting(Base):
     meeting_time: Mapped[str | None] = mapped_column(String(50), nullable=True)
     venue: Mapped[str | None] = mapped_column(String(500), nullable=True)
     minutes: Mapped[str] = mapped_column(Text)
+    minutes_item1: Mapped[str] = mapped_column(Text, default="", server_default="")
+    minutes_item2: Mapped[str] = mapped_column(Text, default="", server_default="")
+
+
+class IAECMember(Base):
+    __tablename__ = "iaec_member"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    full_name: Mapped[str] = mapped_column(String(200))
+    designation: Mapped[str] = mapped_column(String(200))
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+
+class IAECMeetingAttendance(Base):
+    __tablename__ = "iaec_meeting_attendance"
+    __table_args__ = (
+        UniqueConstraint("meeting_id", "member_id", name="uq_iaec_meeting_attendance"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    meeting_id: Mapped[int] = mapped_column(ForeignKey("iaec_meeting.id", ondelete="CASCADE"))
+    member_id: Mapped[int] = mapped_column(ForeignKey("iaec_member.id", ondelete="CASCADE"))
+    present: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class IAECMinutes(Base):

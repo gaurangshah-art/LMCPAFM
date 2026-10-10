@@ -138,6 +138,25 @@ export interface IAECMeetingRecord {
   meeting_time?: string | null;
   venue?: string | null;
   minutes: string;
+  minutes_item1?: string;
+  minutes_item2?: string;
+}
+
+export interface IAECMemberRecord {
+  id: number;
+  full_name: string;
+  designation: string;
+  display_order: number;
+  active: boolean;
+  user_id: number | null;
+}
+
+export interface IAECMeetingAttendanceRecord {
+  member_id: number;
+  full_name: string;
+  designation: string;
+  active: boolean;
+  present: boolean;
 }
 
 export interface IAECMeetingCreate {
