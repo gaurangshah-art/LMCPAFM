@@ -52,6 +52,7 @@ import { AdminDashboardPage } from "../pages/AdminDashboardPage";
 import { AdminMasterDataPage } from "../pages/AdminMasterDataPage";
 import { AdminFacilityPage } from "../pages/AdminFacilityPage";
 import { StaffFacilityPage } from "../pages/StaffFacilityPage";
+import { StaffSopPackPage } from "../pages/StaffSopPackPage";
 import { FormCPage } from "../pages/FormCPage";
 import { IAECProjectViewPage } from "../pages/IAECProjectViewPage";
 import { IAECProjectEditPage } from "../pages/IAECProjectEditPage";
@@ -673,6 +674,19 @@ export default function App() {
                 allowedRoles={["staff", "admin"]}
               >
                 <StaffFacilityPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/staff/sop-pack"
+            element={
+              <ProtectedRoute
+                currentUser={currentUser}
+                isAuthLoading={isAuthLoading}
+                allowedRoles={["staff", "admin"]}
+              >
+                <StaffSopPackPage />
               </ProtectedRoute>
             }
           />

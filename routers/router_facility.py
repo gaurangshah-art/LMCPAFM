@@ -389,3 +389,22 @@ def download_form_c_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="Form_C_Register.pdf"'},
     )
+
+
+@router.get("/sop-pack/download")
+def download_facility_sop_pack(
+    _current_user: User = Depends(require_any_role("staff", "admin")),
+):
+    from crud.exceptions import CRUDValidationError
+    from utils.facility_sop_pack import build_facility_sop_zip_bytes, facility_sop_zip_filename
+
+    try:
+        zip_bytes = build_facility_sop_zip_bytes()
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    filename = facility_sop_zip_filename()
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

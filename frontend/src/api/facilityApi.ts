@@ -200,6 +200,17 @@ export async function downloadAnimalLabel(animalId: number, animalNumber: string
   window.URL.revokeObjectURL(url);
 }
 
+export async function downloadFacilitySopPack(): Promise<{ blob: Blob; filename: string }> {
+  const response = await apiClient.get("/facility/sop-pack/download", { responseType: "blob" });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="?([^";]+)"?/i);
+  const filename = match?.[1] ?? "LMCP-Facility-SOP-Pack.zip";
+  return {
+    blob: new Blob([response.data], { type: "application/zip" }),
+    filename,
+  };
+}
+
 export async function downloadFormCPdf(): Promise<void> {
   const response = await apiClient.get("/inventory/form-c/download", { responseType: "blob" });
   const blob = new Blob([response.data], { type: "application/pdf" });

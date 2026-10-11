@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
   { to: "/requisitions", label: "Requisitions", roles: ["investigator", "staff", "iaec"] },
   { to: "/allocations", label: "Allocations", roles: ["staff", "investigator", "iaec"] },
   { to: "/facility", label: "Facility", roles: ["staff", "admin"] },
+  { to: "/staff/sop-pack", label: "SOP pack", roles: ["staff", "admin"] },
   { to: "/admin/facility", label: "Facility Admin", roles: ["admin"] },
   { to: "/form-c", label: "Form C", roles: ["staff", "iaec", "admin"] },
   { to: "/experiment-groups", label: "Experiment Groups", roles: ["investigator"] },
