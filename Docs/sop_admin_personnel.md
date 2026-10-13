@@ -189,7 +189,7 @@ There is **no separate “rack” table** — put rack/shelf in the cage **locat
 
 ## 9. Optional: historical IAEC meetings import
 
-Template: `scripts/templates/iaec_meetings_template.csv`
+Templates: `scripts/templates/iaec_last_three_meetings_template.csv` (fill-in for your last three meets) or `scripts/templates/iaec_meetings_template.csv` (generic examples). See `scripts/templates/README_iaec_meetings_import.md`.
 
 ```bash
 sudo docker compose exec backend python scripts/import_iaec_meetings.py --csv /path/to/meetings.csv --dry-run
@@ -210,7 +210,7 @@ IAEC_PROTOCOL_SERIAL_WIDTH=4
 
 New approvals become e.g. `LMCP/IAEC/2026/8/0248`, `LMCP/IAEC/2026/9/0249` — same shape as older IDs, but the **last segment** continues across the whole college register.
 
-When importing ongoing or recent protocols, store the **full** string from minutes (including year and meeting number) so the next auto-number continues correctly.
+When importing ongoing or recent protocols, use `scripts/import_iaec_carryover_protocols.py` with `scripts/templates/iaec_carryover_protocols_template.csv` (full protocol string from minutes) so the next auto-number continues correctly.
 
 ---
 

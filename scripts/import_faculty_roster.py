@@ -37,11 +37,19 @@ import models.activity_log  # noqa: F401
 from database.lmcpafm_models import FacultyRosterEntry
 from utils.institutional_email import is_lmcp_institutional_email, normalize_email
 
-REQUIRED_COLUMNS = ("email",)
+EMAIL_HEADERS = ("email", "member_email")
+NAME_HEADERS = ("name", "member_name")
 
 
 def _normalize_header(value: str) -> str:
     return (value or "").strip().lower().replace(" ", "_")
+
+
+def _pick_column(field_map: dict[str, str], aliases: tuple[str, ...]) -> str | None:
+    for alias in aliases:
+        if alias in field_map:
+            return field_map[alias]
+    return None
 
 
 def _parse_active(value: str) -> bool:
@@ -59,16 +67,18 @@ def _read_rows(csv_path: Path) -> list[dict[str, str]]:
         if reader.fieldnames is None:
             raise ValueError("CSV file has no header row.")
         field_map = {_normalize_header(name): name for name in reader.fieldnames}
-        missing = [column for column in REQUIRED_COLUMNS if column not in field_map]
-        if missing:
-            raise ValueError(f"Missing required column(s): {', '.join(missing)}")
+        email_key = _pick_column(field_map, EMAIL_HEADERS)
+        if email_key is None:
+            raise ValueError(
+                f"Missing email column. Use one of: {', '.join(EMAIL_HEADERS)}"
+            )
+        name_key = _pick_column(field_map, NAME_HEADERS)
 
         rows: list[dict[str, str]] = []
         for line_no, raw in enumerate(reader, start=2):
-            email = (raw.get(field_map["email"]) or "").strip()
+            email = (raw.get(email_key) or "").strip()
             if not email:
                 continue
-            name_key = field_map.get("name")
             active_key = field_map.get("active")
             name = (raw.get(name_key, "") or "").strip() if name_key else ""
             active_raw = (raw.get(active_key, "") or "").strip() if active_key else ""
