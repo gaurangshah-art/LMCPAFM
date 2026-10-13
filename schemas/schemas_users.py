@@ -8,6 +8,7 @@ class UserRole(str, Enum):
     investigator = "investigator"
     iaec = "iaec"
     staff = "staff"
+    admin = "admin"
 
 
 class UserCreate(BaseModel):

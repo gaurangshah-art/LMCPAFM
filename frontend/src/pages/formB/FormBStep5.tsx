@@ -1,69 +1,132 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../api/client";
+import { getApiErrorMessage } from "../../api/errors";
+import { saveFormBStep5 } from "../../api/formbApi";
+import { LoadingState } from "../../components/common/LoadingState";
+import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
+import { RequiredMark } from "../../components/common/RequiredMark";
+import { WizardActionBar } from "../../components/common/WizardActionBar";
+import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
+import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
+import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
+import { useWizardValidation } from "../../hooks/useWizardValidation";
+
+const EMPTY = {
+  housingConditions: "",
+  specialRequirements: "",
+  feeding: "",
+  environmentalEnrichment: "",
+  animalTransportationMethods: "",
+  scopeForReuse: "",
+  rehabilitationDetails: "",
+  carcassDisposalMethod: "",
+};
+
+function mapSaved(data: Record<string, unknown> | null | undefined) {
+  if (!data) return EMPTY;
+  return {
+    housingConditions: readString(data, "housing_conditions"),
+    specialRequirements: readString(data, "special_requirements"),
+    feeding: readString(data, "feeding"),
+    environmentalEnrichment: readString(data, "environmental_enrichment"),
+    animalTransportationMethods: readString(data, "animal_transportation_methods"),
+    scopeForReuse: readString(data, "scope_for_reuse"),
+    rehabilitationDetails: readString(data, "rehabilitation_details"),
+    carcassDisposalMethod: readString(data, "carcass_disposal_method"),
+  };
+}
 
 export function FormBStep5() {
   const navigate = useNavigate();
-
-  const [formBId] = useState<number | null>(
-    Number(localStorage.getItem("form_b_id")) || null
-  );
-
+  const { formBId, validating: resolvingFormB, submitted } = useResolvedFormBId();
+  useFormBEditRouteGuard(formBId, submitted, resolvingFormB);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { validationRef, validationError, showValidationError, clearValidationError } =
+    useWizardValidation();
+  const [form, setForm] = useState(EMPTY);
 
-  const [housingConditions, setHousingConditions] = useState("");
-  const [specialRequirements, setSpecialRequirements] = useState("");
-  const [feeding, setFeeding] = useState("");
-  const [environmentalEnrichment, setEnvironmentalEnrichment] = useState("");
+  const { value: saved, loading: loadingSaved } = useFormBStepReview(formBId, "step5", mapSaved, EMPTY);
+
+  useEffect(() => {
+    if (saved) setForm(saved);
+  }, [saved]);
+
+  function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
 
   function validateStep5() {
-    if (!housingConditions) return "Housing type is required.";
-    if (!feeding) return "Feeding type is required.";
-    if (!environmentalEnrichment) return "Environmental enrichment is required.";
+    if (!form.housingConditions) return "Housing type is required.";
+    if (
+      (form.housingConditions === "Special cages (IAEC-approved)" ||
+        form.housingConditions === "Other") &&
+      !form.specialRequirements.trim()
+    ) {
+      return "Describe special housing requirements when special or other housing is selected.";
+    }
+    if (!form.feeding) return "Feeding type is required.";
+    if (!form.environmentalEnrichment) return "Environmental enrichment is required.";
+    if (!form.animalTransportationMethods.trim()) return "Animal transportation methods are required.";
+    if (!form.scopeForReuse.trim()) return "Scope for reuse is required.";
+    if (!form.rehabilitationDetails.trim()) return "Rehabilitation details are required.";
+    if (!form.carcassDisposalMethod.trim()) return "Carcass disposal method is required.";
     return null;
   }
 
   async function handleNext() {
     if (!formBId) {
-      alert("Form B ID missing. Please complete previous steps.");
+      showValidationError("Form B ID missing. Please complete previous steps.");
       return;
     }
 
     const error = validateStep5();
     if (error) {
-      alert(error);
+      showValidationError(error);
       return;
     }
 
+    clearValidationError();
     setLoading(true);
+    setErrorMessage(null);
     try {
-      await api.post("/form-b/step-5", {
+      await saveFormBStep5({
         form_b_id: formBId,
-        housing_conditions: housingConditions,
-        special_requirements: specialRequirements,
-        feeding,
-        environmental_enrichment: environmentalEnrichment,
+        housing_conditions: form.housingConditions,
+        special_requirements: form.specialRequirements,
+        feeding: form.feeding,
+        environmental_enrichment: form.environmentalEnrichment,
+        animal_transportation_methods: form.animalTransportationMethods.trim(),
+        scope_for_reuse: form.scopeForReuse.trim(),
+        rehabilitation_details: form.rehabilitationDetails.trim(),
+        carcass_disposal_method: form.carcassDisposalMethod.trim(),
       });
 
       navigate("/form-b/step-6");
-    } catch {
-      alert("Failed to save Step 5.");
+    } catch (error) {
+      const message = getApiErrorMessage(error);
+      setErrorMessage(message);
+      showValidationError(message);
     } finally {
       setLoading(false);
     }
+  }
+
+  if (loadingSaved || resolvingFormB) {
+    return <LoadingState label="Loading housing and post-experiment details..." />;
   }
 
   return (
     <div className="page-card">
       <header className="section-header">
         <h2>Form B – Step 5</h2>
-        <p>Housing & Husbandry</p>
+        <p>Section II: Housing, transportation, and post-experimentation procedures.</p>
       </header>
 
+      <FormRequiredLegend />
+
       {!formBId && (
-        <p className="error-text">
-          Form B ID not found. Please complete previous steps.
-        </p>
+        <p className="error-text">Form B ID not found. Please complete previous steps.</p>
       )}
 
       {formBId && (
@@ -71,36 +134,25 @@ export function FormBStep5() {
           <p><strong>Form B internal ID:</strong> {formBId}</p>
 
           <div className="form-grid">
-
             <label>
-              Housing Type
+              Housing type
+              <RequiredMark />
               <select
-                value={housingConditions}
-                onChange={(e) => setHousingConditions(e.target.value)}
+                value={form.housingConditions}
+                onChange={(e) => updateField("housingConditions", e.target.value)}
               >
                 <option value="">Select housing type</option>
                 <option value="Polypropylene cages">Polypropylene cages</option>
-                <option value="Individually ventilated cages (IVC)">
-                  Individually ventilated cages (IVC)
-                </option>
+                <option value="Individually ventilated cages (IVC)">Individually ventilated cages (IVC)</option>
                 <option value="Metabolic cages">Metabolic cages</option>
                 <option value="Special cages (IAEC-approved)">Special cages (IAEC-approved)</option>
                 <option value="Other">Other</option>
               </select>
             </label>
-
-            <label>
-              Special Requirements (if any)
-              <textarea
-                value={specialRequirements}
-                onChange={(e) => setSpecialRequirements(e.target.value)}
-                placeholder="Describe any special housing or husbandry requirements..."
-              />
-            </label>
-
             <label>
               Feeding
-              <select value={feeding} onChange={(e) => setFeeding(e.target.value)}>
+              <RequiredMark />
+              <select value={form.feeding} onChange={(e) => updateField("feeding", e.target.value)}>
                 <option value="">Select feeding type</option>
                 <option value="Standard pellet diet">Standard pellet diet</option>
                 <option value="Custom diet">Custom diet</option>
@@ -108,12 +160,12 @@ export function FormBStep5() {
                 <option value="Other">Other</option>
               </select>
             </label>
-
             <label>
-              Environmental Enrichment
+              Environmental enrichment
+              <RequiredMark />
               <select
-                value={environmentalEnrichment}
-                onChange={(e) => setEnvironmentalEnrichment(e.target.value)}
+                value={form.environmentalEnrichment}
+                onChange={(e) => updateField("environmentalEnrichment", e.target.value)}
               >
                 <option value="">Select enrichment</option>
                 <option value="Nesting material">Nesting material</option>
@@ -122,18 +174,58 @@ export function FormBStep5() {
                 <option value="None">None</option>
               </select>
             </label>
-
+            <label className="full-width">
+              Special housing requirements (if any)
+              <textarea
+                value={form.specialRequirements}
+                onChange={(e) => updateField("specialRequirements", e.target.value)}
+              />
+            </label>
+            <label className="full-width">
+              Animal transportation methods (if extra-institutional transport is envisaged)
+              <RequiredMark />
+              <textarea
+                value={form.animalTransportationMethods}
+                onChange={(e) => updateField("animalTransportationMethods", e.target.value)}
+              />
+            </label>
+            <label className="full-width">
+              Scope for reuse
+              <RequiredMark />
+              <textarea
+                value={form.scopeForReuse}
+                onChange={(e) => updateField("scopeForReuse", e.target.value)}
+              />
+            </label>
+            <label className="full-width">
+              Rehabilitation (name and address, if applicable)
+              <RequiredMark />
+              <textarea
+                value={form.rehabilitationDetails}
+                onChange={(e) => updateField("rehabilitationDetails", e.target.value)}
+              />
+            </label>
+            <label className="full-width">
+              Method of carcass disposal after euthanasia
+              <RequiredMark />
+              <textarea
+                value={form.carcassDisposalMethod}
+                onChange={(e) => updateField("carcassDisposalMethod", e.target.value)}
+              />
+            </label>
           </div>
 
-          <div className="wizard-actions">
+          <WizardActionBar
+            validationError={validationError ?? errorMessage}
+            actionRef={validationRef}
+          >
             <button className="btn-secondary" onClick={() => navigate("/form-b/step-4")}>
               ← Back
             </button>
-
             <button className="btn" onClick={handleNext} disabled={loading}>
               Save & Next →
             </button>
-          </div>
+          </WizardActionBar>
         </>
       )}
     </div>

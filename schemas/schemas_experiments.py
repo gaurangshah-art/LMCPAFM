@@ -27,8 +27,9 @@ class ExperimentAnimal(ExperimentAnimalBase):
 
 class ExperimentBase(BaseModel):
     protocol_id: int
-    allocation_id: int                     # links experiment to allocation
-    date: date                             # experiment date
+    allocation_id: int
+    experiment_group_id: int
+    date: date
     performed_by: str                      # researcher name
     purpose: str                           # experiment purpose
     procedure: str                         # what was done

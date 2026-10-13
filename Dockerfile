@@ -22,6 +22,8 @@ COPY routers ./routers
 COPY schemas ./schemas
 COPY scripts ./scripts
 COPY utils ./utils
+COPY Docs ./Docs
+COPY static ./static
 
 EXPOSE 8000
 

@@ -56,6 +56,9 @@ export function AllocationPage({ currentUser }: AllocationPageProps) {
         <>
           {canCreateAllocations ? (
             <PageSection title="Create Allocation" subtitle="POST /iaec/allocation">
+              <p>
+                <a href="/facility" className="btn-secondary">View facility inventory</a>
+              </p>
               <AllocationForm onCreated={setAllocation} />
             </PageSection>
           ) : (

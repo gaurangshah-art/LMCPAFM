@@ -1,0 +1,7 @@
+category,equipment_id,location,make,model,serial_no,key_characteristics,calibration_or_validation_due,sop_reference,notes
+environment,ENV-1,,,,,"temp range; RH range; setpoints",,PH106,
+cage_wash,WASH-1,,,,,"cycle times; detergent",,PH101,
+sterilizer,STR-1,,,,,"chamber L; cycles",,PH107,
+balance,BAL-1,,,,,"readability; max weight",,PH-121,
+refrigerator,REF-1,,,,,"set temp C",,PH-114,
+room,,,,,,"room code; species; target temp; target RH",,PH106,

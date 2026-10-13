@@ -72,6 +72,8 @@ class AnimalAllocationAnimal(BaseModel):
     cage_id: int | None = None
     status: str | None = None
     protocol_id: int | None = None
+    experiment_group_id: int | None = None
+    animal_number: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -93,6 +95,7 @@ class AnimalAllocationBase(BaseModel):
 
 class AnimalAllocationCreate(AnimalAllocationBase):
     items: list[AnimalAllocationItemCreate]
+    experiment_group_id: int | None = None
 
 
 class AnimalAllocation(AnimalAllocationBase):

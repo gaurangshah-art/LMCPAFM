@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { createUser, listUsers } from "../api/userApi";
 import { getApiErrorMessage } from "../api/errors";
-import type { User, UserCreate, UserRole } from "../api/types";
+import type { User, UserCreate } from "../api/types";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
@@ -12,7 +12,7 @@ import { SuccessNote } from "../components/common/SuccessNote";
 import { UserTable } from "../components/tables/UserTable";
 import { useSubmitState } from "../hooks/useSubmitState";
 
-const availableRoles = ["investigator", "iaec", "staff"] as const;
+const availableRoles = ["admin", "iaec", "staff"] as const;
 type AssignableRole = (typeof availableRoles)[number];
 
 const schema = z.object({
@@ -40,7 +40,7 @@ export function UsersPage({ currentUser }: UsersPageProps) {
       email: "",
       password: "",
       status: true,
-      roles: ["investigator"],
+      roles: ["staff"],
     },
   });
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
@@ -79,7 +79,6 @@ export function UsersPage({ currentUser }: UsersPageProps) {
         name: values.name,
         email: values.email,
         password: values.password,
-        role: values.roles[0],
         roles: [...values.roles],
       };
       const created = await createUser(payload);
@@ -90,7 +89,7 @@ export function UsersPage({ currentUser }: UsersPageProps) {
         email: "",
         password: "",
         status: true,
-        roles: ["investigator"],
+        roles: ["staff"],
       });
     } catch (error) {
       fail(getApiErrorMessage(error));
@@ -99,7 +98,10 @@ export function UsersPage({ currentUser }: UsersPageProps) {
 
   return (
     <div className="page-grid">
-      <PageSection title="Create User" subtitle="POST /users/">
+      <PageSection
+        title="Create User"
+        subtitle="Staff can create admin, IAEC, and staff accounts. Role editing is available in the Superadmin dashboard."
+      >
         <form className="form-grid" onSubmit={onSubmit}>
           <label>
             Name

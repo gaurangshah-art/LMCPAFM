@@ -5,7 +5,15 @@ from sqlalchemy import func
 
 from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain, IAECProject, ExperimentGroup, Animal
-from database.lmcpafm_requisition_allocation import AnimalRequisition, AnimalRequisitionItem, AnimalAllocation
+from dependencies.auth import get_current_user, user_role_names
+from models.user import User
+from database.lmcpafm_requisition_allocation import (
+    AnimalRequisition,
+    AnimalRequisitionItem,
+    AnimalAllocation,
+    AnimalAllocationItem,
+    allocation_item_animals,
+)
 from database.lmcpafm_experiments import Experiment
 
 
@@ -42,8 +50,14 @@ def list_species(db: Session = Depends(get_db)):
 
 
 @router.get("/strain", response_model=list[LookupOption])
-def list_strains(db: Session = Depends(get_db)):
-    rows = db.query(Strain).order_by(Strain.name.asc()).all()
+def list_strains(
+    species_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Strain).order_by(Strain.name.asc())
+    if species_id is not None:
+        query = query.filter(Strain.species_id == species_id)
+    rows = query.all()
     return [LookupOption(id=row.id, name=row.name) for row in rows]
 
 
@@ -102,13 +116,26 @@ def list_animals(db: Session = Depends(get_db)):
 
 
 @lookup_router.get("/approved-protocols", response_model=list[LookupOption])
-def approved_protocols(db: Session = Depends(get_db)):
-    rows = (
-        db.query(IAECProject)
-        .filter(func.lower(func.coalesce(IAECProject.status, "")).contains("approved"))
-        .order_by(IAECProject.id.asc())
-        .all()
-    )
+def approved_protocols(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from crud.crud_iaec import get_projects_by_investigator
+
+    roles = set(user_role_names(current_user))
+    if roles.isdisjoint({"iaec", "admin", "staff"}):
+        rows = [
+            project
+            for project in get_projects_by_investigator(db, current_user.id)
+            if (project.status or "").strip().lower() == "approved"
+        ]
+    else:
+        rows = (
+            db.query(IAECProject)
+            .filter(func.lower(func.coalesce(IAECProject.status, "")).contains("approved"))
+            .order_by(IAECProject.id.asc())
+            .all()
+        )
     return [
         LookupOption(
             id=row.id,
@@ -238,18 +265,34 @@ def approved_allocations(db: Session = Depends(get_db)):
 
 
 @lookup_router.get("/approved-animals", response_model=list[LookupOption])
-def approved_animals(db: Session = Depends(get_db)):
+def approved_animals(
+    db: Session = Depends(get_db),
+    allocation_id: int | None = Query(None, gt=0),
+):
     approved_ids = _approved_protocol_ids(db)
     if not approved_ids:
         return []
 
-    rows = (
-        db.query(Animal)
-        .filter(Animal.protocol_id.in_(approved_ids))
-        .order_by(Animal.id.asc())
-        .all()
-    )
-    return [LookupOption(id=row.id, name=f"Animal {row.id}") for row in rows]
+    query = db.query(Animal).filter(Animal.protocol_id.in_(approved_ids))
+
+    if allocation_id is not None:
+        query = (
+            query.join(allocation_item_animals, allocation_item_animals.c.animal_id == Animal.id)
+            .join(
+                AnimalAllocationItem,
+                AnimalAllocationItem.id == allocation_item_animals.c.allocation_item_id,
+            )
+            .filter(AnimalAllocationItem.allocation_id == allocation_id)
+        )
+
+    rows = query.order_by(Animal.animal_number.asc(), Animal.id.asc()).all()
+    return [
+        LookupOption(
+            id=row.id,
+            name=row.animal_number or f"Animal {row.id}",
+        )
+        for row in rows
+    ]
 
 
 @lookup_router.get("/approved-experiments", response_model=list[LookupOption])

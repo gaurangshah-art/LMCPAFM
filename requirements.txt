@@ -1,5 +1,6 @@
 fastapi==0.139.0
 uvicorn==0.51.0
+python-multipart>=0.0.9,<1
 sqlalchemy==2.0.51
 alembic>=1.13,<2
 pydantic==2.13.4
@@ -13,3 +14,7 @@ pydantic[email]>=2.0
 # Test dependencies
 pytest==9.1.1
 httpx==0.28.1
+fpdf2>=2.8,<3
+pypdf>=5,<7
+python-barcode[images]>=0.15,<1
+Pillow>=10,<12
