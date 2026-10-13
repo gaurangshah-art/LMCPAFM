@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import re
+
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
@@ -24,6 +27,84 @@ APPROVED_CERTIFICATE_DECISIONS = frozenset(
 )
 
 PROTOCOL_PREFIX = "LMCP/IAEC"
+
+
+def _protocol_number_mode() -> str:
+    return os.getenv("IAEC_PROTOCOL_NUMBER_MODE", "per_meeting").strip().lower()
+
+
+def _protocol_serial_width() -> int:
+    raw = os.getenv("IAEC_PROTOCOL_SERIAL_WIDTH", "4").strip()
+    try:
+        width = int(raw)
+    except ValueError:
+        width = 4
+    return max(3, min(width, 6))
+
+
+def _protocol_serial_start_floor() -> int:
+    raw = os.getenv("IAEC_PROTOCOL_SERIAL_START", "").strip()
+    if not raw:
+        return 0
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
+
+
+def _extract_running_protocol_serial(protocol_number: str | None) -> int | None:
+    """Parse the college-wide running serial (last numeric segment) from stored protocol numbers."""
+    normalized = _normalize_protocol_number(protocol_number)
+    if normalized is None or not normalized.startswith(f"{PROTOCOL_PREFIX}/"):
+        return None
+
+    parts = normalized.split("/")
+    if len(parts) < 3:
+        return None
+    tail = parts[-1]
+    if not tail.isdigit():
+        return None
+    return int(tail)
+
+
+def _next_continuous_protocol_serial(db: Session) -> int:
+    rows = (
+        db.query(IAECProject.protocol_number)
+        .filter(
+            IAECProject.protocol_number.isnot(None),
+            IAECProject.protocol_number != "",
+        )
+        .all()
+    )
+    max_serial = 0
+    for (protocol_number,) in rows:
+        parsed = _extract_running_protocol_serial(protocol_number)
+        if parsed is not None:
+            max_serial = max(max_serial, parsed)
+
+    floor = _protocol_serial_start_floor()
+    return max(max_serial, floor) + 1
+
+
+def _format_continuous_protocol_number(
+    *,
+    year: int,
+    meeting_number: str,
+    serial: int,
+) -> str:
+    """LMCP tradition: year + IAEC meeting number + global running serial."""
+    width = _protocol_serial_width()
+    return f"{PROTOCOL_PREFIX}/{year}/{meeting_number.strip()}/{serial:0{width}d}"
+
+
+def _format_per_meeting_protocol_number(
+    *,
+    year: int,
+    meeting_number: str,
+    serial: int,
+) -> str:
+    """Serial restarts at 001 for each meeting (demo / alternate mode)."""
+    return f"{PROTOCOL_PREFIX}/{year}/{meeting_number.strip()}/{serial:03d}"
 
 
 def _assert_form_b_submitted_for_iaec(form_b: FormB) -> None:
@@ -287,8 +368,21 @@ def _assign_protocol_number(
             )
 
     year = meeting.date.year
-    serial = _count_protocols_for_meeting(db, meeting.id) + 1
-    protocol_number = f"{PROTOCOL_PREFIX}/{year}/{meeting.meeting_number.strip()}/{serial:03d}"
+    meeting_number = str(meeting.meeting_number)
+    if _protocol_number_mode() == "continuous":
+        serial = _next_continuous_protocol_serial(db)
+        protocol_number = _format_continuous_protocol_number(
+            year=year,
+            meeting_number=meeting_number,
+            serial=serial,
+        )
+    else:
+        serial = _count_protocols_for_meeting(db, meeting.id) + 1
+        protocol_number = _format_per_meeting_protocol_number(
+            year=year,
+            meeting_number=meeting_number,
+            serial=serial,
+        )
 
     try:
         project.protocol_number = protocol_number

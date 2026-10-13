@@ -198,6 +198,20 @@ sudo docker compose exec backend python scripts/import_iaec_meetings.py --csv /p
 
 This creates **meeting records** only; it does **not** import old Form B approvals or protocols automatically.
 
+### 9.1 Continuous protocol numbering (LMCP tradition)
+
+If your college uses a **global running serial** that does **not** restart each meeting, but still embeds the **meeting number** in the protocol ID, set in production `.env`:
+
+```env
+IAEC_PROTOCOL_NUMBER_MODE=continuous
+IAEC_PROTOCOL_SERIAL_START=247
+IAEC_PROTOCOL_SERIAL_WIDTH=4
+```
+
+New approvals become e.g. `LMCP/IAEC/2026/8/0248`, `LMCP/IAEC/2026/9/0249` — same shape as older IDs, but the **last segment** continues across the whole college register.
+
+When importing ongoing or recent protocols, store the **full** string from minutes (including year and meeting number) so the next auto-number continues correctly.
+
 ---
 
 ## 10. Bootstrap first admin (emergency / new server)

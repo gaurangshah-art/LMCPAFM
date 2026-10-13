@@ -123,6 +123,91 @@ def test_form_b_meeting_workflow(client, iaec_auth_headers):
     assert any(item["form_b_id"] == form_b.id for item in cert_res.json())
 
 
+def test_continuous_protocol_serial(client, iaec_auth_headers, monkeypatch):
+    monkeypatch.setenv("IAEC_PROTOCOL_NUMBER_MODE", "continuous")
+    monkeypatch.setenv("IAEC_PROTOCOL_SERIAL_START", "247")
+    monkeypatch.setenv("IAEC_PROTOCOL_SERIAL_WIDTH", "4")
+
+    from database.database import SessionLocal
+
+    db = SessionLocal()
+    meeting, _, form_b1 = _seed_form_b(db)
+    db.close()
+
+    for form_b_id in (form_b1.id,):
+        client.put(
+            f"/iaec/form-b/{form_b_id}/decision",
+            json={"meeting_id": meeting.id, "decision": "approved"},
+            headers=iaec_auth_headers,
+        )
+        res = client.post(
+            f"/iaec/form-b/{form_b_id}/protocol-number",
+            headers=iaec_auth_headers,
+        )
+        assert res.status_code == 200
+        assert res.json()["protocol_number"] == "LMCP/IAEC/2026/3/0248"
+
+    db = SessionLocal()
+    project2 = IAECProject(
+        title="Second continuous",
+        investigator_name="Dr B",
+        protocol_number="LMCP/IAEC/2026/3/0248",
+    )
+    db.add(project2)
+    db.commit()
+    db.refresh(project2)
+    form_b2 = FormB(
+        project_id=project2.id,
+        date=date.today(),
+        meeting_id=meeting.id,
+        submitted_at=datetime.now(timezone.utc),
+    )
+    db.add(form_b2)
+    db.commit()
+    db.refresh(form_b2)
+    db.close()
+
+    client.put(
+        f"/iaec/form-b/{form_b2.id}/decision",
+        json={"meeting_id": meeting.id, "decision": "approved"},
+        headers=iaec_auth_headers,
+    )
+    res2 = client.post(
+        f"/iaec/form-b/{form_b2.id}/protocol-number",
+        headers=iaec_auth_headers,
+    )
+    assert res2.status_code == 200
+    assert res2.json()["protocol_number"] == "LMCP/IAEC/2026/3/0248"
+
+    db = SessionLocal()
+    project3 = IAECProject(title="Third continuous", investigator_name="Dr C")
+    db.add(project3)
+    db.commit()
+    db.refresh(project3)
+    form_b3 = FormB(
+        project_id=project3.id,
+        date=date.today(),
+        meeting_id=meeting.id,
+        submitted_at=datetime.now(timezone.utc),
+    )
+    db.add(form_b3)
+    db.commit()
+    db.refresh(form_b3)
+    db.close()
+
+    client.put(
+        f"/iaec/form-b/{form_b3.id}/decision",
+        json={"meeting_id": meeting.id, "decision": "approved"},
+        headers=iaec_auth_headers,
+    )
+    res3 = client.post(
+        f"/iaec/form-b/{form_b3.id}/protocol-number",
+        headers=iaec_auth_headers,
+    )
+    assert res3.status_code == 200
+    assert res3.json()["protocol_number"] == "LMCP/IAEC/2026/3/0249"
+
+
 def test_protocol_serial_increments_per_meeting(client, iaec_auth_headers):
     from database.database import SessionLocal
 
