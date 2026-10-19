@@ -16,6 +16,7 @@ import { UserRoleEditForm } from "../components/admin/UserRoleEditForm";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageHeader } from "../components/common/PageHeader";
+import { ResourcesEntryPanel } from "../components/common/ResourcesEntryPanel";
 import { PageSection } from "../components/common/PageSection";
 import { DataTable } from "../components/tables/DataTable";
 import {
@@ -135,6 +136,8 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
       <p className="page-meta-line">
         Signed in as <strong>{currentUser.email}</strong> ({currentUser.roles.join(", ")})
       </p>
+
+      <ResourcesEntryPanel />
 
       <PageSection title="System Summary" subtitle="Overview of LMCPAFM">
         {summary ? (

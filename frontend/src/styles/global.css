@@ -1752,3 +1752,128 @@ input[type="number"] {
   flex-direction: column;
   gap: 1rem;
 }
+
+.resources-entry-panel__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.resources-doc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.resources-doc-link {
+  display: block;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color, #d0d7de);
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface-muted, #f6f8fa);
+}
+
+.resources-doc-link:hover {
+  border-color: var(--primary-color, #1f6feb);
+}
+
+.resources-doc-link strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.resources-doc-link span {
+  color: var(--text-muted, #57606a);
+  font-size: 0.95rem;
+}
+
+.markdown-doc {
+  line-height: 1.55;
+  max-width: 52rem;
+}
+
+.markdown-doc h1,
+.markdown-doc h2,
+.markdown-doc h3,
+.markdown-doc h4 {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-doc p,
+.markdown-doc ul,
+.markdown-doc ol {
+  margin: 0.65rem 0;
+}
+
+.markdown-doc table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.92rem;
+}
+
+.markdown-doc th,
+.markdown-doc td {
+  border: 1px solid var(--border-color, #d0d7de);
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-doc th {
+  background: var(--surface-muted, #f6f8fa);
+}
+
+.markdown-doc pre {
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+.markdown-doc code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.resources-pdf-hint kbd {
+  font-size: 0.85em;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--border-color, #d0d7de);
+  border-radius: 4px;
+  background: var(--surface-muted, #f6f8fa);
+}
+
+@media print {
+  body.resources-print-mode .top-nav,
+  body.resources-print-mode .institution-banner,
+  body.resources-print-mode .resources-pdf-hint,
+  body.resources-print-mode .page-header .inline-actions,
+  body.resources-print-mode .page-header .eyebrow,
+  body.resources-print-mode .investigator-profile-gate-banner {
+    display: none !important;
+  }
+
+  body.resources-print-mode .page-container {
+    padding: 0;
+    max-width: none;
+  }
+
+  body.resources-print-mode .resources-print-target {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  body.resources-print-mode .markdown-doc table {
+    font-size: 0.8rem;
+  }
+}

@@ -33,6 +33,7 @@ from routers.router_admin import router as admin_router
 from routers.router_admin_facility import router as admin_facility_router
 from routers.router_admin_masters import router as admin_masters_router
 from routers.router_facility import router as facility_router
+from routers.router_resources import router as resources_router
 
 def _cors_origins() -> list[str]:
     configured = os.getenv("CORS_ALLOW_ORIGINS")
@@ -103,3 +104,4 @@ app.include_router(approved_lookups_router)
 app.include_router(users_router)
 app.include_router(inventory_router)
 app.include_router(investigator_profile_router)
+app.include_router(resources_router)

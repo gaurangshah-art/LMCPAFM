@@ -85,6 +85,16 @@ These are the documents investigators should receive (PDF or in-app when availab
 | Handout at IAEC orientation | Indexing on public college homepage without access control |
 | Future: **Help** page **inside LMCPAFM after login** | Serving `/Docs/*.md` from nginx without authentication |
 
+### Single PDF for QA / UAT (external validator)
+
+1. Regenerate: `python scripts/build_qa_validation_pack.py`  
+2. Source file: [lmcpafm_qa_validation_pack.md](./lmcpafm_qa_validation_pack.md)  
+3. **In the app (easiest):** log in → **SOPs & guides** → **QA validation pack (combined)** → **Save as PDF** (or Ctrl+P → Save as PDF).  
+4. **From the repo file:** Cursor/VS Code → Extensions → install **Markdown PDF** (yzane) → open the `.md` file → Command Palette → **Markdown PDF: Export (pdf)**. Or Pandoc: `pandoc Docs/lmcpafm_qa_validation_pack.md -o LMCPAFM-QA-Validation-Pack.pdf --toc`  
+5. Transfer PDF on **restricted** college storage only  
+
+Includes: UAT scenarios, printable checklist, and Parts 4–10 (personnel + Form B + IAEC + staff + admin SOPs).
+
 ### Recommended pack for investigators (PDF export)
 
 Create one folder on internal storage, e.g. `LMCPAFM-Investigator-Reference/`:
@@ -109,9 +119,9 @@ Docs/changes_expected.docx
 
 Commit **LMCP-written** markdown SOPs to your **private** remote only. Never push `source_industry` or industry `.doc` files.
 
-### Optional later (in-app ready reference)
+### In-app ready reference (live)
 
-A logged-in **Resources** page (`/resources`) listing PDFs or rendered markdown for `investigator` / `staff` roles — can be a follow-up task after SOP text is **APPROVED**.
+After login, all users open **SOPs & guides** in the top navigation (`/resources`). Documents are served from the deployed `Docs/` folder (role-filtered). Dashboard home pages include an **Open guides** panel. Staff may still download the facility zip from `/staff/sop-pack`.
 
 ---
 

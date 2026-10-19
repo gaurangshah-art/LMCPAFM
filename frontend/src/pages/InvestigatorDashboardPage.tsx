@@ -9,6 +9,7 @@ import { ErrorAlert } from "../components/common/ErrorAlert";
 import { SuccessNote } from "../components/common/SuccessNote";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageHeader } from "../components/common/PageHeader";
+import { ResourcesEntryPanel } from "../components/common/ResourcesEntryPanel";
 import { PageSection } from "../components/common/PageSection";
 import { DataTable } from "../components/tables/DataTable";
 import { formatDisplayDate } from "../utils/dateFormat";
@@ -152,6 +153,8 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
           ) : null}
         </p>
       ) : null}
+
+      <ResourcesEntryPanel />
 
       <PageSection title="Overview" subtitle="Your IAEC workflow at a glance">
         <div className="summary-grid">

@@ -53,6 +53,7 @@ import { AdminMasterDataPage } from "../pages/AdminMasterDataPage";
 import { AdminFacilityPage } from "../pages/AdminFacilityPage";
 import { StaffFacilityPage } from "../pages/StaffFacilityPage";
 import { StaffSopPackPage } from "../pages/StaffSopPackPage";
+import { ResourcesPage } from "../pages/ResourcesPage";
 import { FormCPage } from "../pages/FormCPage";
 import { IAECProjectViewPage } from "../pages/IAECProjectViewPage";
 import { IAECProjectEditPage } from "../pages/IAECProjectEditPage";
@@ -674,6 +675,24 @@ export default function App() {
                 allowedRoles={["staff", "admin"]}
               >
                 <StaffFacilityPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/resources"
+            element={
+              <ProtectedRoute currentUser={currentUser} isAuthLoading={isAuthLoading}>
+                <ResourcesPage currentUser={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/resources/:docSlug"
+            element={
+              <ProtectedRoute currentUser={currentUser} isAuthLoading={isAuthLoading}>
+                <ResourcesPage currentUser={currentUser} />
               </ProtectedRoute>
             }
           />

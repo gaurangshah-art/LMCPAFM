@@ -18,6 +18,7 @@ import type {
 import { getApiErrorMessage } from "../../api/errors";
 import { DataTable, type TableColumn } from "../../components/tables/DataTable";
 import { formatDisplayDate } from "../../utils/dateFormat";
+import { ResourcesEntryPanel } from "../../components/common/ResourcesEntryPanel";
 
 const APPROVED_DECISIONS = ["approved", "approved_with_revisions", "animal_count_amended"];
 
@@ -298,6 +299,8 @@ export function IaecDashboard() {
           approval after a meeting decision, and generate protocol numbers when needed.
         </p>
       </header>
+
+      <ResourcesEntryPanel />
 
       {loading && <p>Loading…</p>}
       {error && <p className="error-text">{error}</p>}

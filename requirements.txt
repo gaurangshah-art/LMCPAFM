@@ -18,3 +18,4 @@ fpdf2>=2.8,<3
 pypdf>=5,<7
 python-barcode[images]>=0.15,<1
 Pillow>=10,<12
+markdown>=3.6,<4
