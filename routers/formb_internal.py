@@ -10,6 +10,7 @@ from crud.formb_attachments import (
     upload_form_b_attachment,
 )
 from crud.formb_internal import get_formb_by_protocol, update_formb
+from crud.formb_copy import copy_form_b, list_form_b_copy_sources
 from crud.formb_wizard import (
     build_form_b_step1_autofill,
     get_form_b_review,
@@ -38,6 +39,9 @@ from schemas.schemas_formb import (
     InvestigatorUserSearchResult,
     FormBRead,
     FormBReviewRead,
+    FormBCopyRequest,
+    FormBCopyResultRead,
+    FormBCopySourceRead,
     FormBStartRead,
     FormBStep1AutofillRead,
     FormBStep1Save,
@@ -60,6 +64,26 @@ def read_form_b_step1_autofill(
     current_user: User = Depends(require_investigator),
 ):
     return build_form_b_step1_autofill(db, current_user)
+
+
+@router.get("/copy-sources", response_model=list[FormBCopySourceRead])
+def read_form_b_copy_sources(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    return list_form_b_copy_sources(db, current_user)
+
+
+@router.post("/copy", response_model=FormBCopyResultRead)
+def create_form_b_from_copy(
+    payload: FormBCopyRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_investigator),
+):
+    try:
+        return copy_form_b(db, current_user, payload.source_form_b_id)
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/start", response_model=FormBStartRead)

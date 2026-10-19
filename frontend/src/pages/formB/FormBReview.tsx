@@ -13,6 +13,7 @@ import { LoadingState } from "../../components/common/LoadingState";
 import { ErrorAlert } from "../../components/common/ErrorAlert";
 import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
 import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
+import { FormBWizardPageHeader } from "../../components/formB/FormBWizardPageHeader";
 
 export function FormBReview() {
   const navigate = useNavigate();
@@ -97,10 +98,13 @@ export function FormBReview() {
 
   return (
     <div className="page-card">
-      <header className="section-header">
-        <h2>Form B – Review and Submit</h2>
-        <p>Verify all details before submission.</p>
-      </header>
+      <FormBWizardPageHeader
+        stepId="review"
+        formBId={formBId}
+        submitted={submitted}
+        title="Form B – Review and Submit"
+        subtitle="Verify all details before submission."
+      />
 
       <p>
         <strong>Form B ID:</strong> {formBId}

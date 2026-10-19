@@ -1040,6 +1040,77 @@ input[type="number"] {
   line-height: 1.4;
 }
 
+.form-b-wizard-progress {
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border, #dbe3ee);
+  border-radius: 10px;
+  background: var(--surface-muted, #f8fafc);
+}
+
+.form-b-wizard-progress__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-b-wizard-progress__total {
+  font-size: 0.8125rem;
+}
+
+.form-b-wizard-progress__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border, #dbe3ee);
+  overflow: hidden;
+}
+
+.form-b-wizard-progress__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary, #1d4ed8);
+  transition: width 0.25s ease;
+}
+
+.form-b-wizard-progress__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+
+.form-b-wizard-progress__link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.form-b-wizard-progress__chip {
+  display: inline-block;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border, #dbe3ee);
+  background: #fff;
+  color: var(--muted, #64748b);
+}
+
+.form-b-wizard-progress__chip--done {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.form-b-wizard-progress__chip--current {
+  border-color: var(--primary, #1d4ed8);
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
 .checkbox-group {
   border: 1px solid var(--border, #dbe3ee);
   border-radius: 8px;

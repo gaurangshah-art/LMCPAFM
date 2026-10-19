@@ -10,6 +10,13 @@ import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
 import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
 import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
 import { useWizardValidation } from "../../hooks/useWizardValidation";
+import { FormBLmcpDefaultPackBanner } from "../../components/formB/FormBLmcpDefaultPackBanner";
+import { FormBWizardPageHeader } from "../../components/formB/FormBWizardPageHeader";
+import {
+  fetchStep4DefaultPackExtras,
+  LMCP_DEFAULT_PACK_STEP4,
+  mergeFillEmpty,
+} from "../../constants/formBLmcpDefaultPack";
 
 const EMPTY = {
   procedureDescription: "",
@@ -73,6 +80,7 @@ export function FormBStep4() {
   const { validationRef, validationError, showValidationError, clearValidationError } =
     useWizardValidation();
   const [form, setForm] = useState(EMPTY);
+  const [packApplying, setPackApplying] = useState(false);
 
   const { value: saved, loading: loadingSaved } = useFormBStepReview(formBId, "step4", mapSaved, EMPTY);
 
@@ -82,6 +90,22 @@ export function FormBStep4() {
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function applyLmcpDefaultPack() {
+    if (!formBId) return;
+    setPackApplying(true);
+    try {
+      const extras = await fetchStep4DefaultPackExtras(formBId);
+      setForm((current) =>
+        mergeFillEmpty(current, {
+          ...LMCP_DEFAULT_PACK_STEP4,
+          ...extras,
+        }),
+      );
+    } finally {
+      setPackApplying(false);
+    }
   }
 
   function validateStep4() {
@@ -182,10 +206,13 @@ export function FormBStep4() {
 
   return (
     <div className="page-card">
-      <header className="section-header">
-        <h2>Form B – Step 4</h2>
-        <p>Section II: Procedures, injections, surgery, and euthanasia.</p>
-      </header>
+      <FormBWizardPageHeader
+        stepId="step-4"
+        formBId={formBId}
+        submitted={submitted}
+        title="Form B – Step 4"
+        subtitle="Section II: Procedures, injections, surgery, and euthanasia."
+      />
 
       <FormRequiredLegend />
 
@@ -196,6 +223,12 @@ export function FormBStep4() {
       {formBId && (
         <>
           <p><strong>Form B internal ID:</strong> {formBId}</p>
+
+          <FormBLmcpDefaultPackBanner
+            applying={packApplying}
+            description="Fills common LMCP choices (euthanasia, 3Rs text, blood withdrawal from Step 2b when available). You must still enter procedure description, pain category, anaesthesia, and analgesia for your study."
+            onApply={applyLmcpDefaultPack}
+          />
 
           <div className="form-grid">
             <label className="full-width">

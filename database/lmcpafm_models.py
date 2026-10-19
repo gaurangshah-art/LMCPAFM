@@ -512,6 +512,8 @@ class FormBStudyGroup(Base):
     animal_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     species_id: Mapped[int | None] = mapped_column(ForeignKey("species.id"), nullable=True)
     strain_id: Mapped[int | None] = mapped_column(ForeignKey("strain.id"), nullable=True)
+    species_other: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    strain_other: Mapped[str | None] = mapped_column(String(200), nullable=True)
     sex: Mapped[str | None] = mapped_column(String(50), nullable=True)
     age: Mapped[str | None] = mapped_column(String(100), nullable=True)
     weight_range: Mapped[str | None] = mapped_column(String(100), nullable=True)

@@ -59,6 +59,22 @@ export interface FormBStartResponse {
   project_id: number;
 }
 
+export interface FormBCopySource {
+  form_b_id: number;
+  project_id: number;
+  title: string;
+  protocol_number?: string | null;
+  submitted_at?: string | null;
+  status?: string | null;
+}
+
+export interface FormBCopyResult extends FormBStartResponse {
+  source_form_b_id: number;
+  source_protocol_number?: string | null;
+  attachments_not_copied: boolean;
+  funding_proof_not_copied: boolean;
+}
+
 export interface FormBStep1Payload {
   form_b_id: number;
   principal_investigator: string;
@@ -308,6 +324,8 @@ export interface FormBStudyGroupEntry {
   animal_count: number;
   species_id?: number | null;
   strain_id?: number | null;
+  species_other?: string | null;
+  strain_other?: string | null;
   sex?: string | null;
   age?: string | null;
   weight_range?: string | null;
@@ -336,11 +354,20 @@ export interface FormBStudyPhaseEntry {
   groups: FormBStudyGroupEntry[];
 }
 
+export interface FormBProjectSpeciesStrainPayload {
+  enabled: boolean;
+  species_id?: number | null;
+  strain_id?: number | null;
+  species_other?: string | null;
+  strain_other?: string | null;
+}
+
 export interface FormBStudyPlanPayload {
   form_b_id: number;
   design_rationale: string;
   phases: FormBStudyPhaseEntry[];
   animal_rationale: Record<string, unknown>;
+  project_species_strain?: FormBProjectSpeciesStrainPayload | null;
 }
 
 export interface FormBStudyPlanRead {
@@ -351,6 +378,7 @@ export interface FormBStudyPlanRead {
   phase_count: number;
   group_count: number;
   animal_rationale?: Record<string, unknown> | null;
+  project_species_strain?: FormBProjectSpeciesStrainPayload | null;
 }
 
 export async function getFormBStudyPlan(formBId: number): Promise<FormBStudyPlanRead> {
@@ -386,6 +414,18 @@ export async function getFormBStep1Autofill(): Promise<FormBStep1Autofill> {
 export async function startFormB(forceNew = false): Promise<FormBStartResponse> {
   const { data } = await apiClient.post<FormBStartResponse>("/formb/start", undefined, {
     params: forceNew ? { force_new: true } : undefined,
+  });
+  return data;
+}
+
+export async function getFormBCopySources(): Promise<FormBCopySource[]> {
+  const { data } = await apiClient.get<FormBCopySource[]>("/formb/copy-sources");
+  return data;
+}
+
+export async function copyFormBFromSource(sourceFormBId: number): Promise<FormBCopyResult> {
+  const { data } = await apiClient.post<FormBCopyResult>("/formb/copy", {
+    source_form_b_id: sourceFormBId,
   });
   return data;
 }

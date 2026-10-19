@@ -16,6 +16,7 @@ import { DraftRestoreBanner } from "../../components/common/DraftRestoreBanner";
 import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
 import { RequiredMark } from "../../components/common/RequiredMark";
 import { WizardActionBar } from "../../components/common/WizardActionBar";
+import { FormBWizardPageHeader } from "../../components/formB/FormBWizardPageHeader";
 import { useFormDraftPersistence } from "../../hooks/useFormDraftPersistence";
 import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
 import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
@@ -213,10 +214,13 @@ export function FormBStep2() {
 
   return (
     <div className="page-card">
-      <header className="section-header">
-        <h2>Form B – Step 2</h2>
-        <p>Section II: Project protocol details.</p>
-      </header>
+      <FormBWizardPageHeader
+        stepId="step-2"
+        formBId={formBId}
+        submitted={submitted}
+        title="Form B – Step 2"
+        subtitle="Section II: Project protocol details."
+      />
 
       {restoreOffer ? (
         <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />

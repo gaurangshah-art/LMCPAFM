@@ -4,7 +4,9 @@ import { getApiErrorMessage } from "../api/errors";
 import { getInvestigatorProjectSummaries } from "../api/iaecApi";
 import { getMyInvestigatorProfile, type InvestigatorProfile } from "../api/investigatorProfileApi";
 import type { InvestigatorProjectSummary, User } from "../api/types";
+import { FormBCopyDialog } from "../components/formB/FormBCopyDialog";
 import { ErrorAlert } from "../components/common/ErrorAlert";
+import { SuccessNote } from "../components/common/SuccessNote";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageHeader } from "../components/common/PageHeader";
 import { PageSection } from "../components/common/PageSection";
@@ -53,6 +55,8 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
   const [profile, setProfile] = useState<InvestigatorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +104,17 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
 
   return (
     <div className="page-grid">
+      {copyNotice ? <SuccessNote message={copyNotice} /> : null}
+
+      <FormBCopyDialog
+        open={copyDialogOpen}
+        onClose={() => setCopyDialogOpen(false)}
+        onCopied={(formBId, notice) => {
+          setCopyNotice(notice);
+          navigate(`/form-b/step-1?formBId=${formBId}`);
+        }}
+      />
+
       <PageHeader
         eyebrow="Investigator dashboard"
         title={`Welcome back, ${currentUser.name}`}
@@ -108,6 +123,13 @@ export function InvestigatorDashboardPage({ currentUser }: InvestigatorDashboard
           <div className="quick-nav-grid dashboard-quick-actions">
             <button type="button" className="btn" onClick={() => navigate("/form-b/step-1?new=1")}>
               New Form B
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setCopyDialogOpen(true)}
+            >
+              Copy previous Form B
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => navigate("/requisitions")}>
               Requisitions

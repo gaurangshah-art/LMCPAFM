@@ -15,6 +15,13 @@ import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
 import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
 import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
 import { validateWeightGrams } from "../../utils/businessValidation";
+import {
+  isSpeciesOtherSelect,
+  SPECIES_STRAIN_OTHER_LABEL,
+  SPECIES_STRAIN_OTHER_SELECT_VALUE,
+  speciesSelectValue,
+  strainSelectValue,
+} from "../../utils/speciesStrainFields";
 
 interface RequirementRow extends FormBAnimalRequirementEntry {
   id: string;
@@ -262,8 +269,24 @@ export function FormBStep3() {
     for (let index = 0; index < form.requirements.length; index += 1) {
       const row = form.requirements[index];
       const label = `Requirement ${index + 1}`;
-      if (!row.species) return `${label}: species is required.`;
-      if (!row.strain) return `${label}: strain is required.`;
+      const speciesPick = speciesSelectValue(row.species, speciesOptions);
+      if (!speciesPick) return `${label}: species is required.`;
+      if (isSpeciesOtherSelect(speciesPick) && !row.species.trim()) {
+        return `${label}: specify the species name when Other is selected.`;
+      }
+      const speciesId = speciesIdForName(row.species);
+      const strainPick = strainSelectValue(
+        row.strain,
+        speciesId,
+        strainsForSpecies(speciesId),
+      );
+      if (!strainPick) return `${label}: strain is required.`;
+      if (
+        (isSpeciesOtherSelect(strainPick) || isSpeciesOtherSelect(speciesPick)) &&
+        !row.strain.trim()
+      ) {
+        return `${label}: specify the strain name when Other is selected.`;
+      }
       if (!row.sex) return `${label}: sex is required.`;
       if (!row.age) return `${label}: age is required.`;
       if (!row.weight.trim()) return `${label}: weight range is required.`;
@@ -467,11 +490,15 @@ export function FormBStep3() {
                 <label>
                   Species
                   <select
-                    value={row.species}
+                    value={speciesSelectValue(row.species, speciesOptions)}
                     onChange={(e) => {
-                      const species = e.target.value;
-                      const speciesId = speciesIdForName(species);
-                      updateRequirement(row.id, { species, strain: "" });
+                      const pick = e.target.value;
+                      if (isSpeciesOtherSelect(pick)) {
+                        updateRequirement(row.id, { species: "", strain: "" });
+                        return;
+                      }
+                      const speciesId = speciesIdForName(pick);
+                      updateRequirement(row.id, { species: pick, strain: "" });
                       if (speciesId) void ensureStrainsLoaded(speciesId);
                     }}
                   >
@@ -481,31 +508,75 @@ export function FormBStep3() {
                         {option.name}
                       </option>
                     ))}
-                  </select>
-                </label>
-                <label>
-                  Strain
-                  <select
-                    value={row.strain}
-                    onChange={(e) => updateRequirement(row.id, { strain: e.target.value })}
-                    disabled={!row.species}
-                  >
-                    <option value="">
-                      {!row.species
-                        ? "Select species first"
-                        : strainsLoading(speciesIdForName(row.species))
-                          ? "Loading strains..."
-                          : strainsForSpecies(speciesIdForName(row.species)).length
-                            ? "Select strain"
-                            : "No strains for this species"}
+                    <option value={SPECIES_STRAIN_OTHER_SELECT_VALUE}>
+                      {SPECIES_STRAIN_OTHER_LABEL}
                     </option>
-                    {strainsForSpecies(speciesIdForName(row.species)).map((option) => (
-                      <option key={option.id} value={option.name}>
-                        {option.name}
-                      </option>
-                    ))}
                   </select>
                 </label>
+                {isSpeciesOtherSelect(speciesSelectValue(row.species, speciesOptions)) ? (
+                  <label>
+                    Specify species
+                    <input
+                      value={row.species}
+                      placeholder="Enter species name"
+                      onChange={(e) => updateRequirement(row.id, { species: e.target.value, strain: row.strain })}
+                    />
+                  </label>
+                ) : null}
+                {!isSpeciesOtherSelect(speciesSelectValue(row.species, speciesOptions)) ? (
+                  <label>
+                    Strain
+                    <select
+                      value={strainSelectValue(
+                        row.strain,
+                        speciesIdForName(row.species),
+                        strainsForSpecies(speciesIdForName(row.species)),
+                      )}
+                      onChange={(e) => {
+                        const pick = e.target.value;
+                        updateRequirement(row.id, {
+                          strain: isSpeciesOtherSelect(pick) ? "" : pick,
+                        });
+                      }}
+                      disabled={!row.species}
+                    >
+                      <option value="">
+                        {!row.species
+                          ? "Select species first"
+                          : strainsLoading(speciesIdForName(row.species))
+                            ? "Loading strains..."
+                            : strainsForSpecies(speciesIdForName(row.species)).length
+                              ? "Select strain"
+                              : "No strains for this species"}
+                      </option>
+                      {strainsForSpecies(speciesIdForName(row.species)).map((option) => (
+                        <option key={option.id} value={option.name}>
+                          {option.name}
+                        </option>
+                      ))}
+                      <option value={SPECIES_STRAIN_OTHER_SELECT_VALUE}>
+                        {SPECIES_STRAIN_OTHER_LABEL}
+                      </option>
+                    </select>
+                  </label>
+                ) : null}
+                {isSpeciesOtherSelect(
+                  strainSelectValue(
+                    row.strain,
+                    speciesIdForName(row.species),
+                    strainsForSpecies(speciesIdForName(row.species)),
+                  ),
+                ) ||
+                isSpeciesOtherSelect(speciesSelectValue(row.species, speciesOptions)) ? (
+                  <label>
+                    Specify strain
+                    <input
+                      value={row.strain}
+                      placeholder="Enter strain name"
+                      onChange={(e) => updateRequirement(row.id, { strain: e.target.value })}
+                    />
+                  </label>
+                ) : null}
                 <label>
                   Sex
                   <select

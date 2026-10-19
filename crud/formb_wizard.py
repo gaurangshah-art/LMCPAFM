@@ -80,23 +80,16 @@ def _sync_animal_requirements(db: Session, form_b: FormB, payload: dict) -> None
         db.delete(existing)
     db.flush()
 
-    for requirement in requirements:
-        species = (
-            db.query(Species)
-            .filter(Species.name.ilike(requirement["species"].strip()))
-            .first()
-        )
-        strain = (
-            db.query(Strain)
-            .filter(Strain.name.ilike(requirement["strain"].strip()))
-            .first()
-            if species
-            else None
-        )
-        if strain and strain.species_id != species.id:
-            strain = None
+    from utils.species_strain_names import get_or_create_species_strain
 
-        if not species or not strain:
+    for requirement in requirements:
+        species_label = (requirement.get("species") or "").strip()
+        strain_label = (requirement.get("strain") or "").strip()
+        if not species_label or not strain_label:
+            continue
+        try:
+            species, strain = get_or_create_species_strain(db, species_label, strain_label)
+        except ValueError:
             continue
 
         db.add(

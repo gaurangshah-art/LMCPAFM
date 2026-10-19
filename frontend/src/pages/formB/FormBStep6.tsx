@@ -13,6 +13,13 @@ import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
 import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
 import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
 import { useWizardValidation } from "../../hooks/useWizardValidation";
+import { FormBLmcpDefaultPackBanner } from "../../components/formB/FormBLmcpDefaultPackBanner";
+import {
+  buildPersonnelDefaultFromStep1,
+  LMCP_DEFAULT_PACK_STEP6,
+  mergeFillEmpty,
+} from "../../constants/formBLmcpDefaultPack";
+import { FormBWizardPageHeader } from "../../components/formB/FormBWizardPageHeader";
 
 interface PersonnelRow extends FormBAuthorizedPersonnelEntry {
   id: string;
@@ -79,6 +86,12 @@ export function FormBStep6() {
     mapSaved,
     mapSaved(null),
   );
+  const { value: step1Saved } = useFormBStepReview(
+    formBId,
+    "step1",
+    (data) => data ?? null,
+    null,
+  );
 
   useEffect(() => {
     if (!saved) return;
@@ -92,6 +105,22 @@ export function FormBStep6() {
     setAuthorizedPersonnel((current) =>
       current.map((row) => (row.id === id ? { ...row, ...patch } : row)),
     );
+  }
+
+  function applyLmcpDefaultPack() {
+    const piDefaults = buildPersonnelDefaultFromStep1(step1Saved ?? undefined);
+    setTrainingLevel((current) => current || LMCP_DEFAULT_PACK_STEP6.trainingLevel);
+    setCompetencyCertification(
+      (current) => current || LMCP_DEFAULT_PACK_STEP6.competencyCertification,
+    );
+    setTrainingDetails((current) =>
+      current.trim() ? current : LMCP_DEFAULT_PACK_STEP6.trainingDetails,
+    );
+    setAuthorizedPersonnel((current) => {
+      if (!current.length) return current;
+      const [first, ...rest] = current;
+      return [mergeFillEmpty(first, piDefaults), ...rest];
+    });
   }
 
   function validateStep6() {
@@ -159,10 +188,13 @@ export function FormBStep6() {
 
   return (
     <div className="page-card">
-      <header className="section-header">
-        <h2>Form B – Step 6</h2>
-        <p>Section II: Authorized personnel and training.</p>
-      </header>
+      <FormBWizardPageHeader
+        stepId="step-6"
+        formBId={formBId}
+        submitted={submitted}
+        title="Form B – Step 6"
+        subtitle="Section II: Authorized personnel and training."
+      />
 
       <FormRequiredLegend />
 
@@ -173,6 +205,11 @@ export function FormBStep6() {
       {formBId && (
         <>
           <p><strong>Form B internal ID:</strong> {formBId}</p>
+
+          <FormBLmcpDefaultPackBanner
+            description="Fills CPCSEA/institutional training defaults and the first personnel row from Step 1 (PI name, designation, contact) where those fields are still blank."
+            onApply={applyLmcpDefaultPack}
+          />
 
           <div className="subform-header full-width">
             <h3>Authorized personnel (all fields required)</h3>

@@ -123,6 +123,42 @@ def test_form_b_annexure_pdf_includes_animal_summary_table(client, monkeypatch):
     assert plan["phases"][0]["blood_withdrawal_volume"] == "0.5 ml per draw"
 
 
+def test_form_b_study_plan_persists_project_species_strain(client, monkeypatch):
+    headers, payload = _register_and_login(client, monkeypatch)
+    form_b_id = client.post("/formb/start", headers=headers).json()["id"]
+    client.post("/formb/step-1", json=step1_body(form_b_id, payload), headers=headers)
+
+    suffix = uuid4().hex[:4]
+    with SessionLocal() as db:
+        species = Species(name=f"ProjSP-{suffix}")
+        db.add(species)
+        db.flush()
+        strain = Strain(name=f"ProjStr-{suffix}", species_id=species.id)
+        db.add(strain)
+        db.commit()
+        species_id = species.id
+        strain_id = strain.id
+
+    body = study_plan_body(form_b_id, species_id=species_id, strain_id=strain_id)
+    body["project_species_strain"] = {
+        "enabled": True,
+        "species_id": species_id,
+        "strain_id": strain_id,
+        "species_other": None,
+        "strain_other": None,
+    }
+    save_res = client.put(f"/formb/{form_b_id}/study-plan", json=body, headers=headers)
+    assert save_res.status_code == 200, save_res.text
+
+    read_res = client.get(f"/formb/{form_b_id}/study-plan", headers=headers)
+    assert read_res.status_code == 200, read_res.text
+    project = read_res.json()["project_species_strain"]
+    assert project is not None
+    assert project["enabled"] is True
+    assert project["species_id"] == species_id
+    assert project["strain_id"] == strain_id
+
+
 def test_form_b_study_plan_rejects_mismatched_fate_counts(client, monkeypatch):
     headers, payload = _register_and_login(client, monkeypatch)
     form_b_id = client.post("/formb/start", headers=headers).json()["id"]

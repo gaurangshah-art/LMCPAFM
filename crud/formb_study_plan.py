@@ -64,18 +64,23 @@ def _sync_step3_from_study_plan(db: Session, form_b: FormB, payload) -> None:
             f"({total_animals})."
         )
 
-    aggregates: dict[tuple[int, int], dict] = {}
+    from utils.species_strain_names import resolve_species_strain_labels
+
+    aggregates: dict[tuple[str, str], dict] = {}
     for phase in payload.phases:
         for group in phase.groups:
-            key = (group.species_id, group.strain_id)
-            species = db.query(Species).filter(Species.id == group.species_id).first()
-            strain = db.query(Strain).filter(Strain.id == group.strain_id).first()
-            if species is None or strain is None:
-                raise CRUDValidationError("Invalid species or strain in study plan groups.")
+            species_name, strain_name = resolve_species_strain_labels(
+                species_id=group.species_id,
+                strain_id=group.strain_id,
+                species_other=group.species_other,
+                strain_other=group.strain_other,
+                db=db,
+            )
+            key = (species_name.casefold(), strain_name.casefold())
             if key not in aggregates:
                 aggregates[key] = {
-                    "species": species.name,
-                    "strain": strain.name,
+                    "species": species_name,
+                    "strain": strain_name,
                     "sex": group.sex,
                     "age": group.age,
                     "weight": group.weight_range,
@@ -227,9 +232,11 @@ def _group_to_dict(group: FormBStudyGroup) -> dict:
         "role": group.role,
         "animal_count": group.animal_count,
         "species_id": group.species_id,
-        "species_name": group.species.name if group.species else None,
+        "species_name": group.species.name if group.species else group.species_other,
+        "species_other": group.species_other,
         "strain_id": group.strain_id,
-        "strain_name": group.strain.name if group.strain else None,
+        "strain_name": group.strain.name if group.strain else group.strain_other,
+        "strain_other": group.strain_other,
         "sex": group.sex,
         "age": group.age,
         "weight_range": group.weight_range,
@@ -292,6 +299,7 @@ def get_study_plan(db: Session, user: User, form_b_id: int) -> dict:
         "group_count": group_count,
         "animal_rationale": step2b.get("animal_rationale")
         or _animal_rationale_from_step3(application_data.get("step3")),
+        "project_species_strain": step2b.get("project_species_strain"),
     }
 
 
@@ -319,15 +327,19 @@ def _animal_rationale_from_step3(step3: dict | None) -> dict | None:
     }
 
 
-def _validate_species_strain(db: Session, species_id: int | None, strain_id: int | None) -> None:
-    if species_id is None or strain_id is None:
-        raise CRUDValidationError("Each study group must specify both species and strain.")
-    species = db.query(Species).filter(Species.id == species_id).first()
-    strain = db.query(Strain).filter(Strain.id == strain_id).first()
-    if species is None or strain is None:
-        raise CRUDValidationError("Invalid species or strain selected for a study group.")
-    if strain.species_id != species.id:
-        raise CRUDValidationError("Selected strain does not belong to the selected species.")
+def _validate_species_strain_group(db: Session, group) -> None:
+    from utils.species_strain_names import resolve_species_strain_labels
+
+    try:
+        resolve_species_strain_labels(
+            species_id=group.species_id,
+            strain_id=group.strain_id,
+            species_other=getattr(group, "species_other", None),
+            strain_other=getattr(group, "strain_other", None),
+            db=db,
+        )
+    except ValueError as exc:
+        raise CRUDValidationError(str(exc)) from exc
 
 
 def validate_study_plan_payload(db: Session, form_b_id: int, payload: FormBStudyPlanSave) -> None:
@@ -353,7 +365,7 @@ def validate_study_plan_payload(db: Session, form_b_id: int, payload: FormBStudy
         for group in phase.groups:
             if group.role not in GROUP_ROLES:
                 raise CRUDValidationError(f"Invalid group role '{group.role}' in phase '{phase.phase_name}'.")
-            _validate_species_strain(db, group.species_id, group.strain_id)
+            _validate_species_strain_group(db, group)
 
             fate_total = sum(fate.count for fate in group.fates)
             if fate_total != group.animal_count:
@@ -465,6 +477,8 @@ def save_study_plan(db: Session, user: User, payload: FormBStudyPlanSave) -> dic
                 animal_count=group_entry.animal_count,
                 species_id=group_entry.species_id,
                 strain_id=group_entry.strain_id,
+                species_other=(group_entry.species_other or "").strip() or None,
+                strain_other=(group_entry.strain_other or "").strip() or None,
                 sex=(group_entry.sex or "").strip() or None,
                 age=(group_entry.age or "").strip() or None,
                 weight_range=(group_entry.weight_range or "").strip() or None,
@@ -527,7 +541,7 @@ def save_study_plan(db: Session, user: User, payload: FormBStudyPlanSave) -> dic
             phase.depends_on_phase_id = depends_on.id
 
     application_data = dict(form_b.application_data or {})
-    application_data[STEP2B_KEY] = {
+    step2b_payload = {
         "completed": True,
         "design_rationale": (payload.design_rationale or "").strip(),
         "phase_count": len(payload.phases),
@@ -535,6 +549,9 @@ def save_study_plan(db: Session, user: User, payload: FormBStudyPlanSave) -> dic
         "animal_rationale": payload.animal_rationale.model_dump(),
         "phase_procedures": _extract_phase_procedures(payload.phases),
     }
+    if payload.project_species_strain is not None:
+        step2b_payload["project_species_strain"] = payload.project_species_strain.model_dump()
+    application_data[STEP2B_KEY] = step2b_payload
     form_b.application_data = application_data
     _sync_step3_from_study_plan(db, form_b, payload)
 
@@ -551,10 +568,12 @@ def has_complete_study_plan(db: Session, form_b_id: int) -> bool:
         return False
 
 
-def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
+def build_study_plan_save_payload(db: Session, form_b_id: int) -> "FormBStudyPlanSave | None":
+    from schemas.schemas_formb_study_plan import FormBStudyPlanSave
+
     form_b = db.query(FormB).filter(FormB.id == form_b_id).first()
     if form_b is None:
-        raise CRUDValidationError("Form B not found.")
+        return None
 
     phases = (
         db.query(FormBStudyPhase)
@@ -568,19 +587,35 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
         .all()
     )
     if not phases:
-        raise CRUDValidationError(
-            "Complete the experimental study plan (Annexure I) before continuing."
-        )
+        return None
 
     application_data = form_b.application_data or {}
     step2b = application_data.get(STEP2B_KEY) or {}
     design_rationale = (step2b.get("design_rationale") or "").strip()
     if not design_rationale:
-        raise CRUDValidationError(
-            "Complete the experimental study plan (Annexure I) before continuing."
-        )
+        return None
 
-    payload_phases = []
+    try:
+        payload = _study_plan_save_from_phases(
+            db,
+            form_b_id=form_b_id,
+            phases=phases,
+            application_data=application_data,
+            design_rationale=design_rationale,
+        )
+    except CRUDValidationError:
+        return None
+    return payload
+
+
+def _study_plan_save_from_phases(
+    db: Session,
+    *,
+    form_b_id: int,
+    phases: list[FormBStudyPhase],
+    application_data: dict,
+    design_rationale: str,
+) -> "FormBStudyPlanSave":
     from schemas.schemas_formb_study_plan import (
         FormBGroupDosingEntry,
         FormBGroupEndpointEntry,
@@ -590,6 +625,9 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
         FormBStudyPlanAnimalRationale,
         FormBStudyPlanSave,
     )
+
+    step2b = application_data.get(STEP2B_KEY) or {}
+    payload_phases = []
 
     animal_rationale_data = step2b.get("animal_rationale") or _animal_rationale_from_step3(
         application_data.get("step3")
@@ -643,6 +681,8 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
                         animal_count=group.animal_count,
                         species_id=group.species_id,
                         strain_id=group.strain_id,
+                        species_other=group.species_other,
+                        strain_other=group.strain_other,
                         sex=group.sex,
                         age=group.age,
                         weight_range=group.weight_range,
@@ -678,16 +718,52 @@ def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
             )
         )
 
-    validate_study_plan_payload(
-        db,
-        form_b_id,
-        FormBStudyPlanSave(
-            form_b_id=form_b_id,
-            design_rationale=design_rationale,
-            phases=payload_phases,
-            animal_rationale=animal_rationale,
-        ),
+    payload = FormBStudyPlanSave(
+        form_b_id=form_b_id,
+        design_rationale=design_rationale,
+        phases=payload_phases,
+        animal_rationale=animal_rationale,
     )
+    return payload
+
+
+def validate_study_plan_exists(db: Session, form_b_id: int) -> None:
+    form_b = db.query(FormB).filter(FormB.id == form_b_id).first()
+    if form_b is None:
+        raise CRUDValidationError("Form B not found.")
+
+    phases = (
+        db.query(FormBStudyPhase)
+        .options(
+            joinedload(FormBStudyPhase.groups).joinedload(FormBStudyGroup.fates),
+            joinedload(FormBStudyPhase.groups).joinedload(FormBStudyGroup.dosing_entries),
+            joinedload(FormBStudyPhase.groups).joinedload(FormBStudyGroup.endpoints),
+        )
+        .filter(FormBStudyPhase.form_b_id == form_b_id)
+        .order_by(FormBStudyPhase.sequence_order.asc())
+        .all()
+    )
+    if not phases:
+        raise CRUDValidationError(
+            "Complete the experimental study plan (Annexure I) before continuing."
+        )
+
+    application_data = form_b.application_data or {}
+    step2b = application_data.get(STEP2B_KEY) or {}
+    design_rationale = (step2b.get("design_rationale") or "").strip()
+    if not design_rationale:
+        raise CRUDValidationError(
+            "Complete the experimental study plan (Annexure I) before continuing."
+        )
+
+    payload = _study_plan_save_from_phases(
+        db,
+        form_b_id=form_b_id,
+        phases=phases,
+        application_data=application_data,
+        design_rationale=design_rationale,
+    )
+    validate_study_plan_payload(db, form_b_id, payload)
 
 
 def sync_experiment_groups_from_study_plan(db: Session, project_id: int) -> int:

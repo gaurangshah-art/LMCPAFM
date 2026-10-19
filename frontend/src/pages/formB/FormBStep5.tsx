@@ -10,6 +10,9 @@ import { readString, useFormBStepReview } from "../../hooks/useFormBStepReview";
 import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
 import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
 import { useWizardValidation } from "../../hooks/useWizardValidation";
+import { FormBLmcpDefaultPackBanner } from "../../components/formB/FormBLmcpDefaultPackBanner";
+import { FormBWizardPageHeader } from "../../components/formB/FormBWizardPageHeader";
+import { LMCP_DEFAULT_PACK_STEP5, mergeFillEmpty } from "../../constants/formBLmcpDefaultPack";
 
 const EMPTY = {
   housingConditions: "",
@@ -54,6 +57,10 @@ export function FormBStep5() {
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function applyLmcpDefaultPack() {
+    setForm((current) => mergeFillEmpty(current, { ...LMCP_DEFAULT_PACK_STEP5 }));
   }
 
   function validateStep5() {
@@ -118,10 +125,13 @@ export function FormBStep5() {
 
   return (
     <div className="page-card">
-      <header className="section-header">
-        <h2>Form B – Step 5</h2>
-        <p>Section II: Housing, transportation, and post-experimentation procedures.</p>
-      </header>
+      <FormBWizardPageHeader
+        stepId="step-5"
+        formBId={formBId}
+        submitted={submitted}
+        title="Form B – Step 5"
+        subtitle="Section II: Housing, transportation, and post-experimentation procedures."
+      />
 
       <FormRequiredLegend />
 
@@ -132,6 +142,11 @@ export function FormBStep5() {
       {formBId && (
         <>
           <p><strong>Form B internal ID:</strong> {formBId}</p>
+
+          <FormBLmcpDefaultPackBanner
+            description="Fills standard LMCP animal house housing, feeding, enrichment, transport, reuse, rehabilitation, and carcass disposal text. Review and edit before saving."
+            onApply={applyLmcpDefaultPack}
+          />
 
           <div className="form-grid">
             <label>

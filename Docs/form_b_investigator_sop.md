@@ -91,10 +91,13 @@ Until the profile is complete, Step 1 will show a message and **Start Form B** w
 ## 5. High-level workflow overview
 
 ```
-Register → Login → Complete Profile → Step 1 → Step 2 → Step 2b → Step 3 → Step 4 → Step 5 → Step 6 → Step 7 → Review → Submit
-                                              ↑
-                                    Upload funding proof here
+Register → Login → Complete Profile → Step 1 → Step 2 → Step 2b → Step 4 → Step 5 → Step 6 → Step 7 → Review → Submit
+                                              ↑              ↑
+                                    Upload funding proof   Step 3 data is saved here automatically
+                                    here                   (animal justification + requirement table)
 ```
+
+**Note:** After a successful **Save & Next** on Step 2b, you normally **skip Step 3 in the wizard**. Step 3 content is written to the server from the study plan and **Animal use rationale** section on Step 2b. Do not re-enter the same information on `/form-b/step-3` unless IAEC asks you to revise that section.
 
 After submission:
 
@@ -232,7 +235,7 @@ Click **Save and continue** → proceeds to **Step 2b**.
 | Group code / name | Yes | e.g. P1, “Pilot control” |
 | Role | Yes | control, sham, treatment, baseline, other |
 | Animal count | Yes | ≥ 1 |
-| Species / Strain | Yes | Select from approved IAEC species/strain lists |
+| Species / Strain | Yes | **Default:** check **one species and strain for the whole project** on Step 2b and set it once; all groups inherit it. Uncheck only for mixed-species studies. Per-group pickers appear when unchecked. |
 | Sex, age, weight range, feeding diet | Yes | |
 | Treatment summary | Required for **treatment** and **sham** groups | |
 | Dosing entries | Required for **treatment** and **sham** groups | Agent, dose, route, frequency |
@@ -485,7 +488,32 @@ To change permissions or add team members, return to **Step 2** (only while Form
 
 ---
 
-## 10. Attachments reference
+## 10. Tips to complete Form B faster
+
+Form B is long because CPCSEA Form B and LMCP IAEC review require detailed design, welfare, and personnel information. You cannot remove those fields, but you can **reduce rework and duplicate entry**.
+
+| Tip | What to do |
+|-----|------------|
+| **Prepare offline first** | Draft title, summary, objectives, study phases/groups, and 3Rs text in Word before opening the wizard. Paste into the matching steps. |
+| **Complete profile once** | Step 1 autofills PI name, designation, department, and email from **Investigator Profile** — keep the profile up to date. |
+| **Use Step 2b as the main workload** | Enter species, counts, dosing, endpoints, fates, **and** animal justification on Step 2b only. After **Save & Next**, Step 3 is already stored — go straight to Step 4. |
+| **Single-phase pilot studies** | One phase and one or two groups is enough for many dissertations; add phases only when the design needs them. |
+| **Reuse LMCP defaults** | Breeder name, address, and CPCSEA registration on Step 2b are pre-filled for the institutional animal house — verify, do not retype unless animals come from elsewhere. |
+| **Save each step before leaving** | Use **Save and continue** (or **Save & Next**). Browser drafts in session storage help after refresh but **do not** replace server save for submission. |
+| **Copy previous Form B** | On the **Investigator Dashboard**, click **Copy previous Form B**, choose a submitted or approved protocol, then edit dates, numbers, and text. Re-upload **funding proof** and hazard certificates — files are not copied. |
+| **LMCP default pack (Steps 4–6)** | On each of Steps **4**, **5**, and **6**, click **Apply LMCP defaults (fill blank fields only)** to insert institutional baseline text and dropdown values. Always review and edit (especially procedure description and pain category on Step 4). |
+| **Standard husbandry (Steps 5–6)** | The default pack on Step 5 sets IVC housing, standard pellet diet, nesting material, and institutional disposal/transport wording. |
+| **Split across sessions** | Steps 1–2b one day, procedures and housing (4–5) another, personnel and hazards (6–7) when attachments are ready. |
+
+### Possible future improvements (product)
+
+Investigator feedback on completion time is noted. **Copy previous Form B**, the **LMCP default pack** (Steps 4–6), and the wizard **progress bar with typical time remaining** are available in the application. Planned next: **optional autosave** on long text fields.
+
+Each Form B step shows **Step X of 8**, a **saved-sections progress bar**, and **typical minutes remaining** from your current step (about **2 hours** for the full wizard if starting from Step 1). Estimates are guidance only; Step 2b usually takes the longest.
+
+---
+
+## 11. Attachments reference
 
 | Category | When required | Typical document |
 |----------|---------------|------------------|
@@ -500,7 +528,7 @@ Supported upload format: **PDF** (recommended).
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 | Problem | Likely cause | Solution |
 |---------|--------------|----------|
@@ -522,7 +550,7 @@ Supported upload format: **PDF** (recommended).
 
 ---
 
-## 12. Quick reference — URL map
+## 13. Quick reference — URL map
 
 | Page | URL |
 |------|-----|
@@ -542,7 +570,7 @@ Supported upload format: **PDF** (recommended).
 
 ---
 
-## 13. Document control
+## 14. Document control
 
 | Item | Detail |
 |------|--------|

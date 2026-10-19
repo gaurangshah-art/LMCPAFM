@@ -20,6 +20,15 @@ import {
   type FormBAnimalRationaleForm,
 } from "../../constants/formBAnimalRationale";
 import {
+  isSpeciesOtherSelect,
+  SPECIES_STRAIN_OTHER_LABEL,
+  SPECIES_STRAIN_OTHER_SELECT_VALUE,
+  studyGroupSpeciesSelectValue,
+  studyGroupStrainSelectValue,
+  studyGroupUsesOtherSpecies,
+  validateStudyGroupSpeciesStrain,
+} from "../../utils/speciesStrainFields";
+import {
   buildStudyPlanPayloadPhases,
   computeAnimalSummary,
   defaultEndpoints,
@@ -33,6 +42,18 @@ import { DraftRestoreBanner } from "../../components/common/DraftRestoreBanner";
 import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
 import { RequiredMark } from "../../components/common/RequiredMark";
 import { WizardActionBar } from "../../components/common/WizardActionBar";
+import { FormBProjectSpeciesStrainSection } from "../../components/formB/FormBProjectSpeciesStrainSection";
+import { FormBWizardPageHeader } from "../../components/formB/FormBWizardPageHeader";
+import {
+  applyProjectSpeciesStrainToGroup,
+  applyProjectSpeciesStrainToPhases,
+  createDefaultProjectSpeciesStrain,
+  detectUniformProjectSpeciesStrain,
+  formatProjectSpeciesStrainLabel,
+  parseProjectSpeciesStrain,
+  serializeProjectSpeciesStrain,
+  type FormBProjectSpeciesStrain,
+} from "../../constants/formBProjectSpeciesStrain";
 import { useFormDraftPersistence } from "../../hooks/useFormDraftPersistence";
 import { useFormBEditRouteGuard } from "../../hooks/useFormBEditRouteGuard";
 import { useResolvedFormBId } from "../../hooks/useResolvedFormBId";
@@ -80,6 +101,8 @@ function emptyGroup(animalCount = 6): FormBStudyGroupEntry {
     animal_count: animalCount,
     species_id: null,
     strain_id: null,
+    species_other: null,
+    strain_other: null,
     sex: "Both",
     age: "8-10 weeks",
     weight_range: "200-250 g",
@@ -157,11 +180,17 @@ export function FormBStep2b() {
     createEmptyAnimalRationale(),
   );
   const [phases, setPhases] = useState<FormBStudyPhaseEntry[]>([emptyPhase(1)]);
-  const [speciesOptions, setSpeciesOptions] = useState<LookupOption[]>([]);
-  const speciesIdsInPlan = useMemo(
-    () => phases.flatMap((phase) => phase.groups.map((group) => group.species_id)),
-    [phases],
+  const [projectSpeciesStrain, setProjectSpeciesStrain] = useState<FormBProjectSpeciesStrain>(
+    createDefaultProjectSpeciesStrain(),
   );
+  const [speciesOptions, setSpeciesOptions] = useState<LookupOption[]>([]);
+  const speciesIdsInPlan = useMemo(() => {
+    const fromGroups = phases.flatMap((phase) => phase.groups.map((group) => group.species_id));
+    if (projectSpeciesStrain.enabled && projectSpeciesStrain.species_id) {
+      return [projectSpeciesStrain.species_id, ...fromGroups];
+    }
+    return fromGroups;
+  }, [phases, projectSpeciesStrain]);
   const { ensureStrainsLoaded, strainsForSpecies, strainsLoading } =
     useStrainLookup(speciesIdsInPlan);
 
@@ -179,9 +208,19 @@ export function FormBStep2b() {
       try {
         const saved = await getFormBStudyPlan(formBId);
         if (!cancelled) {
+          const normalized = normalizePlan(saved.phases as FormBStudyPhaseEntry[]);
           setDesignRationale(saved.design_rationale ?? "");
-          setPhases(normalizePlan(saved.phases as FormBStudyPhaseEntry[]));
+          setPhases(normalized);
           setAnimalRationale(parseAnimalRationale(saved.animal_rationale ?? undefined));
+          if (saved.project_species_strain) {
+            setProjectSpeciesStrain(parseProjectSpeciesStrain(saved.project_species_strain));
+          } else {
+            const uniform = detectUniformProjectSpeciesStrain(normalized);
+            setProjectSpeciesStrain({
+              ...createDefaultProjectSpeciesStrain(),
+              ...(uniform ?? {}),
+            });
+          }
         }
       } catch {
         if (!cancelled) {
@@ -269,7 +308,12 @@ export function FormBStep2b() {
   }
 
   function addPhase() {
-    setPhases((current) => [...current, emptyPhase(current.length + 1)]);
+    setPhases((current) =>
+      applyProjectSpeciesStrainToPhases(
+        [...current, emptyPhase(current.length + 1)],
+        projectSpeciesStrain,
+      ),
+    );
   }
 
   function addGroup(phaseIndex: number) {
@@ -277,17 +321,25 @@ export function FormBStep2b() {
       current.map((phase, pi) => {
         if (pi !== phaseIndex) return phase;
         const nextIndex = phase.groups.length + 1;
-        const groups = [
-          ...phase.groups,
+        const newGroup = applyProjectSpeciesStrainToGroup(
           {
             ...emptyGroup(6),
             group_code: `G${nextIndex}`,
             group_name: `Group ${nextIndex}`,
           },
-        ];
+          projectSpeciesStrain,
+        );
+        const groups = [...phase.groups, newGroup];
         return syncPhaseCap({ ...phase, groups });
       }),
     );
+  }
+
+  function handleProjectSpeciesStrainChange(next: FormBProjectSpeciesStrain) {
+    setProjectSpeciesStrain(next);
+    if (next.enabled) {
+      setPhases((current) => applyProjectSpeciesStrainToPhases(current, next));
+    }
   }
 
   function updateEndpoint(
@@ -427,8 +479,12 @@ export function FormBStep2b() {
       for (const group of phase.groups) {
         if (!group.group_name.trim()) return "Every group needs a title.";
         if (group.animal_count <= 0) return `Group "${group.group_name}" needs a positive animal count.`;
-        if (!group.species_id || !group.strain_id) {
-          return `Group "${group.group_name}": species and strain are required.`;
+        if (!projectSpeciesStrain.enabled) {
+          const speciesStrainError = validateStudyGroupSpeciesStrain(
+            group,
+            `Group "${group.group_name}"`,
+          );
+          if (speciesStrainError) return speciesStrainError;
         }
         if (group.role === "treatment" || group.role === "sham") {
           const dose = group.dosing[0];
@@ -451,6 +507,14 @@ export function FormBStep2b() {
           return `Group "${group.group_name}": disposition counts (${fateTotal}) must equal animals in group (${group.animal_count}).`;
         }
       }
+    }
+
+    if (projectSpeciesStrain.enabled) {
+      const projectError = validateStudyGroupSpeciesStrain(
+        projectSpeciesStrain,
+        "Project species/strain",
+      );
+      if (projectError) return projectError;
     }
 
     return null;
@@ -526,7 +590,8 @@ export function FormBStep2b() {
       return;
     }
 
-    const payloadPhases = buildStudyPlanPayloadPhases(phases, syncPhaseCap);
+    const syncedPhases = applyProjectSpeciesStrainToPhases(phases, projectSpeciesStrain);
+    const payloadPhases = buildStudyPlanPayloadPhases(syncedPhases, syncPhaseCap);
 
     clearValidationError();
     setLoading(true);
@@ -537,6 +602,7 @@ export function FormBStep2b() {
         design_rationale: designRationale.trim() || "Preclinical study plan",
         phases: payloadPhases,
         animal_rationale: serializeAnimalRationale(animalRationale),
+        project_species_strain: serializeProjectSpeciesStrain(projectSpeciesStrain),
       });
       clearDraft();
       if (nextPath) navigate(nextPath);
@@ -564,12 +630,14 @@ export function FormBStep2b() {
     setLoading(true);
     setErrorMessage(null);
     try {
-      const payloadPhases = buildStudyPlanPayloadPhases(phases, syncPhaseCap);
+      const syncedPhases = applyProjectSpeciesStrainToPhases(phases, projectSpeciesStrain);
+    const payloadPhases = buildStudyPlanPayloadPhases(syncedPhases, syncPhaseCap);
       await saveFormBStudyPlan({
         form_b_id: formBId,
         design_rationale: designRationale.trim() || "Preclinical study plan",
         phases: payloadPhases,
         animal_rationale: serializeAnimalRationale(animalRationale),
+        project_species_strain: serializeProjectSpeciesStrain(projectSpeciesStrain),
       });
       await previewStudyPlanAnnexurePdf(formBId);
     } catch (error) {
@@ -585,19 +653,19 @@ export function FormBStep2b() {
 
   return (
     <div className="page-card">
-      <header className="section-header">
-        <h2>Form B – Step 2b</h2>
-        <p>
-          Preclinical study plan and animal requirements: define phases, groups, and the rationale
-          for animal use. Species and counts in each group are used automatically — no separate
-          Step 3 is needed.
-        </p>
+      <FormBWizardPageHeader
+        stepId="step-2b"
+        formBId={formBId}
+        submitted={submitted}
+        title="Form B – Step 2b"
+        subtitle="Preclinical study plan and animal requirements: define phases, groups, and the rationale for animal use. Species and counts in each group are used automatically — no separate Step 3 is needed."
+      >
         <p className="auth-note" role="note">
           Groups defined here are your <strong>proposal</strong> for IAEC review (Annexure I). After
           approval, they are copied into your project workspace as a starting point. If IAEC requests
           changes, update experiment groups in the project workspace — not in this submitted Form B.
         </p>
-      </header>
+      </FormBWizardPageHeader>
 
       {restoreOffer ? (
         <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />
@@ -657,6 +725,15 @@ export function FormBStep2b() {
               </table>
             </div>
           </div>
+
+          <FormBProjectSpeciesStrainSection
+            value={projectSpeciesStrain}
+            speciesOptions={speciesOptions}
+            ensureStrainsLoaded={ensureStrainsLoaded}
+            strainsForSpecies={strainsForSpecies}
+            strainsLoading={strainsLoading}
+            onChange={handleProjectSpeciesStrainChange}
+          />
 
           {phases.map((phase, phaseIndex) => (
             <section key={`phase-${phase.sequence_order}`} className="page-section" style={{ marginTop: "1rem" }}>
@@ -884,47 +961,120 @@ export function FormBStep2b() {
                           }
                         />
                       </label>
-                      <label>
-                        Species
-                        <select
-                          value={group.species_id != null ? String(group.species_id) : ""}
-                          onChange={(e) => {
-                            const speciesId = e.target.value ? Number(e.target.value) : null;
-                            updateGroup(phaseIndex, groupIndex, { species_id: speciesId, strain_id: null });
-                            if (speciesId) void ensureStrainsLoaded(speciesId);
-                          }}
-                        >
-                          <option value="">Select species</option>
-                          {speciesOptions.map((option) => (
-                            <option key={option.id} value={String(option.id)}>{option.name}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Strain
-                        <select
-                          value={group.strain_id != null ? String(group.strain_id) : ""}
-                          onChange={(e) =>
-                            updateGroup(phaseIndex, groupIndex, {
-                              strain_id: e.target.value ? Number(e.target.value) : null,
-                            })
-                          }
-                          disabled={!group.species_id}
-                        >
-                          <option value="">
-                            {!group.species_id
-                              ? "Select species first"
-                              : strainsLoading(group.species_id)
-                                ? "Loading strains..."
-                                : strainsForSpecies(group.species_id).length
-                                  ? "Select strain"
-                                  : "No strains for this species"}
-                          </option>
-                          {strainsForSpecies(group.species_id).map((option) => (
-                            <option key={option.id} value={String(option.id)}>{option.name}</option>
-                          ))}
-                        </select>
-                      </label>
+                      {projectSpeciesStrain.enabled ? (
+                        <p className="field-help full-width">
+                          Species / strain:{" "}
+                          <strong>
+                            {formatProjectSpeciesStrainLabel(
+                              projectSpeciesStrain,
+                              speciesOptions,
+                              strainsForSpecies,
+                            )}
+                          </strong>{" "}
+                          (project default — set above)
+                        </p>
+                      ) : (
+                        <>
+                          <label>
+                            Species
+                            <select
+                              value={studyGroupSpeciesSelectValue(group)}
+                              onChange={(e) => {
+                                const pick = e.target.value;
+                                if (isSpeciesOtherSelect(pick)) {
+                                  updateGroup(phaseIndex, groupIndex, {
+                                    species_id: null,
+                                    strain_id: null,
+                                    species_other: "",
+                                    strain_other: "",
+                                  });
+                                  return;
+                                }
+                                const speciesId = pick ? Number(pick) : null;
+                                updateGroup(phaseIndex, groupIndex, {
+                                  species_id: speciesId,
+                                  strain_id: null,
+                                  species_other: null,
+                                  strain_other: null,
+                                });
+                                if (speciesId) void ensureStrainsLoaded(speciesId);
+                              }}
+                            >
+                              <option value="">Select species</option>
+                              {speciesOptions.map((option) => (
+                                <option key={option.id} value={String(option.id)}>{option.name}</option>
+                              ))}
+                              <option value={SPECIES_STRAIN_OTHER_SELECT_VALUE}>
+                                {SPECIES_STRAIN_OTHER_LABEL}
+                              </option>
+                            </select>
+                          </label>
+                          {studyGroupUsesOtherSpecies(group) ? (
+                            <label>
+                              Specify species
+                              <input
+                                value={group.species_other ?? ""}
+                                placeholder="Enter species name"
+                                onChange={(e) =>
+                                  updateGroup(phaseIndex, groupIndex, { species_other: e.target.value })
+                                }
+                              />
+                            </label>
+                          ) : null}
+                          {!studyGroupUsesOtherSpecies(group) ? (
+                            <label>
+                              Strain
+                              <select
+                                value={studyGroupStrainSelectValue(group)}
+                                onChange={(e) => {
+                                  const pick = e.target.value;
+                                  if (isSpeciesOtherSelect(pick)) {
+                                    updateGroup(phaseIndex, groupIndex, {
+                                      strain_id: null,
+                                      strain_other: "",
+                                    });
+                                    return;
+                                  }
+                                  updateGroup(phaseIndex, groupIndex, {
+                                    strain_id: pick ? Number(pick) : null,
+                                    strain_other: null,
+                                  });
+                                }}
+                                disabled={!group.species_id}
+                              >
+                                <option value="">
+                                  {!group.species_id
+                                    ? "Select species first"
+                                    : strainsLoading(group.species_id)
+                                      ? "Loading strains..."
+                                      : strainsForSpecies(group.species_id).length
+                                        ? "Select strain"
+                                        : "No strains for this species"}
+                                </option>
+                                {strainsForSpecies(group.species_id).map((option) => (
+                                  <option key={option.id} value={String(option.id)}>{option.name}</option>
+                                ))}
+                                <option value={SPECIES_STRAIN_OTHER_SELECT_VALUE}>
+                                  {SPECIES_STRAIN_OTHER_LABEL}
+                                </option>
+                              </select>
+                            </label>
+                          ) : null}
+                          {studyGroupUsesOtherSpecies(group) ||
+                          studyGroupStrainSelectValue(group) === SPECIES_STRAIN_OTHER_SELECT_VALUE ? (
+                            <label>
+                              Specify strain
+                              <input
+                                value={group.strain_other ?? ""}
+                                placeholder="Enter strain name"
+                                onChange={(e) =>
+                                  updateGroup(phaseIndex, groupIndex, { strain_other: e.target.value })
+                                }
+                              />
+                            </label>
+                          ) : null}
+                        </>
+                      )}
                     </div>
 
                     <div className="form-grid">

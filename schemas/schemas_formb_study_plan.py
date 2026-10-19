@@ -47,8 +47,10 @@ class FormBStudyGroupEntry(BaseModel):
     group_name: str = Field(..., min_length=1, max_length=200)
     role: str = Field("other", max_length=50)
     animal_count: int = Field(..., ge=1)
-    species_id: int = Field(..., ge=1)
-    strain_id: int = Field(..., ge=1)
+    species_id: int | None = Field(None, ge=1)
+    strain_id: int | None = Field(None, ge=1)
+    species_other: str | None = Field(None, max_length=200)
+    strain_other: str | None = Field(None, max_length=200)
     sex: str = Field(..., min_length=1, max_length=50)
     age: str = Field(..., min_length=1, max_length=100)
     weight_range: str = Field(..., min_length=1, max_length=100)
@@ -60,6 +62,21 @@ class FormBStudyGroupEntry(BaseModel):
 
     @model_validator(mode="after")
     def validate_treatment_group_details(self):
+        species_other = (self.species_other or "").strip()
+        strain_other = (self.strain_other or "").strip()
+        has_species_id = self.species_id is not None
+        has_strain_id = self.strain_id is not None
+        if species_other and has_species_id:
+            raise ValueError("Use either a listed species or Other, not both.")
+        if not species_other and not has_species_id:
+            raise ValueError("Species is required (select from list or choose Other).")
+        if species_other and not strain_other:
+            raise ValueError("Strain is required when species is Other.")
+        if has_species_id and not has_strain_id and not strain_other:
+            raise ValueError("Strain is required (select from list or choose Other).")
+        if has_strain_id and strain_other:
+            raise ValueError("Use either a listed strain or Other, not both.")
+
         if self.role not in GROUP_ROLES:
             raise ValueError(f"Invalid group role '{self.role}'.")
         if self.role in TREATMENT_GROUP_ROLES or self.role == "control":
@@ -128,11 +145,20 @@ class FormBStudyPlanAnimalRationale(BaseModel):
         return self
 
 
+class FormBProjectSpeciesStrain(BaseModel):
+    enabled: bool = True
+    species_id: int | None = Field(None, ge=1)
+    strain_id: int | None = Field(None, ge=1)
+    species_other: str | None = Field(None, max_length=200)
+    strain_other: str | None = Field(None, max_length=200)
+
+
 class FormBStudyPlanSave(BaseModel):
     form_b_id: int
     design_rationale: str = Field(..., min_length=1, max_length=5000)
     phases: list[FormBStudyPhaseEntry] = Field(..., min_length=1)
     animal_rationale: FormBStudyPlanAnimalRationale
+    project_species_strain: FormBProjectSpeciesStrain | None = None
 
     @model_validator(mode="after")
     def validate_unique_phase_order(self):
@@ -150,3 +176,4 @@ class FormBStudyPlanRead(BaseModel):
     phase_count: int = 0
     group_count: int = 0
     animal_rationale: dict | None = None
+    project_species_strain: FormBProjectSpeciesStrain | None = None

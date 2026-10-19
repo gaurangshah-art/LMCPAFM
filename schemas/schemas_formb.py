@@ -204,6 +204,28 @@ class FormBStartRead(BaseModel):
     project_id: int
 
 
+class FormBCopySourceRead(BaseModel):
+    form_b_id: int
+    project_id: int
+    title: str
+    protocol_number: str | None = None
+    submitted_at: datetime | None = None
+    status: str | None = None
+
+
+class FormBCopyRequest(BaseModel):
+    source_form_b_id: int = Field(..., ge=1)
+
+
+class FormBCopyResultRead(BaseModel):
+    id: int
+    project_id: int
+    source_form_b_id: int
+    source_protocol_number: str | None = None
+    attachments_not_copied: bool = True
+    funding_proof_not_copied: bool = True
+
+
 class FormBStep1Save(BaseModel):
     form_b_id: int
     principal_investigator: str = Field(..., min_length=1, max_length=200)

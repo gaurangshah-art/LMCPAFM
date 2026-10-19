@@ -6,6 +6,7 @@ import { LoadingState } from "../../components/common/LoadingState";
 import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
 import { RequiredMark } from "../../components/common/RequiredMark";
 import { WizardActionBar } from "../../components/common/WizardActionBar";
+import { FormBWizardPageHeader } from "../../components/formB/FormBWizardPageHeader";
 import {
   FormBAttachmentField,
   formBHasAttachment,
@@ -205,10 +206,13 @@ export function FormBStep7() {
 
   return (
     <div className="page-card form-b-step7">
-      <header className="section-header">
-        <h2>Form B – Step 7</h2>
-        <p>Section II item 14 and investigator declaration.</p>
-      </header>
+      <FormBWizardPageHeader
+        stepId="step-7"
+        formBId={formBId}
+        submitted={submitted}
+        title="Form B – Step 7"
+        subtitle="Section II item 14 and investigator declaration."
+      />
 
       <FormRequiredLegend />
 
