@@ -105,9 +105,9 @@ These are the documents investigators should receive (PDF or in-app when availab
 
 1. Regenerate: `python scripts/build_qa_validation_pack.py`  
 2. Source file: [lmcpafm_qa_validation_pack.md](./lmcpafm_qa_validation_pack.md)  
-3. **In the app (easiest):** log in → **SOPs & guides** → **QA validation pack (combined)** → **Save as PDF** (or Ctrl+P → Save as PDF).  
-4. **From the repo file:** Cursor/VS Code → Extensions → install **Markdown PDF** (yzane) → open the `.md` file → Command Palette → **Markdown PDF: Export (pdf)**. Or Pandoc: `pandoc Docs/lmcpafm_qa_validation_pack.md -o LMCPAFM-QA-Validation-Pack.pdf --toc`  
-5. Transfer PDF on **restricted** college storage only  
+3. **In the app (recommended):** log in → **SOPs & guides** → **Download QA SOP pack (zip)** or **Download combined pack (.md)** → share zip on college Drive/SharePoint. QA opens `.md` in **Word** → Save As → **PDF**.  
+4. **Without the app:** from repo root run `python scripts/build_qa_validation_pack.py` then `python scripts/export_qa_sop_pack.py` — zip appears in project folder.  
+5. Transfer on **restricted** college storage only (not public links).  
 
 Includes: UAT scenarios, printable checklist, and Parts 4–10 (personnel + Form B + IAEC + staff + admin SOPs).
 

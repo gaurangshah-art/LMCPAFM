@@ -1,8 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import Response
 from pydantic import BaseModel
 
+from crud.exceptions import CRUDValidationError
 from dependencies.auth import get_current_user, user_role_names
 from models.user import User
+from utils.qa_sop_pack import (
+    build_qa_sop_zip_bytes,
+    combined_qa_pack_markdown,
+    qa_pack_zip_filename,
+)
 from utils.app_resource_catalog import (
     available_docs_for_user,
     get_catalog_doc,
@@ -82,4 +89,37 @@ def get_resource_document(slug: str, current_user: User = Depends(get_current_us
         category=doc.category,
         markdown=markdown_text,
         html=_render_markdown(markdown_text),
+    )
+
+
+@router.get("/qa-pack/download")
+def download_qa_sop_pack(current_user: User = Depends(get_current_user)):
+    """Zip of QA/UAT markdown for sharing offline (any logged-in user)."""
+    del current_user
+    try:
+        zip_bytes = build_qa_sop_zip_bytes()
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    filename = qa_pack_zip_filename()
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/qa-pack/combined.md")
+def download_combined_qa_markdown(current_user: User = Depends(get_current_user)):
+    """Single combined QA validation markdown file."""
+    del current_user
+    try:
+        text, filename = combined_qa_pack_markdown()
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    return Response(
+        content=text.encode("utf-8"),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

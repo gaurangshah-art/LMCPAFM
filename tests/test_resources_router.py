@@ -41,6 +41,18 @@ def test_resources_catalog_and_doc_for_investigator(client, monkeypatch):
     assert "<h" in body["html"]
 
 
+def test_qa_sop_pack_download(client, monkeypatch):
+    headers = _login_investigator(client, monkeypatch)
+    res = client.get("/resources/qa-pack/download", headers=headers)
+    assert res.status_code == 200, res.text
+    assert res.headers["content-type"] == "application/zip"
+    assert res.content[:2] == b"PK"
+
+    md_res = client.get("/resources/qa-pack/combined.md", headers=headers)
+    assert md_res.status_code == 200, md_res.text
+    assert b"QA Validation Pack" in md_res.content or b"LMCPAFM" in md_res.content
+
+
 def test_resources_doc_forbidden_for_wrong_role(client, monkeypatch):
     headers = _login_investigator(client, monkeypatch)
     res = client.get("/resources/docs/admin-personnel", headers=headers)

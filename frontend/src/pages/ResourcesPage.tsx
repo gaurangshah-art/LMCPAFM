@@ -10,6 +10,7 @@ import {
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageHeader } from "../components/common/PageHeader";
+import { QaSopPackDownloadPanel } from "../components/common/QaSopPackDownloadPanel";
 import type { User } from "../api/types";
 
 interface ResourcesPageProps {
@@ -136,10 +137,11 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
         </>
       ) : (
         <>
+          <QaSopPackDownloadPanel />
+
           <p className="field-help">
-            Open a guide below, then click <strong>Save as PDF</strong> on that page. For one
-            combined QA document, open <strong>QA validation pack (combined)</strong> under Quality
-            assurance (if listed).
+            To read online, open a guide below. To share with QA, prefer{" "}
+            <strong>Download QA SOP pack (zip)</strong> above.
           </p>
           {catalog.length === 0 ? (
             <div className="page-card">
