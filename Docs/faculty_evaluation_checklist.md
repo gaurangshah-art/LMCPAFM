@@ -49,6 +49,11 @@
 | B9 | Form B PDF downloads; LMCP header/branding correct | | |
 | B10 | Project workspace shows “View submitted Form B” | | |
 | B11 | Post-approval: requisition / experiment / log entry (if test project provided) | | |
+| B12 | Copy previous Form B creates a new draft (dashboard) | | |
+| B13 | LMCP default text pack on Form B Steps 4–6 (if used) | | |
+| B14 | Step 2b — one project species/strain applies to all groups when enabled | | |
+| B15 | PI can amend/cancel requisition before staff allocation (`/requisitions/{id}` → Manage) | | |
+| B16 | **SOPs & guides** (`/resources`) opens role-appropriate manuals | | |
 
 ---
 

@@ -97,6 +97,12 @@ All services should show **healthy**.
 - [ ] `IAEC_PPT_GOOGLE_FORM_URL` set if PPT upload link is required (e.g. `https://forms.gle/Xn35w2wyhaKK8PXL7`)
 - [ ] Frontend rebuilt after any `VITE_*` change (`docker compose ... up -d --build`)  
 
+### 4.2.1 Database migrations (release candidate)
+
+- [ ] On staging backend container: `alembic upgrade head` (includes study-plan species/strain Other + requisition status)  
+- [ ] Confirm `/resources/catalog` returns guides after deploy (requires `Docs/` on server)  
+- [ ] See [lmcpafm_release_candidate_validation.md](./lmcpafm_release_candidate_validation.md) for test list  
+
 ### 4.3 Admin account
 
 - [ ] At least one `admin` user exists and you can log in  

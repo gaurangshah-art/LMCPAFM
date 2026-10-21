@@ -29,7 +29,7 @@ import { RegisterInvestigatorPage } from "../pages/RegisterInvestigatorPage";
 import { UsersPage } from "../pages/UsersPage";
 import { NotAuthorizedPage } from "../pages/NotAuthorizedPage";
 import { IaecDashboard } from "../pages/iaec/IaecDashboard";
-import { RequisitionViewPage } from "../pages/RequisitionViewPage";
+import { AnimalRequisitionDetailPage } from "../pages/AnimalRequisitionDetailPage";
 import { AllocationViewPage } from "../pages/AllocationViewPage";
 import { InvestigatorProfilePage } from "../pages/InvestigatorProfilePage";
 import { InvestigatorProfileGate } from "../components/common/InvestigatorProfileGate";
@@ -636,7 +636,7 @@ export default function App() {
             isAuthLoading={isAuthLoading}
             allowedRoles={["investigator", "staff", "iaec"]}
           >
-          <RequisitionViewPage />
+          <AnimalRequisitionDetailPage currentUser={currentUser} />
           </ProtectedRoute>
             }
           />

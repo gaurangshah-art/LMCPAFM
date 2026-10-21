@@ -149,6 +149,20 @@ def form_b_has_lmcp_faculty(db: Session, form_b: FormB) -> bool:
     return False
 
 
+def user_is_principal_investigator(db: Session, user_id: int, project_id: int) -> bool:
+    membership = (
+        db.query(FormBInvestigator)
+        .join(FormB, FormB.id == FormBInvestigator.form_b_id)
+        .filter(
+            FormB.project_id == project_id,
+            FormBInvestigator.user_id == user_id,
+            FormBInvestigator.project_role == "principal_investigator",
+        )
+        .first()
+    )
+    return membership is not None
+
+
 def user_can_view_project(db: Session, user_id: int, project_id: int) -> bool:
     membership = (
         db.query(FormBInvestigator)

@@ -389,14 +389,22 @@ IAEC users **can** create allocations and requisitions via API (same as staff). 
 | Page | URL | Notes |
 |------|-----|-------|
 | Allocations | `/allocations` | Issue animals against approved requisition |
-| Requisition lookup | `/requisitions/:id` | View requisition details |
+| Requisition detail | `/requisitions/{id}` | View counts, status; PI may **amend/cancel** until first allocation |
+| Requisitions list | `/requisitions` | Create / lookup |
+
+**PI requisition changes (before allocation):**
+
+- Only the **principal investigator** may amend or cancel an active requisition.  
+- Once **staff or IAEC records an allocation** against that requisition, counts are **locked**; corrections need facility/IAEC coordination.  
+- **Cancelled** requisitions cannot receive new allocations.
 
 **Allocation prerequisites:**
 
 - Protocol must have **protocol number** and **approval date**  
 - Project status must be `approved`  
+- Requisition **status** must be `active` (not cancelled)  
 - Sufficient **available** animals in facility for species/strain  
-- Requisition must exist and not exceed requested counts  
+- Allocation must not exceed **requested** counts on the requisition line  
 
 Detailed animal-issue procedures are typically performed by **facility staff**; IAEC may oversee or approve in exceptional cases.
 

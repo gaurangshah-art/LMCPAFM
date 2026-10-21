@@ -11,8 +11,14 @@ Simple-English standard operating procedures by audience:
 
 **Facility SOP sources:** [facility_sop_source_catalog.md](./facility_sop_source_catalog.md) — which industry files were selected from `Docs/source_industry/`.
 
-**Additional references:**
+**In the application (after login):**
+
+- **SOPs & guides** (top navigation, `/resources`) — role-filtered manuals; **Save as PDF** on each guide page  
+- **Open guides** panel on your role dashboard  
+
+**Additional references (markdown in repo / PDF export):**
 
 - [form_b_investigator_sop.md](./form_b_investigator_sop.md) — detailed Form B field manual  
 - [lmcpafm_iaec_admin_sop.md](./lmcpafm_iaec_admin_sop.md) — IAEC secretariat  
-- [oracle_cloud_setup.md](./oracle_cloud_setup.md) — server deployment  
+- [lmcpafm_qa_validation_pack.md](./lmcpafm_qa_validation_pack.md) — combined UAT pack for external QA  
+- [oracle_cloud_setup.md](./oracle_cloud_setup.md) — server deployment (IT only)  

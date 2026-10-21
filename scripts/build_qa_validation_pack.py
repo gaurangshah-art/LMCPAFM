@@ -123,7 +123,8 @@ Email or form (per coordinator) with: **name, role, date/time, URL, steps to rep
 7. **Wizard progress** — step indicator and time estimate visible on long steps.  
 8. **Review** — summary matches entered data → **Submit** → status **submitted**; wizard becomes read-only (`/form-b/view`).  
 9. **Form B PDF** and **study plan annexure PDF** from Step 2b preview if offered.  
-10. **Post-approval** (coordinator provides approved test project): requisition, experiment group, experiment log, final report.
+10. **Post-approval** (coordinator provides approved test project): requisition, **amend requisition before allocation**, experiment group, experiment log, final report.
+11. **SOPs & guides** (`/resources`) — open a manual; **Save as PDF** if needed for offline QA notes.
 
 **Reference:** Part 6 (Form B manual) for field-level detail.
 
@@ -191,12 +192,15 @@ def main() -> None:
 | B12 | Copy previous Form B creates a new draft (dashboard) | | |
 | B13 | LMCP default text pack applies on Form B Steps 4–6 (if used) | | |
 | B14 | Step 2b — one project species/strain applies to all groups when enabled | | |
+| B15 | PI can amend/cancel requisition before staff allocation | | |
+| B16 | SOPs & guides (`/resources`) opens role-appropriate manuals | | |
 """
-    checklist = checklist.replace(
-        "| B11 | Post-approval: requisition / experiment / log entry (if test project provided) | | |\n",
-        "| B11 | Post-approval: requisition / experiment / log entry (if test project provided) | | |\n"
-        + extra_rows,
-    )
+    if "| B12 | Copy previous Form B" not in checklist:
+        checklist = checklist.replace(
+            "| B11 | Post-approval: requisition / experiment / log entry (if test project provided) | | |\n",
+            "| B11 | Post-approval: requisition / experiment / log entry (if test project provided) | | |\n"
+            + extra_rows,
+        )
     chunks.append(checklist)
     chunks.append('\n<div style="page-break-after: always;"></div>\n')
 

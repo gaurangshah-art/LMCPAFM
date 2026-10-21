@@ -1,7 +1,7 @@
 ---
 title: "LMCPAFM — QA Validation Pack"
 subtitle: "L. M. College of Pharmacy — Animal Facility Management System"
-date: "2026-10-19"
+date: "2026-10-21"
 ---
 
 # LMCPAFM — QA Validation Pack (single document)
@@ -9,7 +9,7 @@ date: "2026-10-19"
 **Institution:** L. M. College of Pharmacy, Ahmedabad  
 **System:** LMCP Animal Facility Management (LMCPAFM)  
 **Pack version:** 1.0  
-**Generated:** 2026-10-19  
+**Generated:** 2026-10-21  
 **Classification:** Internal use — QA / UAT only (not for public web)
 
 This file combines **test procedures**, a **printable checklist**, and **role SOPs** so you can export **one PDF** for external or internal QA.
@@ -95,7 +95,8 @@ Email or form (per coordinator) with: **name, role, date/time, URL, steps to rep
 7. **Wizard progress** — step indicator and time estimate visible on long steps.  
 8. **Review** — summary matches entered data → **Submit** → status **submitted**; wizard becomes read-only (`/form-b/view`).  
 9. **Form B PDF** and **study plan annexure PDF** from Step 2b preview if offered.  
-10. **Post-approval** (coordinator provides approved test project): requisition, experiment group, experiment log, final report.
+10. **Post-approval** (coordinator provides approved test project): requisition, **amend requisition before allocation**, experiment group, experiment log, final report.
+11. **SOPs & guides** (`/resources`) — open a manual; **Save as PDF** if needed for offline QA notes.
 
 **Reference:** Part 6 (Form B manual) for field-level detail.
 
@@ -187,10 +188,11 @@ Email or form (per coordinator) with: **name, role, date/time, URL, steps to rep
 | B9 | Form B PDF downloads; LMCP header/branding correct | | |
 | B10 | Project workspace shows “View submitted Form B” | | |
 | B11 | Post-approval: requisition / experiment / log entry (if test project provided) | | |
-
 | B12 | Copy previous Form B creates a new draft (dashboard) | | |
-| B13 | LMCP default text pack applies on Form B Steps 4–6 (if used) | | |
+| B13 | LMCP default text pack on Form B Steps 4–6 (if used) | | |
 | B14 | Step 2b — one project species/strain applies to all groups when enabled | | |
+| B15 | PI can amend/cancel requisition before staff allocation (`/requisitions/{id}` → Manage) | | |
+| B16 | **SOPs & guides** (`/resources`) opens role-appropriate manuals | | |
 
 ---
 
@@ -276,11 +278,17 @@ Simple-English standard operating procedures by audience:
 
 **Facility SOP sources:** [facility_sop_source_catalog.md](Docs/facility_sop_source_catalog.md) — which industry files were selected from `Docs/source_industry/`.
 
-**Additional references:**
+**In the application (after login):**
+
+- **SOPs & guides** (top navigation, `/resources`) — role-filtered manuals; **Save as PDF** on each guide page  
+- **Open guides** panel on your role dashboard  
+
+**Additional references (markdown in repo / PDF export):**
 
 - [form_b_investigator_sop.md](Docs/form_b_investigator_sop.md) — detailed Form B field manual  
 - [lmcpafm_iaec_admin_sop.md](Docs/lmcpafm_iaec_admin_sop.md) — IAEC secretariat  
-- [oracle_cloud_setup.md](Docs/oracle_cloud_setup.md) — server deployment  
+- [lmcpafm_qa_validation_pack.md](Docs/lmcpafm_qa_validation_pack.md) — combined UAT pack for external QA  
+- [oracle_cloud_setup.md](Docs/oracle_cloud_setup.md) — server deployment (IT only)  
 <div style="page-break-after: always;"></div>
 
 # Part 5 — Faculty personnel SOP
@@ -400,7 +408,7 @@ Students can **edit** drafts when linked; they **cannot submit** by default.
 1. Open **Project Workspace** for the approved project.  
 2. **Re-sync / planning:** If experiment groups should match Annexure I, use planning tools on the workspace (follow on-screen notes).  
 3. **Experiment groups:** Create or adjust groups within **approved animal limits**.  
-4. **Requisitions:** Request animals from the facility (**Requisitions** menu) — totals must respect approved caps.  
+4. **Requisitions:** Request animals from the facility (**Requisitions** menu) — totals must respect approved caps. After submit, the **PI** may **amend** or **cancel** until staff record an **allocation** (e.g. change 15 → 12). Open **Manage** on the requisition row.  
 5. **Allocations:** Animal house **staff** fulfill requests; you track status on requisition pages.  
 6. **Experiments and logs:** Record procedures and daily logs as your protocol requires.  
 7. **Form B PDF:** Download from read-only view anytime.
@@ -1609,14 +1617,22 @@ IAEC users **can** create allocations and requisitions via API (same as staff). 
 | Page | URL | Notes |
 |------|-----|-------|
 | Allocations | `/allocations` | Issue animals against approved requisition |
-| Requisition lookup | `/requisitions/:id` | View requisition details |
+| Requisition detail | `/requisitions/{id}` | View counts, status; PI may **amend/cancel** until first allocation |
+| Requisitions list | `/requisitions` | Create / lookup |
+
+**PI requisition changes (before allocation):**
+
+- Only the **principal investigator** may amend or cancel an active requisition.  
+- Once **staff or IAEC records an allocation** against that requisition, counts are **locked**; corrections need facility/IAEC coordination.  
+- **Cancelled** requisitions cannot receive new allocations.
 
 **Allocation prerequisites:**
 
 - Protocol must have **protocol number** and **approval date**  
 - Project status must be `approved`  
+- Requisition **status** must be `active` (not cancelled)  
 - Sufficient **available** animals in facility for species/strain  
-- Requisition must exist and not exceed requested counts  
+- Allocation must not exceed **requested** counts on the requisition line  
 
 Detailed animal-issue procedures are typically performed by **facility staff**; IAEC may oversee or approve in exceptional cases.
 

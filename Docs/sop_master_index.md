@@ -3,9 +3,24 @@
 **Purpose:** Single checklist to **review every SOP** before final approval and commit.  
 **Publication goal:** Investigators and staff get **ready reference** on the **college intranet / private channel only** — **not** on a public website or public GitHub.
 
-**Review status key:** `DRAFT` → `IN REVIEW` → `APPROVED` → `PUBLISHED`
+**Review status key:** `DRAFT` → `IN REVIEW` → `QA CANDIDATE` → `APPROVED` → `PUBLISHED`
 
 Fill **Reviewer** and **Date** as you complete each pass.
+
+### Release candidate (branch `cursor/iaec-add-num-71772`, Oct 2026)
+
+**Scope frozen for external QA** unless the validation report requires changes:
+
+| Area | Delivered behaviour |
+|------|---------------------|
+| Form B UX | Copy previous Form B, LMCP default pack (Steps 4–6), wizard progress/time estimate, species/strain **Other**, **one project species/strain** on Step 2b |
+| SOPs in app | **SOPs & guides** (`/resources`), dashboard **Open guides**, browser **Save as PDF** |
+| Requisitions | PI **amend/cancel** until first staff/IAEC **allocation** |
+| IAEC / imports | CSV tooling for meetings, carryover protocols, faculty roster (see admin SOP) |
+
+**Pre-QA technical checks:** `alembic upgrade head` (includes `a7b8c9d0e1f2`, `b8c9d0e1f2a3`), `pip install -r requirements.txt`, backend + frontend deploy. Automated tests: Form B study plan/copy, resources API, requisition amend.
+
+**Sign-off after QA:** Update statuses in §1–3 to `APPROVED` and record date below.
 
 ---
 
@@ -15,10 +30,10 @@ These are the documents investigators should receive (PDF or in-app when availab
 
 | # | Document | Audience | Status | Reviewer | Date | Notes |
 |---|----------|----------|--------|----------|------|-------|
-| 1 | [sop_faculty_personnel.md](./sop_faculty_personnel.md) | Faculty PI, co-investigators | DRAFT | | | Registration, roster, Form B summary, post-approval |
-| 2 | [form_b_investigator_sop.md](./form_b_investigator_sop.md) | Faculty (detailed Form B) | EXISTING | | | Field-by-field wizard; verify against current UI |
-| 3 | [sop_student_personnel.md](./sop_student_personnel.md) | Scholars / students on Form B | DRAFT | | | Linking, edit vs submit |
-| 4 | [sop_personnel_index.md](./sop_personnel_index.md) | All users — start here | DRAFT | | | One-page map of role SOPs |
+| 1 | [sop_faculty_personnel.md](./sop_faculty_personnel.md) | Faculty PI, co-investigators | QA CANDIDATE | | | Registration, roster, Form B, requisition amend |
+| 2 | [form_b_investigator_sop.md](./form_b_investigator_sop.md) | Faculty (detailed Form B) | QA CANDIDATE | | | Wizard, copy, default pack, project species/strain |
+| 3 | [sop_student_personnel.md](./sop_student_personnel.md) | Scholars / students on Form B | QA CANDIDATE | | | Linking, edit vs submit |
+| 4 | [sop_personnel_index.md](./sop_personnel_index.md) | All users — start here | QA CANDIDATE | | | Map + in-app `/resources` |
 
 **Review focus for rows 1–4:** URLs/paths match production; faculty roster steps accurate; Form B step list matches app; simple English; no industry/CRO branding left in text.
 
@@ -39,7 +54,7 @@ These are the documents investigators should receive (PDF or in-app when availab
 
 | # | Document | Audience | Status | Reviewer | Date | Notes |
 |---|----------|----------|--------|----------|------|-------|
-| 7 | [lmcpafm_iaec_admin_sop.md](./lmcpafm_iaec_admin_sop.md) | IAEC, member secretary | EXISTING | | | Update §3 if investigator admin-create / roster changed |
+| 7 | [lmcpafm_iaec_admin_sop.md](./lmcpafm_iaec_admin_sop.md) | IAEC, member secretary | QA CANDIDATE | | | Meetings, decisions, requisitions §5.12 |
 | 8 | [sop_admin_personnel.md](./sop_admin_personnel.md) | System coordinator | DRAFT | | | Users, roster CSV, imports, go-live |
 
 **Review focus:** IAEC finalize-approval flow; SMTP; roster enforce flag.
@@ -54,6 +69,7 @@ These are the documents investigators should receive (PDF or in-app when availab
 | 10 | [admin_evaluation_sop.md](./admin_evaluation_sop.md) | Optional | **No** | Staging UAT only |
 | 11 | [faculty_evaluation_sop.md](./faculty_evaluation_sop.md) | Optional | **No** | Staging UAT only |
 | 12 | [faculty_evaluation_checklist.md](./faculty_evaluation_checklist.md) | Optional | **No** | UAT sign-off |
+| 12b | [lmcpafm_release_candidate_validation.md](./lmcpafm_release_candidate_validation.md) | Coordinator | **No** | Internal QA gate before production |
 | 13 | [oracle_cloud_setup.md](./oracle_cloud_setup.md) | Private git | **No** | IT / admin |
 | 14 | [lmcp_cursor_rebuild_procedures.md](./lmcp_cursor_rebuild_procedures.md) | Dev only | **No** | Developers |
 | 15 | [lmcp_cursor_master_prompt.md](./lmcp_cursor_master_prompt.md) | Dev only | **No** | Developers |

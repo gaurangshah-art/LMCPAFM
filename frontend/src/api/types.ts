@@ -389,8 +389,14 @@ export interface AnimalRequisitionCreate {
 
 export interface AnimalRequisition extends AnimalRequisitionCreate {
   id: number;
+  requester_user_id?: number;
   items: AnimalRequisitionItem[];
   status?: string;
+  amended_at?: string | null;
+  cancelled_at?: string | null;
+  has_allocation?: boolean;
+  can_amend?: boolean;
+  can_cancel?: boolean;
   submitted_at?: string;
   staff_review_at?: string;
   iaec_review_at?: string;
@@ -474,6 +480,7 @@ export interface ProjectWorkspaceRequisition {
   date: string;
   purpose: string;
   requester_name: string;
+  status?: string;
   item_count: number;
   requested_total: number;
 }

@@ -319,6 +319,7 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
                 { header: "Date", cell: (row) => formatDisplayDate(row.date) },
                 { header: "Requester", cell: (row) => row.requester_name },
                 { header: "Animals", cell: (row) => row.requested_total },
+                { header: "Status", cell: (row) => row.status ?? "active" },
                 {
                   header: "View",
                   cell: (row) => <Link to={`/requisitions/${row.id}`}>Open</Link>,

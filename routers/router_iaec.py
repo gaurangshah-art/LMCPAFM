@@ -321,6 +321,7 @@ def get_project_workspace_view(
                     "date": req.date,
                     "purpose": req.purpose,
                     "requester_name": req.requester_name,
+                    "status": req.status or "active",
                     "item_count": len(req.items or []),
                     "requested_total": sum(item.requested_count for item in (req.items or [])),
                 }

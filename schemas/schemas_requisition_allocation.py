@@ -39,6 +39,12 @@ class AnimalRequisitionCreateInternal(AnimalRequisitionCreate):
     requester_role: str
 
 
+class AnimalRequisitionAmend(BaseModel):
+    date: date
+    purpose: str
+    items: list[AnimalRequisitionItemCreate]
+
+
 class AnimalRequisition(BaseModel):
     id: int
     protocol_id: int
@@ -47,6 +53,12 @@ class AnimalRequisition(BaseModel):
     requester_role: str
     date: date
     purpose: str
+    status: str = "active"
+    amended_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    has_allocation: bool = False
+    can_amend: bool = False
+    can_cancel: bool = False
     items: list[AnimalRequisitionItem]
     model_config = ConfigDict(from_attributes=True)
 

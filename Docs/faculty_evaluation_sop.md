@@ -110,10 +110,11 @@ Record issues using the **feedback form** (link from admin) or email the project
 Walk through all Form B steps:
 
 1. **Step 1** — Project title, type, funding source
-2. **Step 2** — Investigator details
-3. **Step 2b** — Co-investigators / collaborators
-4. **Steps 4–7** — Animal details, procedures, anaesthesia, euthanasia
+2. **Step 2** — Investigators, funding proof upload
+3. **Step 2b** — Study plan (phases/groups), optional **one species/strain for whole project**, annexure preview
+4. **Steps 4–7** — Procedures, anaesthesia, euthanasia, declarations; optional **LMCP default text pack**
 5. **Review** — Summary accurate; submit
+6. Optional: **Copy previous Form B** from dashboard; **SOPs & guides** from navigation
 
 **Pass criteria:**
 
@@ -136,8 +137,9 @@ Walk through all Form B steps:
 
 #### 5.1.5 Post-approval workflow (if admin provides approved test project)
 
-1. Open **Requisitions** — create animal requisition
-2. Open **Experiment groups** / **Experiments** — enter experiment data
+1. Open **Project workspace** → create **requisition** (or **Requisitions** menu)
+2. **Amend requisition (PI):** change requested count (e.g. 15 → 12) via **Manage** before staff allocate; confirm amend blocked after allocation
+3. Open **Experiment groups** / **Experiments** — enter experiment data
 3. Open **Experiment logs** — daily log entry
 4. Open **Final report** — entry and view
 

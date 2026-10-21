@@ -115,7 +115,7 @@ Students can **edit** drafts when linked; they **cannot submit** by default.
 1. Open **Project Workspace** for the approved project.  
 2. **Re-sync / planning:** If experiment groups should match Annexure I, use planning tools on the workspace (follow on-screen notes).  
 3. **Experiment groups:** Create or adjust groups within **approved animal limits**.  
-4. **Requisitions:** Request animals from the facility (**Requisitions** menu) — totals must respect approved caps.  
+4. **Requisitions:** Request animals from the facility (**Requisitions** menu) — totals must respect approved caps. After submit, the **PI** may **amend** or **cancel** until staff record an **allocation** (e.g. change 15 → 12). Open **Manage** on the requisition row.  
 5. **Allocations:** Animal house **staff** fulfill requests; you track status on requisition pages.  
 6. **Experiments and logs:** Record procedures and daily logs as your protocol requires.  
 7. **Form B PDF:** Download from read-only view anytime.
