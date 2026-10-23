@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { downloadCombinedQaMarkdown, downloadQaSopPackZip } from "../../api/resourcesApi";
+import { downloadQaPackPdf } from "../../api/resourcesApi";
 import { getApiErrorMessage } from "../../api/errors";
 
 export function QaSopPackDownloadPanel() {
-  const [loading, setLoading] = useState<"zip" | "md" | null>(null);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,37 +16,20 @@ export function QaSopPackDownloadPanel() {
     URL.revokeObjectURL(url);
   }
 
-  async function handleZip() {
-    setLoading("zip");
+  async function handlePdf() {
+    setLoading(true);
     setError(null);
     setMessage(null);
     try {
-      const { blob, filename } = await downloadQaSopPackZip();
+      const { blob, filename } = await downloadQaPackPdf();
       await saveBlob(blob, filename);
       setMessage(
-        `Downloaded ${filename}. Share the zip on college-restricted storage. QA opens .md files in Word → Save as PDF.`,
+        `Downloaded ${filename}. This file is already a PDF. Share it only on college-restricted storage.`,
       );
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
-      setLoading(null);
-    }
-  }
-
-  async function handleCombinedMd() {
-    setLoading("md");
-    setError(null);
-    setMessage(null);
-    try {
-      const { blob, filename } = await downloadCombinedQaMarkdown();
-      await saveBlob(blob, filename);
-      setMessage(
-        `Downloaded ${filename}. Open in Microsoft Word, then File → Save As → PDF to share with QA.`,
-      );
-    } catch (err) {
-      setError(getApiErrorMessage(err));
-    } finally {
-      setLoading(null);
+      setLoading(false);
     }
   }
 
@@ -54,31 +37,17 @@ export function QaSopPackDownloadPanel() {
     <section className="page-card resources-qa-download-panel">
       <h2>Share SOPs with QA (download)</h2>
       <p className="muted-text">
-        Use these buttons instead of printing from the browser. Send the file on{" "}
-        <strong>college-restricted</strong> storage only (@lmcp.ac.in SharePoint/Drive, not public
-        links).
+        Download the full guide as a PDF. Send it on <strong>college-restricted</strong> storage
+        only (@lmcp.ac.in SharePoint/Drive, not public links).
       </p>
       <div className="wizard-actions">
-        <button
-          type="button"
-          className="btn"
-          disabled={loading !== null}
-          onClick={() => void handleZip()}
-        >
-          {loading === "zip" ? "Preparing zip…" : "Download QA SOP pack (zip)"}
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          disabled={loading !== null}
-          onClick={() => void handleCombinedMd()}
-        >
-          {loading === "md" ? "Downloading…" : "Download combined pack (.md)"}
+        <button type="button" className="btn" disabled={loading} onClick={() => void handlePdf()}>
+          {loading ? "Preparing PDF…" : "Download QA pack (PDF)"}
         </button>
       </div>
       <p className="field-help">
-        The zip includes the full UAT guide, printable checklist, and role SOPs. For PDF: open any{" "}
-        <code>.md</code> file in <strong>Word</strong> → Save As → PDF.
+        The PDF includes the test steps, the printable checklist, and the role SOPs. Open it in
+        any PDF reader. No conversion is required.
       </p>
       {message ? <p className="muted-text">{message}</p> : null}
       {error ? <p className="error-text">{error}</p> : null}

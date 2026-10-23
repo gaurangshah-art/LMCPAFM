@@ -34,17 +34,10 @@ Quick start for QA
 1. Open 01-LMCPAFM-QA-Validation-Pack-COMBINED.md (one file with all scenarios + SOPs).
 2. Use 03-UAT-Checklist-PRINT-THIS.md for pass/fail sign-off.
 
-How to get PDF (no special software required)
----------------------------------------------
-Option A — Microsoft Word (recommended)
-  1. Open the .md file in Word (File → Open → select the .md file).
-  2. File → Save As → PDF.
-
-Option B — Browser
-  1. Log in to LMCPAFM → SOPs & guides → open a guide → Save as PDF (Ctrl+P).
-
-Option C — From this repo (developers)
-  python scripts/export_qa_sop_pack.py --output LMCPAFM-QA-SOP-Pack.zip
+How to get the PDF
+-----------------
+Log in to LMCPAFM → SOPs & guides → Download QA pack (PDF).
+That download is already a PDF. Open it in any PDF reader.
 
 Staging URL for testing: https://lmcpafm-staging.lmcp.ac.in
 
@@ -88,3 +81,25 @@ def combined_qa_pack_markdown(repo_root: Path | None = None) -> tuple[str, str]:
             "Combined QA pack missing. Run: python scripts/build_qa_validation_pack.py"
         )
     return path.read_text(encoding="utf-8"), "LMCPAFM-QA-Validation-Pack.md"
+
+
+_PDF_CACHE: tuple[float, bytes] | None = None
+
+
+def combined_qa_pack_pdf(repo_root: Path | None = None) -> tuple[bytes, str]:
+    """PDF of the combined QA pack. Cached until the source file changes."""
+    from utils.markdown_pdf import markdown_to_pdf_bytes
+
+    global _PDF_CACHE
+    root = repo_root or REPO_ROOT
+    path = root / "Docs/lmcpafm_qa_validation_pack.md"
+    if not path.is_file():
+        raise CRUDValidationError(
+            "Combined QA pack missing. Run: python scripts/build_qa_validation_pack.py"
+        )
+    mtime = path.stat().st_mtime
+    if _PDF_CACHE is not None and _PDF_CACHE[0] == mtime:
+        return _PDF_CACHE[1], "LMCPAFM-QA-Validation-Pack.pdf"
+    pdf_bytes = markdown_to_pdf_bytes(path.read_text(encoding="utf-8"))
+    _PDF_CACHE = (mtime, pdf_bytes)
+    return pdf_bytes, "LMCPAFM-QA-Validation-Pack.pdf"

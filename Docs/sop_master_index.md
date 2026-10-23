@@ -105,7 +105,7 @@ These are the documents investigators should receive (PDF or in-app when availab
 
 1. Regenerate: `python scripts/build_qa_validation_pack.py`  
 2. Source file: [lmcpafm_qa_validation_pack.md](./lmcpafm_qa_validation_pack.md)  
-3. **In the app (recommended):** log in → **SOPs & guides** → **Download QA SOP pack (zip)** or **Download combined pack (.md)** → share zip on college Drive/SharePoint. QA opens `.md` in **Word** → Save As → **PDF**.  
+3. **In the app (recommended):** log in → **SOPs & guides** → **Download QA pack (PDF)** → share that PDF on college Drive/SharePoint.  
 4. **Without the app:** from repo root run `python scripts/build_qa_validation_pack.py` then `python scripts/export_qa_sop_pack.py` — zip appears in project folder.  
 5. Transfer on **restricted** college storage only (not public links).  
 
@@ -122,7 +122,7 @@ Create one folder on internal storage, e.g. `LMCPAFM-Investigator-Reference/`:
 
 Staff add: `04-Facility-Daily-Operations.pdf` (staff only share).
 
-**Export:** VS Code “Markdown PDF” extension, Pandoc, or print-to-PDF from GitHub preview — use LMCP header/footer if required.
+**Export:** log in → **SOPs & guides** → **Download QA pack (PDF)**. Use an LMCP header/footer if the college requires one on a printed copy.
 
 ### Git hygiene before commit
 

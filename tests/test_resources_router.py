@@ -52,6 +52,11 @@ def test_qa_sop_pack_download(client, monkeypatch):
     assert md_res.status_code == 200, md_res.text
     assert b"QA Validation Pack" in md_res.content or b"LMCPAFM" in md_res.content
 
+    pdf_res = client.get("/resources/qa-pack/combined.pdf", headers=headers)
+    assert pdf_res.status_code == 200, pdf_res.text
+    assert pdf_res.headers["content-type"] == "application/pdf"
+    assert pdf_res.content.startswith(b"%PDF")
+
 
 def test_resources_doc_forbidden_for_wrong_role(client, monkeypatch):
     headers = _login_investigator(client, monkeypatch)

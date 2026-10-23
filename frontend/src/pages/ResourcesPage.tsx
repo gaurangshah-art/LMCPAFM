@@ -140,8 +140,8 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
           <QaSopPackDownloadPanel />
 
           <p className="field-help">
-            To read online, open a guide below. To share with QA, prefer{" "}
-            <strong>Download QA SOP pack (zip)</strong> above.
+            To read online, open a guide below. To share with QA, use{" "}
+            <strong>Download QA pack (PDF)</strong> above.
           </p>
           {catalog.length === 0 ? (
             <div className="page-card">

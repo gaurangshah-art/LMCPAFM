@@ -16,17 +16,9 @@ This file combines **test procedures**, a **printable checklist**, and **role SO
 
 ---
 
-## How to export one PDF
+## How to share this pack
 
-1. Open this file in **VS Code** → install extension **Markdown PDF** → right-click → **Markdown PDF: Export (pdf)**  
-   **or**
-2. From repo root (requires [Pandoc](https://pandoc.org/)):
-
-```text
-pandoc Docs/lmcpafm_qa_validation_pack.md -o LMCPAFM-QA-Validation-Pack.pdf --toc --toc-depth=2
-```
-
-3. Share the PDF on **college-restricted** storage only (@lmcp.ac.in or approved QA contact).
+In LMCPAFM, open **SOPs & guides** and choose **Download QA pack (PDF)**. That file is already a PDF. Share it on **college-restricted** storage only (@lmcp.ac.in or approved QA contact).
 
 ---
 

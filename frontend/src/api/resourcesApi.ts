@@ -38,6 +38,13 @@ export async function downloadQaSopPackZip(): Promise<{ blob: Blob; filename: st
   return downloadBlob("/resources/qa-pack/download", "LMCPAFM-QA-SOP-Pack.zip");
 }
 
-export async function downloadCombinedQaMarkdown(): Promise<{ blob: Blob; filename: string }> {
-  return downloadBlob("/resources/qa-pack/combined.md", "LMCPAFM-QA-Validation-Pack.md");
+export async function downloadQaPackPdf(): Promise<{ blob: Blob; filename: string }> {
+  const response = await apiClient.get("/resources/qa-pack/combined.pdf", {
+    responseType: "blob",
+    timeout: 120000,
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? "LMCPAFM-QA-Validation-Pack.pdf";
+  return { blob: response.data as Blob, filename };
 }

@@ -8,6 +8,7 @@ from models.user import User
 from utils.qa_sop_pack import (
     build_qa_sop_zip_bytes,
     combined_qa_pack_markdown,
+    combined_qa_pack_pdf,
     qa_pack_zip_filename,
 )
 from utils.app_resource_catalog import (
@@ -105,6 +106,22 @@ def download_qa_sop_pack(current_user: User = Depends(get_current_user)):
     return Response(
         content=zip_bytes,
         media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/qa-pack/combined.pdf")
+def download_combined_qa_pdf(current_user: User = Depends(get_current_user)):
+    """Single combined QA validation pack as a PDF."""
+    del current_user
+    try:
+        pdf_bytes, filename = combined_qa_pack_pdf()
+    except CRUDValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
