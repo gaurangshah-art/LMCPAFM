@@ -8,6 +8,7 @@ import { useLookupOptions } from "../hooks/useLookupOptions";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
 import { PageSection } from "../components/common/PageSection";
+import { ResourcesEntryPanel } from "../components/common/ResourcesEntryPanel";
 import { AllocationForm } from "../components/forms/AllocationForm";
 import { AllocationTable } from "../components/tables/AllocationTable";
 
@@ -54,8 +55,13 @@ export function AllocationPage({ currentUser }: AllocationPageProps) {
         </PageSection>
       ) : (
         <>
+          <ResourcesEntryPanel />
+
           {canCreateAllocations ? (
             <PageSection title="Create Allocation" subtitle="POST /iaec/allocation">
+              <p>
+                <a href="/facility" className="btn-secondary">View facility inventory</a>
+              </p>
               <AllocationForm onCreated={setAllocation} />
             </PageSection>
           ) : (

@@ -465,22 +465,24 @@ When uncertain, preserve backward compatibility first, then migrate reads and wr
 
 ### Next backend steps (planned)
 
-- Add `meeting_number` to `iaec_meeting`.
+These items were completed on branch `cursor/iaec-add-num-71772`:
 
-- Introduce a way to link Form B (or `iaec_project`) to a specific meeting (e.g., `meeting_id`).
+- `meeting_number` on `iaec_meeting`
+- Form B / project linkage via `meeting_id`
+- Form B submit workflow with meeting assignment and IAEC decision states
+- Protocol numbering on approval (`LMCP/IAEC/{year}/{meeting}/{serial}`)
+- PDF generation for Form B, meeting summary, and IAEC certificate
+- Meeting invitation email (SMTP via root `.env`)
+- Form C inventory register API and frontend
+- Phase 5 role cleanup (`user_roles` only)
+- Activity log table and admin log feed
+- Secured IAEC project/group/experiment endpoints
 
-- Design a `POST /formb/{id}/submit` or `finalize` endpoint that:
+### Remaining follow-ups
 
-  - checks meeting assignment,
-
-  - generates the final protocol number,
-
-  - records the IAEC decision state (approved / approved with modifications / deferred / rejected).
-
-- Plan PDF generation for:
-
-  - CPCSEA Form B per protocol,
-
-  - summary table per meeting,
-
-  - IAEC certificate after approval.
+- Run `python scripts/backfill_investigator_data.py` on production after deploy
+- Student contributor limited dashboard UX
+- Disposal workflow frontend
+- Form C PDF export
+- `email_verified` enforcement workflow
+- Align docs/system role naming for caretaker vs admin/staff

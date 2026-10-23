@@ -1,13 +1,25 @@
-import axios from "../utils/axios";
+import { apiClient } from "./client";
+import type { ActivityLog, SystemSummary, User, UserRole } from "./types";
 
-export const getAllUsers = () =>
-  axios.get("/admin/users");
+export async function getAllUsers(): Promise<User[]> {
+  const { data } = await apiClient.get<User[]>("/admin/users");
+  return data;
+}
 
-export const updateUserRoles = (userId: string, roles: string[]) =>
-  axios.put(`/admin/users/${userId}/roles`, { roles });
+export async function updateUserRoles(userId: string, roles: UserRole[]) {
+  return apiClient.put<User>(`/admin/users/${userId}/roles`, { roles });
+}
 
-export const getSystemActivityLogs = () =>
-  axios.get("/admin/logs");
+export async function deleteUser(userId: number): Promise<void> {
+  await apiClient.delete(`/admin/users/${userId}`);
+}
 
-export const getSystemSummary = () =>
-  axios.get("/admin/summary");
+export async function getSystemActivityLogs(): Promise<ActivityLog[]> {
+  const { data } = await apiClient.get<ActivityLog[]>("/admin/logs");
+  return data;
+}
+
+export async function getSystemSummary(): Promise<SystemSummary> {
+  const { data } = await apiClient.get<SystemSummary>("/admin/summary");
+  return data;
+}
