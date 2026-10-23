@@ -30,7 +30,7 @@ function groupByCategory(items: ResourceCatalogItem[]): Map<string, ResourceCata
 export function ResourcesPage({ currentUser }: ResourcesPageProps) {
   const { docSlug } = useParams<{ docSlug?: string }>();
   const [catalog, setCatalog] = useState<ResourceCatalogItem[]>([]);
-  const [document, setDocument] = useState<ResourceDocument | null>(null);
+  const [guide, setGuide] = useState<ResourceDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,14 +49,14 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
 
         if (docSlug) {
           const doc = await getResourceDocument(docSlug);
-          if (!cancelled) setDocument(doc);
+          if (!cancelled) setGuide(doc);
         } else {
-          setDocument(null);
+          setGuide(null);
         }
       } catch (err) {
         if (!cancelled) {
           setError(getApiErrorMessage(err));
-          setDocument(null);
+          setGuide(null);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -73,7 +73,7 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
     return <LoadingState label="Loading guides..." />;
   }
 
-  if (error && !document && docSlug) {
+  if (error && !guide && docSlug) {
     return (
       <div className="page-grid">
         <ErrorAlert message={error} />
@@ -97,17 +97,17 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
   }
 
   return (
-    <div className={`page-grid resources-page${document ? " resources-page--doc" : ""}`}>
+    <div className={`page-grid resources-page${guide ? " resources-page--doc" : ""}`}>
       <PageHeader
         eyebrow="Ready reference"
-        title={document ? document.title : "SOPs & user guides"}
+        title={guide ? guide.title : "SOPs & user guides"}
         subtitle={
-          document
-            ? document.summary
+          guide
+            ? guide.summary
             : "Standard operating procedures for your role. Do not share outside the college."
         }
         actions={
-          document ? (
+          guide ? (
             <div className="inline-actions">
               <button type="button" className="btn" onClick={handleSaveAsPdf}>
                 Save as PDF
@@ -122,7 +122,7 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
 
       {error && !docSlug ? <ErrorAlert message={error} /> : null}
 
-      {document ? (
+      {guide ? (
         <>
           <p className="field-help resources-pdf-hint">
             <strong>Save as PDF:</strong> use the button above, or press{" "}
@@ -132,7 +132,7 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
           </p>
           <article
             className="page-card markdown-doc resources-print-target"
-            dangerouslySetInnerHTML={{ __html: document.html }}
+            dangerouslySetInnerHTML={{ __html: guide.html }}
           />
         </>
       ) : (

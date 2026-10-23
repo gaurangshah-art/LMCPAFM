@@ -46,7 +46,10 @@ export function FormBCopyDialog({ open, onClose, onCopied }: FormBCopyDialogProp
     setError(null);
     try {
       const result = await copyFormBFromSource(selectedId);
-      storeFormBId(result.id, getStoredUserId());
+      const userId = getStoredUserId();
+      if (userId != null) {
+        storeFormBId(result.id, userId);
+      }
       const protocol = result.source_protocol_number ?? `#${result.source_form_b_id}`;
       onCopied(
         result.id,

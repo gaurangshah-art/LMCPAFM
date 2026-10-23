@@ -44,7 +44,7 @@ export const LMCP_DEFAULT_PACK_STEP6 = {
     "training as applicable to the procedures in this protocol. Records maintained with the animal facility.",
 } as const;
 
-export function mergeFillEmpty<T extends Record<string, unknown>>(
+export function mergeFillEmpty<T extends object>(
   current: T,
   defaults: Partial<T>,
 ): T {

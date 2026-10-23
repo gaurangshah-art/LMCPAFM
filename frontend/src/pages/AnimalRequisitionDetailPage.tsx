@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getApiErrorMessage } from "../api/errors";
-import {
-  amendRequisition,
-  cancelRequisition,
-  getRequisition,
-} from "../api/requisitionApi";
+import { cancelRequisition, getRequisition } from "../api/requisitionApi";
 import type { AnimalRequisition, User } from "../api/types";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
