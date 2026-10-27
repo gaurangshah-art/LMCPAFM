@@ -229,7 +229,7 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
 
       <PageSection
         title="Create User"
-        subtitle="Create staff/IAEC accounts, or pre-register faculty investigators (name + email + temporary password)."
+        subtitle="Select a role below — pharmacology faculty use Investigator (not Staff). Facility workers use Staff only."
       >
         <CreateStaffUserForm onCreated={handleUserCreated} />
       </PageSection>

@@ -3,6 +3,13 @@ import {
   type AssignableAdminRole,
 } from "../../constants/adminRoles";
 
+const ROLE_LABELS: Record<AssignableAdminRole, string> = {
+  admin: "Admin (system coordinator)",
+  iaec: "IAEC (ethics committee)",
+  staff: "Staff (animal facility — daily ops, not pharmacology faculty)",
+  investigator: "Investigator (pharmacology department faculty)",
+};
+
 interface AssignableRoleCheckboxesProps {
   selectedRoles: AssignableAdminRole[];
   onChange: (roles: AssignableAdminRole[]) => void;
@@ -34,7 +41,7 @@ export function AssignableRoleCheckboxes({
             disabled={disabled}
             onChange={(event) => toggleRole(role, event.target.checked)}
           />
-          <span>{role}</span>
+          <span>{ROLE_LABELS[role]}</span>
         </label>
       ))}
     </div>
