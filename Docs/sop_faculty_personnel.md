@@ -28,7 +28,7 @@ You use LMCPAFM to prepare and **submit CPCSEA Form B**, track IAEC review, and 
 
 ### Path 2 — Administrator created your account
 
-1. Admin may add you under **Admin Dashboard → Create User** with role **investigator**, your email, and a **temporary password** (sent to you privately).  
+1. Admin may add you under **Admin Dashboard → Create User** with role **investigator**, your email, and a **temporary password** (sent to you privately). Some faculty (~10–15 college-wide) are also marked **certified for animal handling**; only they may open **Requisitions** / **Allocations** and satisfy the certified-faculty rule on Form B submit.  
 2. Use **Log in** (not Register).  
 3. On first login, LMCPAFM **requires you to set a new password** before any other page opens. Enter the temporary password as **Current password**, then choose your own **New password** (minimum 8 characters).  
 4. After that, complete **Investigator Profile** if prompted.
@@ -91,7 +91,8 @@ On **Step 2 → Project Investigators**:
 3. For a **student scholar:** role **`student_contributor`**, type **`student`**.  
 4. For **co-investigator faculty:** role **`co_investigator`**, type **`faculty`**.  
 5. **Link** them to their LMCPAFM login (search email → **Link**).  
-6. Save Step 2.
+6. Before **submit**, ensure at least one linked team member is **certified for animal handling** (registered that way by admin). If you are not certified, add a certified colleague on Step 2.  
+7. Save Step 2.
 
 Students can **edit** drafts when linked; they **cannot submit** by default.
 

@@ -62,6 +62,7 @@ def read_admin_users(
             "roles": [r.name for r in u.roles],
             "status": u.status,
             "must_change_password": u.must_change_password,
+            "is_certified_animal_handler": u.is_certified_animal_handler,
         }
         for u in users
     ]

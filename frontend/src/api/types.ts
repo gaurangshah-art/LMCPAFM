@@ -68,6 +68,7 @@ export interface User {
   roles: UserRole[];
   status?: boolean;
   must_change_password?: boolean;
+  is_certified_animal_handler?: boolean;
 }
 
 export interface UserCreate {
@@ -76,6 +77,7 @@ export interface UserCreate {
   password: string;
   roles: UserRole[];
   status?: boolean;
+  is_certified_animal_handler?: boolean;
 }
 
 // ---------------- IAEC CERTIFICATE ----------------

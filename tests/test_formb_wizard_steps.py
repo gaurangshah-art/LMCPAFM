@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from database.database import SessionLocal
 from database.lmcpafm_models import FormB, IAECProject, Species, Strain
+from tests.conftest import certify_user_email
 from tests.formb_payloads import (
     STEP3_BODY,
     STEP3_REQUIREMENT,
@@ -28,6 +29,7 @@ def _register_and_login(client, monkeypatch):
     )
     token = login_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
+    certify_user_email(payload["email"])
     return headers, payload
 
 

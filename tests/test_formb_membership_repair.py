@@ -4,6 +4,7 @@ from database.database import SessionLocal
 from database.lmcpafm_models import FormB, FormBInvestigator, IAECProject
 from models.user import User
 
+from tests.conftest import certify_user_email
 from tests.formb_payloads import step1_body
 
 
@@ -32,6 +33,7 @@ def _register_and_login(client, monkeypatch):
         },
         headers=headers,
     )
+    certify_user_email(payload["email"])
     return headers, payload
 
 

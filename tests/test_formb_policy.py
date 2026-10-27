@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain
+from models.user import User
 from tests.formb_payloads import (
     step1_body,
     study_plan_body,
@@ -10,7 +11,15 @@ from tests.formb_payloads import (
 )
 
 
-def _register_and_login(client, monkeypatch, faculty: bool = True):
+def _certify_investigator(email: str) -> None:
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.email == email).first()
+        assert user is not None
+        user.is_certified_animal_handler = True
+        db.commit()
+
+
+def _register_and_login(client, monkeypatch, faculty: bool = True, *, certified: bool | None = None):
     monkeypatch.setenv("LMCP_INSTITUTIONAL_EMAIL_DOMAINS", "lmcp.ac.in")
     suffix = uuid4().hex[:8]
     payload = {
@@ -36,6 +45,9 @@ def _register_and_login(client, monkeypatch, faculty: bool = True):
         },
         headers=headers,
     )
+    should_certify = certified if certified is not None else faculty
+    if should_certify:
+        _certify_investigator(payload["email"])
     return headers, payload
 
 
@@ -70,6 +82,18 @@ def _start_and_complete_wizard(client, headers, payload):
             )
             assert plan_res.status_code == 200, plan_res.text
     return form_b_id
+
+
+def test_submit_requires_certified_animal_handler(client, monkeypatch):
+    headers, payload = _register_and_login(
+        client, monkeypatch, faculty=True, certified=False
+    )
+    form_b_id = _start_and_complete_wizard(client, headers, payload)
+    upload_required_form_b_attachments(client, headers, form_b_id)
+
+    submit_res = client.post("/formb/submit", json={"form_b_id": form_b_id}, headers=headers)
+    assert submit_res.status_code == 400
+    assert "certified" in submit_res.json()["detail"].lower()
 
 
 def test_submit_requires_lmcp_faculty(client, monkeypatch):

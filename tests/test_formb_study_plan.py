@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from database.database import SessionLocal
 from database.lmcpafm_models import ExperimentGroup, FormBStudyPhase, Species, Strain
+from tests.conftest import certify_user_email
 from tests.formb_payloads import step1_body, step2_body, study_plan_body, upload_required_form_b_attachments, wizard_steps_after_step1
 
 
@@ -30,6 +31,7 @@ def _register_and_login(client, monkeypatch):
         },
         headers=headers,
     )
+    certify_user_email(payload["email"])
     return headers, payload
 
 

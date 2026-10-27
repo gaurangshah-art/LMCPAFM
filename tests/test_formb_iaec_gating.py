@@ -5,6 +5,7 @@ from uuid import uuid4
 from database.database import SessionLocal
 from database.lmcpafm_models import Species, Strain
 
+from tests.conftest import certify_user_email
 from tests.formb_payloads import (
     step1_body,
     step2_body,
@@ -38,6 +39,7 @@ def _register_investigator(client, monkeypatch, suffix: str):
         },
         headers=headers,
     )
+    certify_user_email(payload["email"])
     start_res = client.post("/formb/start", headers=headers)
     form_b_id = start_res.json()["id"]
     client.post("/formb/step-1", json=step1_body(form_b_id, payload), headers=headers)

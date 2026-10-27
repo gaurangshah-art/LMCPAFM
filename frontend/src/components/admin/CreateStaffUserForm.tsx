@@ -23,6 +23,7 @@ const schema = z
     email: z.string().trim().email("Enter a valid email address."),
     password: z.string().min(8, "Password must be at least 8 characters."),
     status: z.boolean(),
+    is_certified_animal_handler: z.boolean(),
     roles: z
       .array(z.enum(ASSIGNABLE_ADMIN_ROLES))
       .min(1, "Select at least one role."),
@@ -61,6 +62,7 @@ export function CreateStaffUserForm({ onCreated }: CreateStaffUserFormProps) {
       email: "",
       password: "",
       status: true,
+      is_certified_animal_handler: false,
       roles: ["staff"],
     },
   });
@@ -76,6 +78,7 @@ export function CreateStaffUserForm({ onCreated }: CreateStaffUserFormProps) {
         password: values.password,
         roles: [...values.roles],
         status: values.status,
+        is_certified_animal_handler: values.is_certified_animal_handler,
       });
       onCreated(created);
       succeed(`Created ${created.email}.`);
@@ -85,6 +88,7 @@ export function CreateStaffUserForm({ onCreated }: CreateStaffUserFormProps) {
         password: "",
         status: true,
         roles: ["staff"],
+        is_certified_animal_handler: false,
       });
     } catch (error) {
       fail(getApiErrorMessage(error));
@@ -124,10 +128,17 @@ export function CreateStaffUserForm({ onCreated }: CreateStaffUserFormProps) {
           onChange={handleRolesChange}
         />
         {errors.roles ? <small className="field-error">{errors.roles.message}</small> : null}
+        {selectedRoles.includes("investigator") ? (
+          <label className="toggle-field full-width">
+            <span>Certified for animal handling (requisitions + Form B requirement)</span>
+            <input type="checkbox" {...register("is_certified_animal_handler")} />
+          </label>
+        ) : null}
         <small>
           For faculty: select <strong>investigator</strong>, use their institutional email, and set a
-          temporary password. They log in and complete Investigator Profile before starting Form B.
-          Self-registration remains available for emails not yet in the directory.
+          temporary password. Tick <strong>Certified for animal handling</strong> for the ~10–15 faculty
+          who may submit animal requisitions and satisfy the Form B certified-faculty rule. Others may still
+          draft Form B but must link a certified colleague before submit.
         </small>
       </div>
       <button className="btn" type="submit" disabled={isSubmitting}>

@@ -128,6 +128,31 @@ def default_permissions_for_type(investigator_type: str | None) -> dict[str, boo
     }
 
 
+def form_b_has_certified_animal_handler(db: Session, form_b: FormB) -> bool:
+    investigators = (
+        db.query(FormBInvestigator)
+        .filter(FormBInvestigator.form_b_id == form_b.id)
+        .all()
+    )
+    user_ids = {
+        investigator.user_id
+        for investigator in investigators
+        if investigator.user_id is not None
+    }
+    if not user_ids:
+        return False
+    certified_count = (
+        db.query(User)
+        .filter(
+            User.id.in_(user_ids),
+            User.is_certified_animal_handler.is_(True),
+            User.status.is_(True),
+        )
+        .count()
+    )
+    return certified_count > 0
+
+
 def form_b_has_lmcp_faculty(db: Session, form_b: FormB) -> bool:
     investigators = (
         db.query(FormBInvestigator)

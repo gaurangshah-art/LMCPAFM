@@ -17,6 +17,7 @@ class UserCreate(BaseModel):
     password: str
     roles: List[UserRole]
     status: bool = True
+    is_certified_animal_handler: bool = False
 
 
 class UserRead(BaseModel):
@@ -26,6 +27,7 @@ class UserRead(BaseModel):
     roles: List[str]
     status: bool
     must_change_password: bool = False
+    is_certified_animal_handler: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -33,6 +33,7 @@ The same **institutional email domain** (for example `@lmcp.ac.in`) is used by f
 | Person | LMCPAFM role | How account is created |
 |--------|--------------|-------------------------|
 | **Faculty PI** | `investigator` | Self-register **if on faculty roster** (when enforced), **or** admin pre-creates investigator |
+| **Faculty certified for animal handling** (~10–15) | `investigator` + **certified** flag | Admin **Create User** (tick certified) or CSV import with `animal_handler=yes` |
 | **Student / scholar** | `investigator` (limited) | Usually admin pre-create **or** register only if college allows; linked on Form B Step 2 by PI |
 | **Animal house support** | `staff` | **Admin only** — Create User → role **staff** |
 | **IAEC member / secretary** | `iaec` | **Admin only** |
@@ -98,6 +99,13 @@ To change your own password while logged in, use **Password** in the top navigat
 - Email must be an **allowed institutional address**.  
 - System creates an empty **Investigator Profile**; faculty must complete profile before Form B.  
 - Roster enforcement applies to **self-registration**, not necessarily to admin create — you can pre-create a faculty account even when roster is used.
+
+**Certified animal-handling faculty (~10–15 of ~50):**
+
+- When creating an **investigator**, tick **Certified for animal handling** for faculty with documented animal-work experience.  
+- These accounts may use **Requisitions** and **Allocations** (investigator menus) and count toward the **Form B submit** rule (at least one **linked** certified faculty on the project team).  
+- Other faculty may self-register or be pre-created **without** the tick; they may draft Form B but must **link a certified colleague** on Step 2 before submit.  
+- Bulk import: `scripts/import_faculty_investigators.py` with CSV column `animal_handler` = `yes`, or `--certify-all` when the file lists only certified faculty.
 
 **Role rules in UI:**
 

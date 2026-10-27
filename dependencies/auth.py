@@ -88,3 +88,25 @@ require_iaec = _require_role("iaec")
 require_staff = _require_role("staff")
 require_admin = _require_role("admin")
 require_admin_or_staff = require_any_role("admin", "staff")
+
+
+def require_investigator_requisition_access(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Investigators need certified animal-handler status; staff/IAEC/admin unchanged."""
+    roles = _user_role_name_set(current_user)
+    if roles.isdisjoint({"investigator"}):
+        return current_user
+    if roles & {"staff", "iaec", "admin"}:
+        return current_user
+    from utils.animal_handler_policy import user_is_certified_animal_handler
+
+    if not user_is_certified_animal_handler(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Only faculty certified for animal handling may use requisitions "
+                "and allocations. Ask the LMCPAFM administrator to register your account."
+            ),
+        )
+    return current_user

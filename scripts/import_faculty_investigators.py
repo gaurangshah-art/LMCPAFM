@@ -30,6 +30,11 @@ from utils.security import hash_password
 
 EMAIL_HEADERS = ("email", "member_email")
 NAME_HEADERS = ("name", "member_name")
+CERTIFIED_HEADERS = (
+    "animal_handler",
+    "certified_animal_handler",
+    "is_certified_animal_handler",
+)
 INVESTIGATOR_ROLE = "investigator"
 
 
@@ -56,6 +61,7 @@ def _read_rows(csv_path: Path) -> list[dict[str, str]]:
                 f"Missing email column. Use one of: {', '.join(EMAIL_HEADERS)}"
             )
         name_key = _pick_column(field_map, NAME_HEADERS)
+        certified_key = _pick_column(field_map, CERTIFIED_HEADERS)
 
         rows: list[dict[str, str]] = []
         for line_no, raw in enumerate(reader, start=2):
@@ -68,8 +74,26 @@ def _read_rows(csv_path: Path) -> list[dict[str, str]]:
                 raise ValueError(
                     f"Line {line_no}: email '{email}' is not an allowed institutional address."
                 )
-            rows.append({"email": normalized, "name": name or normalized.split("@")[0]})
+            certified = False
+            if certified_key:
+                raw_flag = (raw.get(certified_key) or "").strip().lower()
+                certified = raw_flag in {"1", "true", "yes", "y"}
+            rows.append(
+                {
+                    "email": normalized,
+                    "name": name or normalized.split("@")[0],
+                    "certified": certified,
+                }
+            )
         return rows
+
+
+def _parse_certified(value: bool | str | None, *, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "y"}
 
 
 def _get_or_create_investigator_role(db) -> Role:
@@ -99,6 +123,7 @@ def _upsert_investigator(
     name: str,
     password: str,
     update_existing: bool,
+    certified: bool,
 ) -> str:
     role = _get_or_create_investigator_role(db)
     existing = db.query(User).filter(User.email == email).first()
@@ -110,6 +135,7 @@ def _upsert_investigator(
         existing.name = name
         existing.password_hash = password_hash
         existing.must_change_password = True
+        existing.is_certified_animal_handler = certified
         existing.status = True
         if role not in existing.roles:
             existing.roles = list(existing.roles) + [role]
@@ -122,6 +148,7 @@ def _upsert_investigator(
         password_hash=password_hash,
         status=True,
         must_change_password=True,
+        is_certified_animal_handler=certified,
     )
     user.roles = [role]
     db.add(user)
@@ -136,6 +163,7 @@ def import_faculty_investigators(
     password: str,
     dry_run: bool = False,
     update_existing: bool = True,
+    certify_all: bool = False,
 ) -> dict[str, int]:
     if not password:
         raise ValueError("Password is required.")
@@ -161,12 +189,14 @@ def import_faculty_investigators(
 
                 roster_result = _upsert_roster(db, row["email"], row["name"])
                 stats[roster_result] += 1
+                certified = _parse_certified(row.get("certified"), default=certify_all)
                 user_result = _upsert_investigator(
                     db,
                     email=row["email"],
                     name=row["name"],
                     password=password,
                     update_existing=update_existing,
+                    certified=certified,
                 )
                 stats[user_result] += 1
                 db.commit()
@@ -196,6 +226,11 @@ def main() -> int:
         action="store_true",
         help="Skip users that already exist (still upserts roster).",
     )
+    parser.add_argument(
+        "--certify-all",
+        action="store_true",
+        help="Mark every imported investigator as certified for animal handling.",
+    )
     args = parser.parse_args()
 
     if not args.csv.is_file():
@@ -207,6 +242,7 @@ def main() -> int:
         password=args.password,
         dry_run=args.dry_run,
         update_existing=not args.no_update_existing,
+        certify_all=args.certify_all,
     )
     mode = "DRY RUN" if args.dry_run else "IMPORT"
     print(f"{mode} complete: {stats}")

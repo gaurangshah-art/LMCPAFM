@@ -20,7 +20,11 @@ from schemas.schemas_requisition_allocation import (
     AnimalAllocationCreate,
     AnimalAllocation,
 )
-from dependencies.auth import require_any_role, user_role_names
+from dependencies.auth import (
+    require_any_role,
+    require_investigator_requisition_access,
+    user_role_names,
+)
 from models.user import User
 
 router = APIRouter(prefix="/iaec", tags=["IAEC Workflow"])
@@ -46,6 +50,7 @@ def submit_requisition(
     req: AnimalRequisitionCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("investigator", "iaec", "staff")),
+    _animal_access: User = Depends(require_investigator_requisition_access),
 ):
     try:
         # Force requester metadata from authenticated user (ignore client spoofing)
@@ -73,6 +78,7 @@ def update_requisition(
     payload: AnimalRequisitionAmend,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("investigator")),
+    _animal_access: User = Depends(require_investigator_requisition_access),
 ):
     try:
         updated = amend_requisition(
@@ -97,6 +103,7 @@ def cancel_requisition_route(
     req_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("investigator")),
+    _animal_access: User = Depends(require_investigator_requisition_access),
 ):
     try:
         cancelled = cancel_requisition(db, req_id, current_user)
@@ -140,6 +147,7 @@ def read_requisition(
     req_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("investigator", "iaec", "staff")),
+    _animal_access: User = Depends(require_investigator_requisition_access),
 ):
     req = get_requisition(db, req_id)
     if not req:
@@ -156,6 +164,7 @@ def read_allocation(
     alloc_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("investigator", "iaec", "staff")),
+    _animal_access: User = Depends(require_investigator_requisition_access),
 ):
     alloc = get_allocation(db, alloc_id)
     if not alloc:

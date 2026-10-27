@@ -43,6 +43,12 @@ def create_user(
             status_code=400,
             detail="Investigator accounts require an LMCP institutional email address.",
         )
+    certified = bool(payload.is_certified_animal_handler)
+    if certified and "investigator" not in role_names:
+        raise HTTPException(
+            status_code=400,
+            detail="Animal-handling certification applies only to investigator accounts.",
+        )
     db_roles = db.query(Role).filter(Role.name.in_(role_names)).all()
     found_names = {r.name for r in db_roles}
 
@@ -58,6 +64,7 @@ def create_user(
         password_hash=hash_password(payload.password),
         status=payload.status,
         must_change_password=True,
+        is_certified_animal_handler=certified,
     )
     user.roles = db_roles
 
@@ -80,6 +87,7 @@ def create_user(
         "roles": [r.name for r in user.roles],
         "status": user.status,
         "must_change_password": user.must_change_password,
+        "is_certified_animal_handler": user.is_certified_animal_handler,
     }
 
 
@@ -97,6 +105,7 @@ def list_users(
             "roles": [r.name for r in u.roles],
             "status": u.status,
             "must_change_password": u.must_change_password,
+            "is_certified_animal_handler": u.is_certified_animal_handler,
         }
         for u in users
     ]
@@ -111,6 +120,7 @@ def me(current_user: User = Depends(get_current_user)):
         "roles": [r.name for r in current_user.roles],
         "status": current_user.status,
         "must_change_password": current_user.must_change_password,
+        "is_certified_animal_handler": current_user.is_certified_animal_handler,
     }
 
 

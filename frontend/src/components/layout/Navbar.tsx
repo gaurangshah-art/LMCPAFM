@@ -31,10 +31,23 @@ const navItems: NavItem[] = [
   { to: "/experiments", label: "Experiments", roles: ["investigator"] },
 ];
 
+const ANIMAL_WORKFLOW_PATHS = new Set(["/requisitions", "/allocations"]);
+
 function visibleNavItems(currentUser: User): NavItem[] {
+  const roleSet = new Set(currentUser.roles);
+  const staffLike = roleSet.has("staff") || roleSet.has("iaec") || roleSet.has("admin");
+
   return navItems.filter((item) => {
     if (!item.roles?.length) {
       return true;
+    }
+    if (
+      !staffLike &&
+      roleSet.has("investigator") &&
+      ANIMAL_WORKFLOW_PATHS.has(item.to) &&
+      !currentUser.is_certified_animal_handler
+    ) {
+      return false;
     }
     return item.roles.some((role) => currentUser.roles.includes(role));
   });

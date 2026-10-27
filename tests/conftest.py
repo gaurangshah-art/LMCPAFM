@@ -58,6 +58,18 @@ def client():
         yield c
 
 
+def certify_user_email(email: str) -> None:
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        if user is None:
+            raise AssertionError(f"User not found for certification: {email}")
+        user.is_certified_animal_handler = True
+        db.commit()
+    finally:
+        db.close()
+
+
 def _login_headers(client, email: str, password: str = "StrongPass@123") -> dict[str, str]:
     login_res = client.post("/auth/login", json={"email": email, "password": password})
     assert login_res.status_code == 200, login_res.text
