@@ -28,6 +28,7 @@ class UserRead(BaseModel):
     status: bool
     must_change_password: bool = False
     is_certified_animal_handler: bool = False
+    admin_provisioned: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -128,6 +128,31 @@ def default_permissions_for_type(investigator_type: str | None) -> dict[str, boo
     }
 
 
+def form_b_has_admin_provisioned_investigator(db: Session, form_b: FormB) -> bool:
+    investigators = (
+        db.query(FormBInvestigator)
+        .filter(FormBInvestigator.form_b_id == form_b.id)
+        .all()
+    )
+    user_ids = {
+        investigator.user_id
+        for investigator in investigators
+        if investigator.user_id is not None
+    }
+    if not user_ids:
+        return False
+    count = (
+        db.query(User)
+        .filter(
+            User.id.in_(user_ids),
+            User.admin_provisioned.is_(True),
+            User.status.is_(True),
+        )
+        .count()
+    )
+    return count > 0
+
+
 def form_b_has_certified_animal_handler(db: Session, form_b: FormB) -> bool:
     investigators = (
         db.query(FormBInvestigator)

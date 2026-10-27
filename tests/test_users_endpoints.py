@@ -5,6 +5,22 @@ from fastapi.testclient import TestClient
 from main import app
 
 
+def test_staff_cannot_create_or_list_users(client, admin_auth_headers, staff_auth_headers):
+    payload = {
+        "name": "Blocked Staff Create",
+        "email": f"blocked_{uuid4().hex[:8]}@example.com",
+        "password": "StrongPass@123",
+        "roles": ["staff"],
+        "status": True,
+    }
+    create_res = client.post("/users/", json=payload, headers=staff_auth_headers)
+    assert create_res.status_code == 403
+    list_res = client.get("/users/", headers=staff_auth_headers)
+    assert list_res.status_code == 403
+    admin_list = client.get("/admin/users", headers=staff_auth_headers)
+    assert admin_list.status_code == 403
+
+
 def test_create_user_requires_admin(client, admin_auth_headers):
     unique_email = f"pytest_{uuid4().hex[:8]}@example.com"
     payload = {
@@ -85,6 +101,7 @@ def test_admin_can_create_investigator_with_institutional_email(
     data = res.json()
     assert data["email"] == email
     assert data["roles"] == ["investigator"]
+    assert data["admin_provisioned"] is True
 
     login_res = client.post(
         "/auth/login",
@@ -92,6 +109,12 @@ def test_admin_can_create_investigator_with_institutional_email(
     )
     assert login_res.status_code == 200, login_res.text
     headers = {"Authorization": f"Bearer {login_res.json()['access_token']}"}
+    change_res = client.post(
+        "/auth/change-password",
+        json={"current_password": "StrongPass@123", "new_password": "NewStrongPass@456"},
+        headers=headers,
+    )
+    assert change_res.status_code == 204
     profile_res = client.get("/investigator-profile/me", headers=headers)
     assert profile_res.status_code == 200, profile_res.text
     profile = profile_res.json()

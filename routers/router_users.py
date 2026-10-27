@@ -13,7 +13,7 @@ from utils.institutional_email import is_lmcp_institutional_email, normalize_ema
 from utils.security import hash_password
 from dependencies.auth import (
     get_current_user,
-    require_admin_or_staff,
+    require_admin,
     require_iaec,
     require_staff,
     require_investigator,
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 def create_user(
     payload: UserCreate,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_admin_or_staff),
+    _current_user: User = Depends(require_admin),
 ):
     normalized_email = normalize_email(str(payload.email))
     existing = db.query(User).filter(User.email == normalized_email).first()
@@ -65,6 +65,7 @@ def create_user(
         status=payload.status,
         must_change_password=True,
         is_certified_animal_handler=certified,
+        admin_provisioned=True,
     )
     user.roles = db_roles
 
@@ -88,13 +89,14 @@ def create_user(
         "status": user.status,
         "must_change_password": user.must_change_password,
         "is_certified_animal_handler": user.is_certified_animal_handler,
+        "admin_provisioned": user.admin_provisioned,
     }
 
 
 @router.get("/", response_model=List[UserRead])
 def list_users(
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_admin_or_staff),
+    _current_user: User = Depends(require_admin),
 ):
     users = db.query(User).order_by(User.id.asc()).all()
     return [
@@ -106,6 +108,7 @@ def list_users(
             "status": u.status,
             "must_change_password": u.must_change_password,
             "is_certified_animal_handler": u.is_certified_animal_handler,
+            "admin_provisioned": u.admin_provisioned,
         }
         for u in users
     ]
@@ -121,6 +124,7 @@ def me(current_user: User = Depends(get_current_user)):
         "status": current_user.status,
         "must_change_password": current_user.must_change_password,
         "is_certified_animal_handler": current_user.is_certified_animal_handler,
+        "admin_provisioned": current_user.admin_provisioned,
     }
 
 

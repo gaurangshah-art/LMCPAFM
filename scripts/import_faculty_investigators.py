@@ -136,6 +136,7 @@ def _upsert_investigator(
         existing.password_hash = password_hash
         existing.must_change_password = True
         existing.is_certified_animal_handler = certified
+        existing.admin_provisioned = True
         existing.status = True
         if role not in existing.roles:
             existing.roles = list(existing.roles) + [role]
@@ -149,6 +150,7 @@ def _upsert_investigator(
         status=True,
         must_change_password=True,
         is_certified_animal_handler=certified,
+        admin_provisioned=True,
     )
     user.roles = [role]
     db.add(user)

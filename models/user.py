@@ -21,6 +21,9 @@ class User(Base):
     is_certified_animal_handler: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    admin_provisioned: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

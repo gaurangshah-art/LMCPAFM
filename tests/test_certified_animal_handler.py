@@ -25,7 +25,9 @@ def test_admin_create_investigator_with_certification_flag(client, admin_auth_he
         headers=admin_auth_headers,
     )
     assert res.status_code == 201, res.text
-    assert res.json()["is_certified_animal_handler"] is True
+    body = res.json()
+    assert body["is_certified_animal_handler"] is True
+    assert body["admin_provisioned"] is True
 
 
 def test_uncertified_investigator_cannot_post_requisition(client, admin_auth_headers):

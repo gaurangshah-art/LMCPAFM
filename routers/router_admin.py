@@ -51,7 +51,7 @@ def read_activity_logs(
 @router.get("/users")
 def read_admin_users(
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_admin_or_staff),
+    _current_user: User = Depends(require_admin),
 ):
     users = db.query(User).order_by(User.id.asc()).all()
     return [
@@ -63,6 +63,7 @@ def read_admin_users(
             "status": u.status,
             "must_change_password": u.must_change_password,
             "is_certified_animal_handler": u.is_certified_animal_handler,
+            "admin_provisioned": u.admin_provisioned,
         }
         for u in users
     ]
@@ -73,7 +74,7 @@ def update_user_roles(
     user_id: int,
     payload: dict,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_admin_or_staff),
+    _current_user: User = Depends(require_admin),
 ):
     from models.role import Role
 
@@ -85,7 +86,7 @@ def update_user_roles(
     if "investigator" in role_names:
         raise HTTPException(
             status_code=400,
-            detail="Use investigator self-registration for investigator accounts.",
+            detail="Investigator accounts are created on Admin Dashboard → Create User.",
         )
 
     db_roles = []

@@ -65,6 +65,7 @@ def certify_user_email(email: str) -> None:
         if user is None:
             raise AssertionError(f"User not found for certification: {email}")
         user.is_certified_animal_handler = True
+        user.admin_provisioned = True
         db.commit()
     finally:
         db.close()

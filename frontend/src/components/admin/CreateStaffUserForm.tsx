@@ -130,15 +130,18 @@ export function CreateStaffUserForm({ onCreated }: CreateStaffUserFormProps) {
         {errors.roles ? <small className="field-error">{errors.roles.message}</small> : null}
         {selectedRoles.includes("investigator") ? (
           <label className="toggle-field full-width">
-            <span>Certified for animal handling (requisitions + Form B requirement)</span>
+            <span>
+              Pharmacology faculty — certified for animal requisitions (required on Form B team)
+            </span>
             <input type="checkbox" {...register("is_certified_animal_handler")} />
           </label>
         ) : null}
         <small>
           For faculty: select <strong>investigator</strong>, use their institutional email, and set a
-          temporary password. Tick <strong>Certified for animal handling</strong> for the ~10–15 faculty
-          who may submit animal requisitions and satisfy the Form B certified-faculty rule. Others may still
-          draft Form B but must link a certified colleague before submit.
+          temporary password. Pharmacology department faculty are <strong>investigators</strong>, not{" "}
+          <strong>staff</strong>. Tick certification for faculty who may submit animal requisitions.
+          Every Form B must link at least one administrator-created pharmacology faculty member before submit.
+          Only <strong>admin</strong> may create accounts; facility staff cannot view or create users.
         </small>
       </div>
       <button className="btn" type="submit" disabled={isSubmitting}>

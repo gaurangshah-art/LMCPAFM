@@ -29,7 +29,6 @@ import { ChangePasswordPage } from "../pages/ChangePasswordPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 import { RegisterInvestigatorPage } from "../pages/RegisterInvestigatorPage";
-import { UsersPage } from "../pages/UsersPage";
 import { NotAuthorizedPage } from "../pages/NotAuthorizedPage";
 import { IaecDashboard } from "../pages/iaec/IaecDashboard";
 import { AnimalRequisitionDetailPage } from "../pages/AnimalRequisitionDetailPage";
@@ -76,12 +75,8 @@ const roleHome: Record<string, string> = {
   admin: "/admin-dashboard",
 };
 
-function UsersRoute({ currentUser }: { currentUser: User | null }) {
-  if (currentUser?.roles.includes("admin")) {
-    return <Navigate to="/admin-dashboard" replace />;
-  }
-
-  return <UsersPage currentUser={currentUser} />;
+function UsersRoute() {
+  return <Navigate to="/admin-dashboard" replace />;
 }
 
 export default function App() {
@@ -265,16 +260,16 @@ export default function App() {
             }
           />
 
-          {/* USERS — staff (admins redirect to superadmin dashboard) */}
+          {/* Legacy /users URL — user management is admin-only on Admin Dashboard */}
           <Route
             path="/users"
             element={
               <ProtectedRoute
                 currentUser={currentUser}
                 isAuthLoading={isAuthLoading}
-                allowedRoles={["staff", "admin"]}
+                allowedRoles={["admin"]}
               >
-                <UsersRoute currentUser={currentUser} />
+                <UsersRoute />
               </ProtectedRoute>
             }
           />

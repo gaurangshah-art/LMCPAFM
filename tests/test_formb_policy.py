@@ -16,6 +16,7 @@ def _certify_investigator(email: str) -> None:
         user = db.query(User).filter(User.email == email).first()
         assert user is not None
         user.is_certified_animal_handler = True
+        user.admin_provisioned = True
         db.commit()
 
 
@@ -93,7 +94,8 @@ def test_submit_requires_certified_animal_handler(client, monkeypatch):
 
     submit_res = client.post("/formb/submit", json={"form_b_id": form_b_id}, headers=headers)
     assert submit_res.status_code == 400
-    assert "certified" in submit_res.json()["detail"].lower()
+    detail = submit_res.json()["detail"].lower()
+    assert "administrator" in detail or "pharmacology" in detail or "certified" in detail
 
 
 def test_submit_requires_lmcp_faculty(client, monkeypatch):

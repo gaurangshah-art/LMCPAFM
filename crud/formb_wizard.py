@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from crud.exceptions import CRUDValidationError
 from crud.formb_membership import (
     assert_can_submit,
+    form_b_has_admin_provisioned_investigator,
     form_b_has_certified_animal_handler,
     form_b_has_lmcp_faculty,
     get_editable_form_b,
@@ -271,10 +272,16 @@ def submit_form_b(db: Session, user: User, form_b_id: int) -> FormB:
             "At least one LMCP faculty investigator is required before submission."
         )
 
+    if not form_b_has_admin_provisioned_investigator(db, form_b):
+        raise CRUDValidationError(
+            "Link at least one Pharmacology department faculty account that was "
+            "created by the administrator before submitting Form B."
+        )
+
     if not form_b_has_certified_animal_handler(db, form_b):
         raise CRUDValidationError(
-            "Link at least one faculty member who is certified for animal handling "
-            "(registered by the administrator) before submitting Form B."
+            "Link at least one administrator-created faculty member who is certified "
+            "for animal handling before submitting Form B."
         )
 
     if not has_form_b_attachment(db, form_b.id, "funding_proof"):

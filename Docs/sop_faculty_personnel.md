@@ -35,7 +35,9 @@ You use LMCPAFM to prepare and **submit CPCSEA Form B**, track IAEC review, and 
 
 **Forgot your password later?** On the login page, click **Forgot password?**, enter your institutional email, and follow the link in the email (link expires after about one hour). If email does not arrive, contact the LMCPAFM administrator.
 
-**Support staff** with the same email domain use **staff** accounts — they do **not** use this faculty registration path. Admin-created **staff** and **IAEC** accounts also receive a temporary password and must change it on first login.
+**Animal facility staff** (cage care, inventory, daily logs) use **`staff`** accounts from admin — they are **not** pharmacology investigators and do **not** use this SOP as their primary guide.
+
+**Pharmacology faculty** are **`investigator`** accounts created **only by admin** (not self-service in production policy). They receive a temporary password and must change it on first login. Each Form B must **link** at least one such admin-created pharmacology faculty member before submit.
 
 ---
 

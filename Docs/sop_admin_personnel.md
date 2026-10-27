@@ -35,11 +35,13 @@ The same **institutional email domain** (for example `@lmcp.ac.in`) is used by f
 | **Faculty PI** | `investigator` | Self-register **if on faculty roster** (when enforced), **or** admin pre-creates investigator |
 | **Faculty certified for animal handling** (~10–15) | `investigator` + **certified** flag | Admin **Create User** (tick certified) or CSV import with `animal_handler=yes` |
 | **Student / scholar** | `investigator` (limited) | Usually admin pre-create **or** register only if college allows; linked on Form B Step 2 by PI |
-| **Animal house support** | `staff` | **Admin only** — Create User → role **staff** |
+| **Animal house support** | `staff` | **Admin only** — Create User → role **staff** (facility day-to-day work, inventory, logs — **not** pharmacology investigators) |
 | **IAEC member / secretary** | `iaec` | **Admin only** |
 | **System coordinator** | `admin` | Bootstrap script or another admin |
 
-**Tell support staff clearly:** Do **not** use “Register as Investigator”. You will receive a **staff** login.
+**Tell support staff clearly:** Do **not** use “Register as Investigator”. You will receive a **staff** login. **Staff cannot create users or open the user directory** — only **admin** can.
+
+**Pharmacology department faculty** are **`investigator`** accounts (admin-created), **not** `staff`. Create them on **Admin Dashboard → Create User** with role **investigator** and certification when they handle animal requisitions.
 
 ---
 
