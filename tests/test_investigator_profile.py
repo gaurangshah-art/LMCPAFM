@@ -31,7 +31,7 @@ def test_registration_creates_profile_shell(client, monkeypatch):
     assert profile_res.status_code == 200, profile_res.text
     profile = profile_res.json()
     assert profile["institutional_email"] == email
-    assert profile["is_lmcp_faculty"] is True
+    assert profile["is_lmcp_faculty"] is False
     assert profile["is_complete"] is False
 
 

@@ -112,14 +112,14 @@ def _upsert_investigator(
         existing.status = True
         if role not in existing.roles:
             existing.roles = list(existing.roles) + [role]
-        create_profile_shell(db, existing)
+        create_profile_shell(db, existing, is_lmcp_faculty=True)
         return "user_updated"
 
     user = User(name=name, email=email, password_hash=password_hash, status=True)
     user.roles = [role]
     db.add(user)
     db.flush()
-    create_profile_shell(db, user)
+    create_profile_shell(db, user, is_lmcp_faculty=True)
     return "user_created"
 
 

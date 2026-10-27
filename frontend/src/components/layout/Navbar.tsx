@@ -12,6 +12,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: "/", label: "Dashboard" },
+  { to: "/account/password", label: "Password" },
   { to: "/resources", label: "SOPs & guides" },
   { to: "/users", label: "Users", roles: ["staff"] },
   { to: "/admin-dashboard", label: "Superadmin", roles: ["admin"] },

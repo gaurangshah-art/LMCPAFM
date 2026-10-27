@@ -16,6 +16,7 @@ from database import lmcpafm_requisition_allocation
 import models.role  # ensure Role and user_roles are registered
 import models.investigator_profile  # ensure InvestigatorProfile is registered
 import models.activity_log  # ensure ActivityLog is registered
+import models.password_reset_token  # ensure PasswordResetToken is registered
 
 from routers.router_iaec import router as iaec_router
 from routers.router_requisition_allocation import router as req_alloc_router

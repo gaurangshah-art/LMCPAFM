@@ -1,6 +1,9 @@
 import { apiClient, setAccessToken } from "./client";
 import { setStoredAccessToken } from "../auth/session";
 import type {
+  ChangePasswordRequest,
+  ForgotPasswordResponse,
+  ResetPasswordRequest,
   InvestigatorRegisterRequest,
   InvestigatorRegisterResponse,
   LoginRequest,
@@ -36,4 +39,19 @@ export async function refreshSession(): Promise<TokenResponse> {
 export async function getCurrentUser(): Promise<User> {
   const { data } = await apiClient.get<User>("/users/me");
   return data;
+}
+
+export async function changePassword(payload: ChangePasswordRequest): Promise<void> {
+  await apiClient.post("/auth/change-password", payload);
+}
+
+export async function requestPasswordReset(email: string): Promise<ForgotPasswordResponse> {
+  const { data } = await apiClient.post<ForgotPasswordResponse>("/auth/forgot-password", {
+    email,
+  });
+  return data;
+}
+
+export async function resetPasswordWithToken(payload: ResetPasswordRequest): Promise<void> {
+  await apiClient.post("/auth/reset-password", payload);
 }

@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDValidationError
+from utils.security import hash_password
 from database.lmcpafm_models import (
     BreedingRecord,
     FacilityCareLog,
@@ -50,6 +51,28 @@ def _clear_user_references(db: Session, user_id: int) -> None:
         {FormBInvestigator.investigator_profile_user_id.key: None},
         synchronize_session=False,
     )
+
+
+def reset_user_password(
+    db: Session,
+    *,
+    actor: User,
+    user_id: int,
+    new_password: str,
+) -> User:
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise CRUDValidationError("User not found.")
+
+    if user.id == actor.id:
+        raise CRUDValidationError(
+            "Use the Password page to change your own password."
+        )
+
+    user.password_hash = hash_password(new_password)
+    db.add(user)
+    db.flush()
+    return user
 
 
 def delete_user(db: Session, *, actor: User, user_id: int) -> User:

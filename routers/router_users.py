@@ -63,7 +63,7 @@ def create_user(
     db.add(user)
     db.flush()
     if "investigator" in role_names:
-        create_profile_shell(db, user)
+        create_profile_shell(db, user, is_lmcp_faculty=True)
     db.commit()
     db.refresh(user)
     record_activity(

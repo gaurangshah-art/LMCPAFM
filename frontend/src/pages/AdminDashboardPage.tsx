@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   deleteUser,
+  resetUserPassword,
   getAllUsers,
   getSystemActivityLogs,
   getSystemSummary,
@@ -12,6 +13,7 @@ import type { FacilityOperationsSummary } from "../api/facilityTypes";
 import { getApiErrorMessage } from "../api/errors";
 import type { ActivityLog, SystemSummary, User } from "../api/types";
 import { CreateStaffUserForm } from "../components/admin/CreateStaffUserForm";
+import { AdminResetPasswordForm } from "../components/admin/AdminResetPasswordForm";
 import { UserRoleEditForm } from "../components/admin/UserRoleEditForm";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { LoadingState } from "../components/common/LoadingState";
@@ -44,6 +46,9 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
   const [isSavingRoles, setIsSavingRoles] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
+  const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   const loadAll = useCallback(async () => {
     try {
@@ -92,6 +97,19 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
       setRoleSaveError(getApiErrorMessage(error));
     } finally {
       setIsSavingRoles(false);
+    }
+  }
+
+  async function handleResetPassword(userId: number, newPassword: string) {
+    setIsSavingPassword(true);
+    setPasswordResetError(null);
+    try {
+      await resetUserPassword(userId, newPassword);
+      setPasswordResetUser(null);
+    } catch (error) {
+      setPasswordResetError(getApiErrorMessage(error));
+    } finally {
+      setIsSavingPassword(false);
     }
   }
 
@@ -266,16 +284,27 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
                           setRoleSaveError(null);
                           setEditingUser(row);
                         }}
-                        disabled={isDeleting}
+                        disabled={isDeleting || isSavingPassword}
                       >
                         Edit Roles
                       </button>
                     )}
                     <button
                       type="button"
+                      className="btn-secondary btn-small"
+                      onClick={() => {
+                        setPasswordResetError(null);
+                        setPasswordResetUser(row);
+                      }}
+                      disabled={isDeleting || isSavingPassword}
+                    >
+                      Reset password
+                    </button>
+                    <button
+                      type="button"
                       className="btn-danger btn-small"
                       onClick={() => void handleDeleteUser(row)}
-                      disabled={isDeleting}
+                      disabled={isDeleting || isSavingPassword}
                     >
                       {isDeleting ? "Deleting..." : "Delete"}
                     </button>
@@ -334,6 +363,19 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
             setRoleSaveError(null);
           }}
           onSave={handleSaveRoles}
+        />
+      ) : null}
+
+      {passwordResetUser ? (
+        <AdminResetPasswordForm
+          user={passwordResetUser}
+          isSaving={isSavingPassword}
+          errorMessage={passwordResetError}
+          onCancel={() => {
+            setPasswordResetUser(null);
+            setPasswordResetError(null);
+          }}
+          onSave={handleResetPassword}
         />
       ) : null}
     </div>

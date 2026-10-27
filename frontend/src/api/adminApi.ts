@@ -14,6 +14,15 @@ export async function deleteUser(userId: number): Promise<void> {
   await apiClient.delete(`/admin/users/${userId}`);
 }
 
+export async function resetUserPassword(
+  userId: number,
+  newPassword: string,
+): Promise<void> {
+  await apiClient.put(`/admin/users/${userId}/password`, {
+    new_password: newPassword,
+  });
+}
+
 export async function getSystemActivityLogs(): Promise<ActivityLog[]> {
   const { data } = await apiClient.get<ActivityLog[]>("/admin/logs");
   return data;

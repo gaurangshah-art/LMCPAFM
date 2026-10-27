@@ -25,6 +25,9 @@ import { AllocationPage } from "../pages/AllocationPage";
 import { ExperimentGroupPage } from "../pages/ExperimentGroupPage";
 import { ExperimentPage } from "../pages/ExperimentPage";
 import { LoginPage } from "../pages/LoginPage";
+import { ChangePasswordPage } from "../pages/ChangePasswordPage";
+import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 import { RegisterInvestigatorPage } from "../pages/RegisterInvestigatorPage";
 import { UsersPage } from "../pages/UsersPage";
 import { NotAuthorizedPage } from "../pages/NotAuthorizedPage";
@@ -201,12 +204,43 @@ export default function App() {
             }
           />
 
+          <Route
+            path="/forgot-password"
+            element={
+              getAccessToken() && currentUser ? (
+                <Navigate to="/" replace />
+              ) : (
+                <ForgotPasswordPage />
+              )
+            }
+          />
+
+          <Route
+            path="/reset-password"
+            element={
+              getAccessToken() && currentUser ? (
+                <Navigate to="/" replace />
+              ) : (
+                <ResetPasswordPage />
+              )
+            }
+          />
+
           {/* DASHBOARD */}
           <Route
             path="/"
             element={
               <ProtectedRoute currentUser={currentUser} isAuthLoading={isAuthLoading}>
                 <DashboardPage currentUser={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/account/password"
+            element={
+              <ProtectedRoute currentUser={currentUser} isAuthLoading={isAuthLoading}>
+                <ChangePasswordPage />
               </ProtectedRoute>
             }
           />

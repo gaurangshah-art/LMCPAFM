@@ -89,11 +89,15 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
 
         <label>
           Password
-          <input type="password" {...register("password")} />
+          <input type="password" autoComplete="current-password" {...register("password")} />
           {errors.password ? (
             <small className="field-error">{errors.password.message}</small>
           ) : null}
         </label>
+
+        <p className="auth-inline-link">
+          <Link to="/forgot-password">Forgot password?</Link>
+        </p>
 
         <button className="btn" type="submit" disabled={isSubmitting}>
           Log In

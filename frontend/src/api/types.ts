@@ -10,6 +10,20 @@ export interface TokenResponse {
   refresh_token?: string;
 }
 
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
 export interface InvestigatorRegisterRequest {
   name: string;
   email: string;

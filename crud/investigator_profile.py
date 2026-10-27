@@ -44,19 +44,27 @@ def profile_to_read(profile: InvestigatorProfile) -> dict:
     }
 
 
-def create_profile_shell(db: Session, user: User) -> InvestigatorProfile:
+def create_profile_shell(
+    db: Session,
+    user: User,
+    *,
+    is_lmcp_faculty: bool = False,
+) -> InvestigatorProfile:
     existing = (
         db.query(InvestigatorProfile)
         .filter(InvestigatorProfile.user_id == user.id)
         .first()
     )
     if existing:
+        if is_lmcp_faculty and not existing.is_lmcp_faculty:
+            existing.is_lmcp_faculty = True
+            existing.updated_at = datetime.now(timezone.utc)
         return existing
 
     profile = InvestigatorProfile(
         user_id=user.id,
         institutional_email=user.email,
-        is_lmcp_faculty=True,
+        is_lmcp_faculty=is_lmcp_faculty,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )

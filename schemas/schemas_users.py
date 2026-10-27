@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import List
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserRole(str, Enum):
@@ -27,3 +27,7 @@ class UserRead(BaseModel):
     status: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str = Field(min_length=8)

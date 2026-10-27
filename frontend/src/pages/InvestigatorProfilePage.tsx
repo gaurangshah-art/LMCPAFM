@@ -69,7 +69,7 @@ export function InvestigatorProfilePage() {
       age: null,
       years_experience: null,
       animal_handling_experience: "",
-      is_lmcp_faculty: true,
+      is_lmcp_faculty: false,
     },
   });
 
