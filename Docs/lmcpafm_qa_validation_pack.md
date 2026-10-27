@@ -1,7 +1,7 @@
 ---
 title: "LMCPAFM — QA Validation Pack"
 subtitle: "L. M. College of Pharmacy — Animal Facility Management System"
-date: "2026-10-21"
+date: "2026-10-27"
 ---
 
 # LMCPAFM — QA Validation Pack (single document)
@@ -9,7 +9,7 @@ date: "2026-10-21"
 **Institution:** L. M. College of Pharmacy, Ahmedabad  
 **System:** LMCP Animal Facility Management (LMCPAFM)  
 **Pack version:** 1.0  
-**Generated:** 2026-10-21  
+**Generated:** 2026-10-27  
 **Classification:** Internal use — QA / UAT only (not for public web)
 
 This file combines **test procedures**, a **printable checklist**, and **role SOPs** so you can export **one PDF** for external or internal QA.
@@ -47,7 +47,7 @@ Use **HTTPS** on staging (padlock visible). Staging data is for testing only; ap
 | **Staff** | Allocations, facility records, Form C, facility SOP zip (in-app) |
 | **Admin** | Users, master data, facility admin — no bypass of IAEC approval |
 
-Credentials are issued by the **LMCPAFM coordinator**. Investigators may **self-register** with `@lmcp.ac.in` if the coordinator allows it.
+Credentials are issued by the **LMCPAFM coordinator**. Investigators may **self-register** with `@lmcp.ac.in` if roster policy allows, or receive **admin-created** logins (temporary password + mandatory change on first login). **Forgot password?** requires SMTP. **Certified animal-handling faculty** (~10–15) are admin-flagged for Form B submit and requisitions — see Part 5 and Part 10.
 
 ### 1.4 Suggested timeline
 
@@ -69,10 +69,12 @@ Email or form (per coordinator) with: **name, role, date/time, URL, steps to rep
 ### 2.1 All roles
 
 1. **Login** with assigned credentials → correct dashboard for role.  
-2. Open a URL for another role → **Not authorized** or redirect.  
-3. **Logout** → cannot access protected pages without login.  
-4. Save a form → reload page → data persists.  
-5. Download a PDF → opens; tables readable; LMCP branding present.
+2. **Forgot password?** (optional) → email or clear SMTP error.  
+3. Admin-created user → **Set your password** before other pages.  
+4. Open a URL for another role → **Not authorized** or redirect.  
+5. **Logout** → cannot access protected pages without login.  
+6. Save a form → reload page → data persists.  
+7. Download a PDF → opens; tables readable; LMCP branding present.
 
 ### 2.2 Investigator
 
@@ -85,9 +87,9 @@ Email or form (per coordinator) with: **name, role, date/time, URL, steps to rep
    - Uncheck only for mixed-species studies.  
 6. **Form B Steps 4–7** — procedures, anaesthesia, euthanasia, declarations; optional **LMCP default text pack** banners on Steps 4–6.  
 7. **Wizard progress** — step indicator and time estimate visible on long steps.  
-8. **Review** — summary matches entered data → **Submit** → status **submitted**; wizard becomes read-only (`/form-b/view`).  
+8. **Review** — summary matches entered data → **Submit** (requires **certified animal-handling** faculty linked on Step 2) → status **submitted**; wizard becomes read-only (`/form-b/view`).  
 9. **Form B PDF** and **study plan annexure PDF** from Step 2b preview if offered.  
-10. **Post-approval** (coordinator provides approved test project): requisition, **amend requisition before allocation**, experiment group, experiment log, final report.
+10. **Post-approval** (coordinator provides approved test project): requisition with **certified** login, **amend requisition before allocation**, experiment group, experiment log, final report. Confirm **non-certified** investigator does not see Requisitions menu.
 11. **SOPs & guides** (`/resources`) — open a manual; **Save as PDF** if needed for offline QA notes.
 
 **Reference:** Part 6 (Form B manual) for field-level detail.
@@ -162,6 +164,8 @@ Email or form (per coordinator) with: **name, role, date/time, URL, steps to rep
 | A6 | Forms save and reload correctly on revisit | | |
 | A7 | Error messages are understandable | | |
 | A8 | PDF downloads open and text/tables are readable | | |
+| A9 | **Forgot password?** sends email (or clear SMTP error) when tested | | |
+| A10 | Admin-created user forced to **Set your password** on first login | | |
 
 ---
 
@@ -185,6 +189,8 @@ Email or form (per coordinator) with: **name, role, date/time, URL, steps to rep
 | B14 | Step 2b — one project species/strain applies to all groups when enabled | | |
 | B15 | PI can amend/cancel requisition before staff allocation (`/requisitions/{id}` → Manage) | | |
 | B16 | **SOPs & guides** (`/resources`) opens role-appropriate manuals | | |
+| B17 | **Certified** investigator sees **Requisitions** / **Allocations** in nav | | |
+| B18 | **Non-certified** investigator: no requisition nav; submit blocked until certified colleague **linked** on Step 2 | | |
 
 ---
 
@@ -264,8 +270,8 @@ Simple-English standard operating procedures by audience:
 | Audience | Document | Contents |
 |----------|----------|----------|
 | **Students / research scholars** | [sop_student_personnel.md](Docs/sop_student_personnel.md) | Account, profile, helping on Form B, permissions, after approval |
-| **Faculty (PI / co-investigators)** | [sop_faculty_personnel.md](Docs/sop_faculty_personnel.md) | Registration, roster, Form B overview, team linking, post-approval workflow |
-| **System administrators** | [sop_admin_personnel.md](Docs/sop_admin_personnel.md) | Users, faculty roster CSV, master data, facility import, go-live checklist |
+| **Faculty (PI / co-investigators)** | [sop_faculty_personnel.md](Docs/sop_faculty_personnel.md) | Registration, roster, certified animal-handling faculty, Form B, passwords, requisitions |
+| **System administrators** | [sop_admin_personnel.md](Docs/sop_admin_personnel.md) | Users, roster CSV, certified faculty, passwords/SMTP, master data, go-live |
 | **Animal house staff (daily ops)** | [sop_facility_daily_operations.md](Docs/sop_facility_daily_operations.md) | Cleaning, entry, env logs, cages, feeding, quarantine, waste |
 
 **Facility SOP sources:** [facility_sop_source_catalog.md](Docs/facility_sop_source_catalog.md) — which industry files were selected from `Docs/source_industry/`.
@@ -313,11 +319,14 @@ You use LMCPAFM to prepare and **submit CPCSEA Form B**, track IAEC review, and 
 
 ### Path 2 — Administrator created your account
 
-1. Admin may add you under **Admin Dashboard → Create User** with role **investigator**, your email, and a **temporary password**.  
+1. Admin may add you under **Admin Dashboard → Create User** with role **investigator**, your email, and a **temporary password** (sent to you privately). Some faculty (~10–15 college-wide) are also marked **certified for animal handling**; only they may open **Requisitions** / **Allocations** and satisfy the certified-faculty rule on Form B submit.  
 2. Use **Log in** (not Register).  
-3. Complete **Investigator Profile** immediately.
+3. On first login, LMCPAFM **requires you to set a new password** before any other page opens. Enter the temporary password as **Current password**, then choose your own **New password** (minimum 8 characters).  
+4. After that, complete **Investigator Profile** if prompted.
 
-**Support staff** with the same email domain use **staff** accounts — they do **not** use this faculty registration path.
+**Forgot your password later?** On the login page, click **Forgot password?**, enter your institutional email, and follow the link in the email (link expires after about one hour). If email does not arrive, contact the LMCPAFM administrator.
+
+**Support staff** with the same email domain use **staff** accounts — they do **not** use this faculty registration path. Admin-created **staff** and **IAEC** accounts also receive a temporary password and must change it on first login.
 
 ---
 
@@ -373,7 +382,8 @@ On **Step 2 → Project Investigators**:
 3. For a **student scholar:** role **`student_contributor`**, type **`student`**.  
 4. For **co-investigator faculty:** role **`co_investigator`**, type **`faculty`**.  
 5. **Link** them to their LMCPAFM login (search email → **Link**).  
-6. Save Step 2.
+6. Before **submit**, ensure at least one linked team member is **certified for animal handling** (registered that way by admin). If you are not certified, add a certified colleague on Step 2.  
+7. Save Step 2.
 
 Students can **edit** drafts when linked; they **cannot submit** by default.
 
@@ -397,11 +407,13 @@ Students can **edit** drafts when linked; they **cannot submit** by default.
 
 ## 7. After IAEC approval — your workflow
 
+**Who can request animals:** Only investigators whose accounts are **certified for animal handling** (admin-registered ~10–15 faculty) see **Requisitions** and **Allocations** in the menu. Other faculty rely on a certified colleague on the project team to submit requisitions.
+
 1. Open **Project Workspace** for the approved project.  
 2. **Re-sync / planning:** If experiment groups should match Annexure I, use planning tools on the workspace (follow on-screen notes).  
 3. **Experiment groups:** Create or adjust groups within **approved animal limits**.  
-4. **Requisitions:** Request animals from the facility (**Requisitions** menu) — totals must respect approved caps. After submit, the **PI** may **amend** or **cancel** until staff record an **allocation** (e.g. change 15 → 12). Open **Manage** on the requisition row.  
-5. **Allocations:** Animal house **staff** fulfill requests; you track status on requisition pages.  
+4. **Requisitions:** (**Certified faculty only**) Request animals from the facility (**Requisitions** menu) — totals must respect approved caps. After submit, the **PI** may **amend** or **cancel** until staff record an **allocation** (e.g. change 15 → 12). Open **Manage** on the requisition row.  
+5. **Allocations:** Animal house **staff** record cage/animal issue; **certified** faculty track status on requisition and allocation pages.  
 6. **Experiments and logs:** Record procedures and daily logs as your protocol requires.  
 7. **Form B PDF:** Download from read-only view anytime.
 
@@ -419,6 +431,8 @@ IAEC meeting workflow (assign meeting, record decision, protocol, finalize, invi
 |---------|------------|
 | Cannot register — roster | Ask admin to add your email via faculty roster import |
 | Email already exists | Use **Login**; you were pre-created |
+| Forgot password | **Forgot password?** on login page, or ask admin to set a new temporary password |
+| Stuck on password page after login | Required first-time change; use temp password as “current”, pick a new password |
 | Submit blocked — faculty | Add a **faculty** member on Step 2 |
 | Submit blocked — missing step | Open each step; save |
 | PI sees “not IAEC-approved” but protocol exists | IAEC must **Finalize approval** |
@@ -488,30 +502,36 @@ This SOP covers:
 - **Review and final submission**  
 - Investigator actions **after submission** (tracking status, meeting invitations)
 
-This SOP does **not** cover IAEC internal committee procedures, animal requisition/allocation after approval, or Form C/D record-keeping in detail (separate facility SOPs apply).
+This SOP does **not** cover IAEC internal committee procedures or Form C/D record-keeping in detail. **After IAEC approval**, animal **requisitions** and viewing **allocations** are described in `Docs/sop_faculty_personnel.md` §7 — only faculty **certified for animal handling** (admin-registered) may use those menus.
 
 ---
 
 ## 3. Roles and eligibility
 
-| Role | How account is created | Can start Form B? | Can submit Form B? |
-|------|------------------------|-------------------|---------------------|
-| **Investigator (self-registered)** | Register at `/register-investigator` | Yes, after profile complete | Yes, if marked as submitter on the Form B team |
-| **LMCP faculty investigator** | Same as above; profile must indicate faculty | Yes | Yes (required: at least one faculty member must be on the Form B team before submission) |
-| **Student contributor** | Added by PI on Form B Step 2 | Only if given edit permission | **No** — students cannot be the final submitter |
-| **Co-investigator (linked user)** | Added on Step 2 and linked to registered account | If given edit permission | Only if given submit permission |
+| Role | How account is created | Can start Form B? | Can submit Form B? | Requisitions / allocations (after approval) |
+|------|------------------------|-------------------|---------------------|---------------------------------------------|
+| **Investigator (self-registered)** | Register at `/register-investigator` | Yes, after profile complete | Yes, if submitter on team **and** certified faculty linked | **No** unless admin marks account certified |
+| **Admin-created faculty** | Admin Dashboard → Create User → investigator | Yes | Same as above | **Yes** if **Certified for animal handling** ticked at creation |
+| **Student contributor** | Added by PI on Form B Step 2 | If given edit permission | **No** | **No** |
+| **Co-investigator (linked user)** | Step 2 + link to login | If given edit permission | If given submit permission | Only if their login is **certified** |
 
-### 3.1 Registration requirements
+### 3.1 Registration and passwords
 
-- Use an **LMCP institutional email** (typically `@lmcp.ac.in`).  
-- Password must be **at least 8 characters**.  
-- Registration creates an account with the **investigator** role only.  
+- Use an **LMCP institutional email** (typically `@lmcp.ac.in`) for self-registration.  
+- Password must be **at least 8 characters** (you choose it at registration).  
+- **Forgot password?** on the login page sends a reset link by email (requires college SMTP configuration).  
+- **Admin-created** accounts receive a **temporary password**; first login opens **Set your password** before any other page.  
+- After login, use **Password** in the top menu to change password anytime.  
 - Admin/staff/IAEC accounts are **not** created through self-registration.
 
-### 3.2 Faculty requirement for submission
+### 3.2 Faculty and certified animal-handler rules for submission
 
-Before Form B can be submitted, the system checks that **at least one LMCP faculty investigator** is associated with the application (via the investigators list on Step 2, with investigator type **faculty**).  
-Applications led only by students or non-faculty members **will be rejected at submission**.
+Before Form B can be submitted, the system checks:
+
+1. **At least one LMCP faculty** on the team (Step 2, type **faculty**, or linked profile with **I am LMCP faculty**).  
+2. **At least one linked login** on the team whose account is **certified for animal handling** by the administrator (~10–15 faculty college-wide with documented animal-work experience).
+
+If you are not certified, add a certified colleague on Step 2 and **Link** their LMCPAFM account before **Submit Form B**. The **LMCP faculty** checkbox alone does **not** grant certification.
 
 ---
 
@@ -897,6 +917,7 @@ Click **Save and continue** → Review page.
 | Study plan (Annexure I) complete | |
 | Hazardous certificates uploaded if Step 7 references provided | |
 | At least one LMCP faculty on investigator team | |
+| At least one **certified animal-handling** faculty **linked** on Step 2 | |
 | You have submit permission on this Form B | |
 
 #### 7.8.2 Submit action
@@ -999,6 +1020,9 @@ Supported upload format: **PDF** (recommended).
 | Step 5 special housing error | Special/Other housing without details | Fill **Special requirements** |
 | Step 7 certificate error | Reference entered but file missing | Upload matching certificate |
 | Submit blocked — faculty | No faculty on team | Add LMCP faculty member on Step 2 |
+| Submit blocked — certified faculty | No linked certified handler | Ask admin who is certified; link them on Step 2 |
+| No Requisitions menu | Account not certified | Certified colleague submits requisitions, or ask admin |
+| Forgot password / locked out | — | **Forgot password?** or contact admin for password reset |
 | Submit blocked — missing step | Step not saved | Open missing step and save |
 | Cannot edit after submit | Normal behaviour | Open **View submitted Form B** from project workspace; contact IAEC for approved amendments |
 | Wizard opens then redirects to view page | Form B already submitted | Expected — use read-only view and PDF download |
@@ -1012,6 +1036,8 @@ Supported upload format: **PDF** (recommended).
 |------|-----|
 | Register | `/register-investigator` |
 | Login | `/login` |
+| Forgot password | `/forgot-password` |
+| Change password (logged in) | `/account/password` |
 | Investigator profile | `/investigator-profile` |
 | Investigator dashboard | `/investigator-dashboard` |
 | Form B Step 1 | `/form-b/step-1` |
@@ -1061,7 +1087,7 @@ Students usually **do not submit** Form B to IAEC. Your faculty guide (Principal
 3. Help **type and save** Form B sections after your guide **adds and links** you on the project team.  
 4. After IAEC approval, help with **experiment records** only if your guide allows it on the **Project Workspace**.
 
-You **cannot** replace your guide for IAEC approval. At least one **LMCP faculty member** must be on every Form B before submission.
+You **cannot** replace your guide for IAEC approval. At least one **LMCP faculty member** and one **admin-certified animal-handling faculty** (linked on Step 2) must be on every Form B before submission. Students do **not** receive requisition/allocation menus.
 
 ---
 
@@ -1086,7 +1112,8 @@ If the administrator created an account for you:
 1. Open the LMCPAFM website (link from your college).  
 2. Click **Log in** (not Register).  
 3. Use the email and **temporary password** your guide or admin sent you.  
-4. Change your password later if your college policy requires it (use a strong password).
+4. On first login, the system **requires** you to choose a **new password** before you can open any other page (minimum 8 characters).  
+5. Later, use **Forgot password?** on the login page or **Password** in the menu after log in.
 
 ### Option B — You register yourself
 
@@ -1275,12 +1302,14 @@ It is written to be **unambiguous**: every procedure explains **what to do**, **
 | **iaec** | Created by superadmin | `/iaec-projects` | Ethics review, meetings, certificates |
 | **admin** | Created by another superadmin | `/admin-dashboard` | System administration, facility control |
 | **staff** | Created by superadmin or staff user page | `/allocations` | Animal issue, facility care (not covered in detail here) |
-| **investigator** | Self-registration only | `/` (investigator dashboard) | Form B submission |
+| **investigator** | Self-registration **or** admin Create User | `/` (investigator dashboard) | Form B; requisitions only if **certified for animal handling** |
 
 **Important distinctions:**
 
 - **Superadmin** = user with the `admin` role. There is no separate “superadmin” role name in the database.  
-- **Investigator accounts cannot be created** from the admin console. Investigators must register at `/register-investigator`.  
+- **Investigator accounts** may be **self-registered** (when roster policy allows) **or** created on **Admin Dashboard → Create User** with role **investigator**.  
+- **Certified animal-handling faculty** (~10–15 college-wide): admin ticks **Certified for animal handling** at creation (or CSV import `animal_handler=yes`). Required **linked** on Form B before submit; only these investigators see **Requisitions** / **Allocations** menus (staff/IAEC unchanged).  
+- **Temporary passwords** for admin-created users force **Set your password** on first login. **Forgot password?** on the login page needs `FRONTEND_PUBLIC_URL` and `IAEC_SMTP_*` in `.env`.  
 - Users may hold **multiple roles** (e.g. `admin` + `staff`). The system grants access if **any** assigned role matches the page requirement.  
 - IAEC frontend pages require the `iaec` role. A superadmin without the `iaec` role **cannot open IAEC Dashboard** from the browser, even though some backend APIs allow admin access.
 
@@ -1318,6 +1347,8 @@ Configure in `.env` (see `.env.example`):
 | `IAEC_SMTP_USERNAME` / `IAEC_SMTP_PASSWORD` | SMTP auth | App password for cloud mail |
 | `IAEC_SENDER_EMAIL` | From address | e.g. `iaec@lmcp.ac.in` |
 | `IAEC_SENDER_NAME` | From display name | e.g. `Member Secretary IAEC` |
+| `FRONTEND_PUBLIC_URL` | Password-reset email links | Public HTTPS site URL, e.g. `https://lmcpafm-staging.lmcp.ac.in` |
+| `PASSWORD_RESET_TOKEN_MINUTES` | Reset link lifetime | Default 60 minutes |
 | `IAEC_PPT_GOOGLE_FORM_URL` | Optional | Link for PI to upload presentation |
 | `IAEC_SUPPORT_CONTACT` | Optional | Shown in invitation email |
 | `LMCP_ESTABLISHMENT_NAME` | Certificates/PDFs | Default: L. M. College of Pharmacy, Ahmedabad |
@@ -1946,7 +1977,7 @@ This SOP does **not** replace an **IAEC-approved protocol** for experimental pro
 | **Facility staff** | Perform tasks in this SOP; enter **care** and **environment** logs in LMCPAFM |
 | **Facility in-charge** | Supervise compliance; escalate deviations; coordinate with IAEC/admin |
 | **Administrator** | Maintain rooms, cages, and master data in **Admin → Facility** |
-| **Investigators** | Animal use only after IAEC approval; requisitions and allocations via LMCPAFM |
+| **Investigators** | Animal use only after IAEC approval; **certified animal-handling faculty** submit requisitions and view allocations in LMCPAFM (staff record allocations) |
 
 ---
 
@@ -2202,6 +2233,7 @@ The same **institutional email domain** (for example `@lmcp.ac.in`) is used by f
 | Person | LMCPAFM role | How account is created |
 |--------|--------------|-------------------------|
 | **Faculty PI** | `investigator` | Self-register **if on faculty roster** (when enforced), **or** admin pre-creates investigator |
+| **Faculty certified for animal handling** (~10–15) | `investigator` + **certified** flag | Admin **Create User** (tick certified) or CSV import with `animal_handler=yes` |
 | **Student / scholar** | `investigator` (limited) | Usually admin pre-create **or** register only if college allows; linked on Form B Step 2 by PI |
 | **Animal house support** | `staff` | **Admin only** — Create User → role **staff** |
 | **IAEC member / secretary** | `iaec` | **Admin only** |
@@ -2217,7 +2249,13 @@ The same **institutional email domain** (for example `@lmcp.ac.in`) is used by f
 2. **Log in** with your admin email and password.  
 3. You should land on **Admin Dashboard** (`/admin-dashboard`).
 
-If you cannot log in, use the server bootstrap script (see Section 10) or contact IT.
+If you cannot log in:
+
+1. Try **Forgot password?** on the login page (requires `IAEC_SMTP_*` and `FRONTEND_PUBLIC_URL` in `.env`).  
+2. Or use the server bootstrap script (see Section 10) with `--update-if-exists`.  
+3. Or ask another admin to **Reset password** for your account on the Admin Dashboard.
+
+To change your own password while logged in, use **Password** in the top navigation.
 
 ---
 
@@ -2227,7 +2265,7 @@ If you cannot log in, use the server bootstrap script (see Section 10) or contac
 |---------|---------|
 | **Facility summary** | Quick link to facility operations |
 | **Create User** | New staff, IAEC, admin, or **investigator** accounts |
-| **User Directory** | List users, filter by role, delete accounts (not yourself) |
+| **User Directory** | List users, filter by role, **reset password**, delete accounts (not yourself) |
 | **Activity Logs** | Recent admin actions |
 | **Quick Navigation** | IAEC Dashboard, Facility, Master Data, Form C, Allocations, Requisitions |
 
@@ -2250,11 +2288,24 @@ If you cannot log in, use the server bootstrap script (see Section 10) or contac
 
 6. Click **Create User**.
 
+**Temporary password policy:**
+
+- Every account you create here gets a **temporary password**. The user **must change it on first login**; the app opens **Set your password** and blocks other menus until they do.  
+- Send the temporary password **privately** (not in a group chat).  
+- To issue a new temporary password later, use **User Directory → Reset password** (admin only) or **Forgot password?** on the login page if SMTP is configured.
+
 **Investigator pre-registration:**
 
 - Email must be an **allowed institutional address**.  
 - System creates an empty **Investigator Profile**; faculty must complete profile before Form B.  
 - Roster enforcement applies to **self-registration**, not necessarily to admin create — you can pre-create a faculty account even when roster is used.
+
+**Certified animal-handling faculty (~10–15 of ~50):**
+
+- When creating an **investigator**, tick **Certified for animal handling** for faculty with documented animal-work experience.  
+- These accounts may use **Requisitions** and **Allocations** (investigator menus) and count toward the **Form B submit** rule (at least one **linked** certified faculty on the project team).  
+- Other faculty may self-register or be pre-created **without** the tick; they may draft Form B but must **link a certified colleague** on Step 2 before submit.  
+- Bulk import: `scripts/import_faculty_investigators.py` with CSV column `animal_handler` = `yes`, or `--certify-all` when the file lists only certified faculty.
 
 **Role rules in UI:**
 
@@ -2419,6 +2470,7 @@ Then rebuild/restart containers if instructed in release notes.
 
 - [ ] Production URL and HTTPS working  
 - [ ] `.env` secrets set (JWT, database, not defaults)  
+- [ ] `FRONTEND_PUBLIC_URL` and `IAEC_SMTP_*` set if using **Forgot password?** email  
 - [ ] At least one **admin** account  
 - [ ] **IAEC** and **staff** accounts created  
 - [ ] **Faculty roster** CSV imported  
@@ -2435,7 +2487,9 @@ Then rebuild/restart containers if instructed in release notes.
 | User says | You do |
 |-----------|--------|
 | “I cannot register as investigator” | Check roster + enforce flag; add email to CSV import; or pre-create investigator account |
-| “Email already exists” | Tell them to **Log in** or reset password (if policy allows manual reset via new temp password by recreating — prefer password change process your college uses) |
+| “Email already exists” | Tell them to **Log in**, use **Forgot password?**, or you **Reset password** in User Directory |
+| “Forgot password / locked out” | Confirm SMTP + public URL; or **Reset password** in User Directory; bootstrap only for emergencies |
+| “Stuck on password screen” | Normal for first login after admin create or CSV import — they must set a new password |
 | “Student cannot see Form B” | PI must link student on Form B Step 2; student profile complete |
 | “Support staff registered as investigator by mistake” | Delete wrong account if policy allows; recreate as **staff** |
 | “Form C is empty” | Normal until staff enter facility/allocation data |

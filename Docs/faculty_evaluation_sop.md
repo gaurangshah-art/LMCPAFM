@@ -111,7 +111,7 @@ Record issues using the **feedback form** (link from admin) or email the project
 Walk through all Form B steps:
 
 1. **Step 1** — Project title, type, funding source
-2. **Step 2** — Investigators, funding proof upload
+2. **Step 2** — Investigators, funding proof upload; **link** at least one **certified animal-handling** faculty login before submit
 3. **Step 2b** — Study plan (phases/groups), optional **one species/strain for whole project**, annexure preview
 4. **Steps 4–7** — Procedures, anaesthesia, euthanasia, declarations; optional **LMCP default text pack**
 5. **Review** — Summary accurate; submit
@@ -121,7 +121,8 @@ Walk through all Form B steps:
 
 - Data persists when moving back/forward between steps
 - Validation messages are clear on missing required fields (shown near Save/Next buttons)
-- Submit changes project status (visible on dashboard / project view)
+- Submit changes project status (visible on dashboard / project view); fails with clear message if no certified faculty linked
+- **Certified** test login sees Requisitions; **non-certified** login does not
 - After submit, Form B wizard steps redirect to **read-only view** (`/form-b/view`) — editing is blocked
 - Attachments upload if applicable (Annexure, funding proof)
 

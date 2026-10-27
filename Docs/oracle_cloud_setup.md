@@ -109,7 +109,9 @@ nano .env
 | `JWT_SECRET_KEY` | Long random string |
 | `VITE_API_BASE_URL` | `https://lmcpafm-staging.lmcp.ac.in/api` |
 | `CORS_ALLOW_ORIGINS` | `https://lmcpafm-staging.lmcp.ac.in` |
-| `IAEC_SMTP_*` | Working SMTP credentials |
+| `IAEC_SMTP_*` | Working SMTP credentials (Form B invitations + **Forgot password?**) |
+| `FRONTEND_PUBLIC_URL` | `https://lmcpafm-staging.lmcp.ac.in` (password-reset links) |
+| `PORT` | Host API port if not 8000 (e.g. `8001` — use in `curl`, not always 8000) |
 
 Update `deploy/nginx/lmcpafm-staging.conf` — replace `server_name` with your domain.
 
@@ -133,7 +135,7 @@ Wait until healthy:
 
 ```bash
 docker compose ps
-curl -s http://127.0.0.1:8000/health/ready
+curl -s "http://127.0.0.1:${PORT:-8000}/health/ready"
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8080/
 ```
 
@@ -175,7 +177,16 @@ docker compose exec backend python scripts/bootstrap_first_user.py \
   --roles "admin,iaec,staff"
 ```
 
-Log in at your staging URL. Validators register at `/register-investigator` with `@lmcp.ac.in` emails.
+Log in at your staging URL.
+
+**Faculty accounts:**
+
+- **~50 roster:** `scripts/import_faculty_roster.py` (self-register allowlist when enforced).  
+- **~10–15 animal-handling faculty:** Admin **Create User** → investigator + **Certified for animal handling**, or `import_faculty_investigators.py` with CSV column `animal_handler=yes` (or `--certify-all` on a dedicated file).  
+- Send **temporary passwords privately**; users must **change password** on first login.  
+- **Forgot password?** on the login page after SMTP and `FRONTEND_PUBLIC_URL` are set.
+
+Other validators may still **self-register** at `/register-investigator` when roster policy allows.
 
 ---
 

@@ -15,8 +15,11 @@
 | `tests/test_resources_router.py` | In-app SOP catalog and role filtering |
 | `tests/test_requisition.py` | Create/get requisition |
 | `tests/test_requisition_amend.py` | PI amend; block after allocation |
+| `tests/test_password_reset.py` / `tests/test_auth_endpoints.py` | Forgot/change password |
+| `tests/test_must_change_password.py` | Mandatory change after admin create |
+| `tests/test_certified_animal_handler.py` | Certified faculty gating |
 
-Run locally: `python -m pytest tests/test_formb_study_plan.py tests/test_formb_copy.py tests/test_resources_router.py tests/test_requisition.py tests/test_requisition_amend.py`
+Run locally: `python -m pytest tests/test_formb_study_plan.py tests/test_formb_copy.py tests/test_resources_router.py tests/test_requisition.py tests/test_requisition_amend.py tests/test_password_reset.py tests/test_must_change_password.py tests/test_certified_animal_handler.py`
 
 ---
 
@@ -24,6 +27,9 @@ Run locally: `python -m pytest tests/test_formb_study_plan.py tests/test_formb_c
 
 1. `a7b8c9d0e1f2` — study group species/strain **Other** text fields  
 2. `b8c9d0e1f2a3` — requisition **status**, amend/cancel timestamps  
+3. `a8b9c0d1e2f3` — password reset tokens  
+4. `b9c0d1e2f3a4` — must change password after admin create  
+5. `c0d1e2f3a4b5` — certified animal-handler flag on users  
 
 Command: `alembic upgrade head`
 

@@ -116,11 +116,13 @@ Students can **edit** drafts when linked; they **cannot submit** by default.
 
 ## 7. After IAEC approval — your workflow
 
+**Who can request animals:** Only investigators whose accounts are **certified for animal handling** (admin-registered ~10–15 faculty) see **Requisitions** and **Allocations** in the menu. Other faculty rely on a certified colleague on the project team to submit requisitions.
+
 1. Open **Project Workspace** for the approved project.  
 2. **Re-sync / planning:** If experiment groups should match Annexure I, use planning tools on the workspace (follow on-screen notes).  
 3. **Experiment groups:** Create or adjust groups within **approved animal limits**.  
-4. **Requisitions:** Request animals from the facility (**Requisitions** menu) — totals must respect approved caps. After submit, the **PI** may **amend** or **cancel** until staff record an **allocation** (e.g. change 15 → 12). Open **Manage** on the requisition row.  
-5. **Allocations:** Animal house **staff** fulfill requests; you track status on requisition pages.  
+4. **Requisitions:** (**Certified faculty only**) Request animals from the facility (**Requisitions** menu) — totals must respect approved caps. After submit, the **PI** may **amend** or **cancel** until staff record an **allocation** (e.g. change 15 → 12). Open **Manage** on the requisition row.  
+5. **Allocations:** Animal house **staff** record cage/animal issue; **certified** faculty track status on requisition and allocation pages.  
 6. **Experiments and logs:** Record procedures and daily logs as your protocol requires.  
 7. **Form B PDF:** Download from read-only view anytime.
 

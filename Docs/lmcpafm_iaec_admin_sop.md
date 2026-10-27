@@ -55,12 +55,14 @@ It is written to be **unambiguous**: every procedure explains **what to do**, **
 | **iaec** | Created by superadmin | `/iaec-projects` | Ethics review, meetings, certificates |
 | **admin** | Created by another superadmin | `/admin-dashboard` | System administration, facility control |
 | **staff** | Created by superadmin or staff user page | `/allocations` | Animal issue, facility care (not covered in detail here) |
-| **investigator** | Self-registration only | `/` (investigator dashboard) | Form B submission |
+| **investigator** | Self-registration **or** admin Create User | `/` (investigator dashboard) | Form B; requisitions only if **certified for animal handling** |
 
 **Important distinctions:**
 
 - **Superadmin** = user with the `admin` role. There is no separate “superadmin” role name in the database.  
-- **Investigator accounts cannot be created** from the admin console. Investigators must register at `/register-investigator`.  
+- **Investigator accounts** may be **self-registered** (when roster policy allows) **or** created on **Admin Dashboard → Create User** with role **investigator**.  
+- **Certified animal-handling faculty** (~10–15 college-wide): admin ticks **Certified for animal handling** at creation (or CSV import `animal_handler=yes`). Required **linked** on Form B before submit; only these investigators see **Requisitions** / **Allocations** menus (staff/IAEC unchanged).  
+- **Temporary passwords** for admin-created users force **Set your password** on first login. **Forgot password?** on the login page needs `FRONTEND_PUBLIC_URL` and `IAEC_SMTP_*` in `.env`.  
 - Users may hold **multiple roles** (e.g. `admin` + `staff`). The system grants access if **any** assigned role matches the page requirement.  
 - IAEC frontend pages require the `iaec` role. A superadmin without the `iaec` role **cannot open IAEC Dashboard** from the browser, even though some backend APIs allow admin access.
 
@@ -98,6 +100,8 @@ Configure in `.env` (see `.env.example`):
 | `IAEC_SMTP_USERNAME` / `IAEC_SMTP_PASSWORD` | SMTP auth | App password for cloud mail |
 | `IAEC_SENDER_EMAIL` | From address | e.g. `iaec@lmcp.ac.in` |
 | `IAEC_SENDER_NAME` | From display name | e.g. `Member Secretary IAEC` |
+| `FRONTEND_PUBLIC_URL` | Password-reset email links | Public HTTPS site URL, e.g. `https://lmcpafm-staging.lmcp.ac.in` |
+| `PASSWORD_RESET_TOKEN_MINUTES` | Reset link lifetime | Default 60 minutes |
 | `IAEC_PPT_GOOGLE_FORM_URL` | Optional | Link for PI to upload presentation |
 | `IAEC_SUPPORT_CONTACT` | Optional | Shown in invitation email |
 | `LMCP_ESTABLISHMENT_NAME` | Certificates/PDFs | Default: L. M. College of Pharmacy, Ahmedabad |

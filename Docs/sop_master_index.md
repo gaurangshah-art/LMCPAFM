@@ -17,8 +17,10 @@ Fill **Reviewer** and **Date** as you complete each pass.
 | SOPs in app | **SOPs & guides** (`/resources`), dashboard **Open guides**, browser **Save as PDF** |
 | Requisitions | PI **amend/cancel** until first staff/IAEC **allocation** |
 | IAEC / imports | CSV tooling for meetings, carryover protocols, faculty roster (see admin SOP) |
+| Passwords | **Forgot password?**, logged-in **Password**, admin **Reset password**, mandatory change after admin create |
+| Animal-handling faculty | Admin **certified** flag (~10–15); Form B submit + requisitions gated (see faculty/admin SOP) |
 
-**Pre-QA technical checks:** `alembic upgrade head` (includes `a7b8c9d0e1f2`, `b8c9d0e1f2a3`), `pip install -r requirements.txt`, backend + frontend deploy. Automated tests: Form B study plan/copy, resources API, requisition amend.
+**Pre-QA technical checks:** `alembic upgrade head` (through password-reset, must-change-password, and certified-handler migrations), `pip install -r requirements.txt`, backend + frontend deploy. Set `FRONTEND_PUBLIC_URL` and SMTP for email reset. Automated tests: Form B study plan/copy, resources API, requisition amend, password and certification policy tests.
 
 **Sign-off after QA:** Update statuses in §1–3 to `APPROVED` and record date below.
 
@@ -35,7 +37,7 @@ These are the documents investigators should receive (PDF or in-app when availab
 | 3 | [sop_student_personnel.md](./sop_student_personnel.md) | Scholars / students on Form B | QA CANDIDATE | | | Linking, edit vs submit |
 | 4 | [sop_personnel_index.md](./sop_personnel_index.md) | All users — start here | QA CANDIDATE | | | Map + in-app `/resources` |
 
-**Review focus for rows 1–4:** URLs/paths match production; faculty roster steps accurate; Form B step list matches app; simple English; no industry/CRO branding left in text.
+**Review focus for rows 1–4:** URLs/paths match production; faculty roster + **certified animal-handler** rules accurate; password recovery and first-login change documented; Form B step list matches app; simple English; no industry/CRO branding left in text.
 
 ---
 
@@ -144,7 +146,7 @@ After login, all users open **SOPs & guides** in the top navigation (`/resources
 ## 7. Pre-commit checklist (coordinator)
 
 - [ ] Every row in §1–3 reviewed; status set to APPROVED or change requests noted  
-- [ ] `lmcpafm_iaec_admin_sop.md` updated for roster + admin-create investigator (if still says “self-registration only”)  
+- [ ] `lmcpafm_iaec_admin_sop.md` updated for roster, admin-create investigator, certified faculty, and password/SMTP env  
 - [ ] `form_b_investigator_sop.md` spot-checked against staging (Steps 1–7, review)  
 - [ ] Facility SOP annex: local temp/RH limits and quarantine days filled in  
 - [ ] `source_industry` in `.gitignore`  

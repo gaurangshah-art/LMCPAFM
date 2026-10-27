@@ -33,7 +33,7 @@ This SOP does **not** replace an **IAEC-approved protocol** for experimental pro
 | **Facility staff** | Perform tasks in this SOP; enter **care** and **environment** logs in LMCPAFM |
 | **Facility in-charge** | Supervise compliance; escalate deviations; coordinate with IAEC/admin |
 | **Administrator** | Maintain rooms, cages, and master data in **Admin → Facility** |
-| **Investigators** | Animal use only after IAEC approval; requisitions and allocations via LMCPAFM |
+| **Investigators** | Animal use only after IAEC approval; **certified animal-handling faculty** submit requisitions and view allocations in LMCPAFM (staff record allocations) |
 
 ---
 

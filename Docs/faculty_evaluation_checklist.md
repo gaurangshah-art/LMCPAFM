@@ -31,6 +31,8 @@
 | A6 | Forms save and reload correctly on revisit | | |
 | A7 | Error messages are understandable | | |
 | A8 | PDF downloads open and text/tables are readable | | |
+| A9 | **Forgot password?** sends email (or clear SMTP error) when tested | | |
+| A10 | Admin-created user forced to **Set your password** on first login | | |
 
 ---
 
@@ -54,6 +56,8 @@
 | B14 | Step 2b — one project species/strain applies to all groups when enabled | | |
 | B15 | PI can amend/cancel requisition before staff allocation (`/requisitions/{id}` → Manage) | | |
 | B16 | **SOPs & guides** (`/resources`) opens role-appropriate manuals | | |
+| B17 | **Certified** investigator sees **Requisitions** / **Allocations** in nav | | |
+| B18 | **Non-certified** investigator: no requisition nav; submit blocked until certified colleague **linked** on Step 2 | | |
 
 ---
 

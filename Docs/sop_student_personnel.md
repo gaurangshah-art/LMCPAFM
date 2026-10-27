@@ -17,7 +17,7 @@ Students usually **do not submit** Form B to IAEC. Your faculty guide (Principal
 3. Help **type and save** Form B sections after your guide **adds and links** you on the project team.  
 4. After IAEC approval, help with **experiment records** only if your guide allows it on the **Project Workspace**.
 
-You **cannot** replace your guide for IAEC approval. At least one **LMCP faculty member** must be on every Form B before submission.
+You **cannot** replace your guide for IAEC approval. At least one **LMCP faculty member** and one **admin-certified animal-handling faculty** (linked on Step 2) must be on every Form B before submission. Students do **not** receive requisition/allocation menus.
 
 ---
 

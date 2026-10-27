@@ -137,11 +137,11 @@ Path: **Admin Dashboard → Master data** (`/admin/masters`)
 
 ### 4.6 Sample workflow data (recommended)
 
-- [ ] One investigator account registered and profile **complete**  
-- [ ] One Form B submitted (so IAEC evaluators have something to review)  
-- [ ] Optional: one project approved for post-approval testing (requisitions, logs)  
+- [ ] At least one **certified animal-handling** investigator account (admin Create User + certified tick)  
+- [ ] One investigator profile **complete**; Form B submitted with certified faculty **linked** on Step 2  
+- [ ] Optional: one project approved for post-approval testing (requisitions, logs) — use **certified** login for requisition tests  
 
-You can submit a test Form B yourself using an investigator test account.
+Use a **certified** test investigator for submit and requisition scenarios; use a **non-certified** login to confirm menus stay hidden and submit is blocked without a certified colleague on the team.
 
 ### 4.7 Faculty materials ready
 
@@ -159,7 +159,7 @@ You can submit a test Form B yourself using an investigator test account.
 
 | Role | Suggested count | Created how |
 |:-----|:----------------|:------------|
-| Investigator | 2–3 faculty | Self-register at `/register-investigator` |
+| Investigator | 2–3 faculty | One **certified** via admin Create User; others self-register or admin-create without certified tick |
 | IAEC | 2–3 members | Admin Dashboard or bootstrap |
 | Staff | 1–2 animal house staff | Admin Dashboard or bootstrap |
 | Admin | 1 coordinator | Bootstrap (you) |

@@ -75,7 +75,7 @@ Use **HTTPS** on staging (padlock visible). Staging data is for testing only; ap
 | **Staff** | Allocations, facility records, Form C, facility SOP zip (in-app) |
 | **Admin** | Users, master data, facility admin — no bypass of IAEC approval |
 
-Credentials are issued by the **LMCPAFM coordinator**. Investigators may **self-register** with `@lmcp.ac.in` if the coordinator allows it.
+Credentials are issued by the **LMCPAFM coordinator**. Investigators may **self-register** with `@lmcp.ac.in` if roster policy allows, or receive **admin-created** logins (temporary password + mandatory change on first login). **Forgot password?** requires SMTP. **Certified animal-handling faculty** (~10–15) are admin-flagged for Form B submit and requisitions — see Part 5 and Part 10.
 
 ### 1.4 Suggested timeline
 
@@ -97,10 +97,12 @@ Email or form (per coordinator) with: **name, role, date/time, URL, steps to rep
 ### 2.1 All roles
 
 1. **Login** with assigned credentials → correct dashboard for role.  
-2. Open a URL for another role → **Not authorized** or redirect.  
-3. **Logout** → cannot access protected pages without login.  
-4. Save a form → reload page → data persists.  
-5. Download a PDF → opens; tables readable; LMCP branding present.
+2. **Forgot password?** (optional) → email or clear SMTP error.  
+3. Admin-created user → **Set your password** before other pages.  
+4. Open a URL for another role → **Not authorized** or redirect.  
+5. **Logout** → cannot access protected pages without login.  
+6. Save a form → reload page → data persists.  
+7. Download a PDF → opens; tables readable; LMCP branding present.
 
 ### 2.2 Investigator
 
@@ -113,9 +115,9 @@ Email or form (per coordinator) with: **name, role, date/time, URL, steps to rep
    - Uncheck only for mixed-species studies.  
 6. **Form B Steps 4–7** — procedures, anaesthesia, euthanasia, declarations; optional **LMCP default text pack** banners on Steps 4–6.  
 7. **Wizard progress** — step indicator and time estimate visible on long steps.  
-8. **Review** — summary matches entered data → **Submit** → status **submitted**; wizard becomes read-only (`/form-b/view`).  
+8. **Review** — summary matches entered data → **Submit** (requires **certified animal-handling** faculty linked on Step 2) → status **submitted**; wizard becomes read-only (`/form-b/view`).  
 9. **Form B PDF** and **study plan annexure PDF** from Step 2b preview if offered.  
-10. **Post-approval** (coordinator provides approved test project): requisition, **amend requisition before allocation**, experiment group, experiment log, final report.
+10. **Post-approval** (coordinator provides approved test project): requisition with **certified** login, **amend requisition before allocation**, experiment group, experiment log, final report. Confirm **non-certified** investigator does not see Requisitions menu.
 11. **SOPs & guides** (`/resources`) — open a manual; **Save as PDF** if needed for offline QA notes.
 
 **Reference:** Part 6 (Form B manual) for field-level detail.

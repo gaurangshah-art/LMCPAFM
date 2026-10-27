@@ -32,30 +32,36 @@ This SOP covers:
 - **Review and final submission**  
 - Investigator actions **after submission** (tracking status, meeting invitations)
 
-This SOP does **not** cover IAEC internal committee procedures, animal requisition/allocation after approval, or Form C/D record-keeping in detail (separate facility SOPs apply).
+This SOP does **not** cover IAEC internal committee procedures or Form C/D record-keeping in detail. **After IAEC approval**, animal **requisitions** and viewing **allocations** are described in `Docs/sop_faculty_personnel.md` §7 — only faculty **certified for animal handling** (admin-registered) may use those menus.
 
 ---
 
 ## 3. Roles and eligibility
 
-| Role | How account is created | Can start Form B? | Can submit Form B? |
-|------|------------------------|-------------------|---------------------|
-| **Investigator (self-registered)** | Register at `/register-investigator` | Yes, after profile complete | Yes, if marked as submitter on the Form B team |
-| **LMCP faculty investigator** | Same as above; profile must indicate faculty | Yes | Yes (required: at least one faculty member must be on the Form B team before submission) |
-| **Student contributor** | Added by PI on Form B Step 2 | Only if given edit permission | **No** — students cannot be the final submitter |
-| **Co-investigator (linked user)** | Added on Step 2 and linked to registered account | If given edit permission | Only if given submit permission |
+| Role | How account is created | Can start Form B? | Can submit Form B? | Requisitions / allocations (after approval) |
+|------|------------------------|-------------------|---------------------|---------------------------------------------|
+| **Investigator (self-registered)** | Register at `/register-investigator` | Yes, after profile complete | Yes, if submitter on team **and** certified faculty linked | **No** unless admin marks account certified |
+| **Admin-created faculty** | Admin Dashboard → Create User → investigator | Yes | Same as above | **Yes** if **Certified for animal handling** ticked at creation |
+| **Student contributor** | Added by PI on Form B Step 2 | If given edit permission | **No** | **No** |
+| **Co-investigator (linked user)** | Step 2 + link to login | If given edit permission | If given submit permission | Only if their login is **certified** |
 
-### 3.1 Registration requirements
+### 3.1 Registration and passwords
 
-- Use an **LMCP institutional email** (typically `@lmcp.ac.in`).  
-- Password must be **at least 8 characters**.  
-- Registration creates an account with the **investigator** role only.  
+- Use an **LMCP institutional email** (typically `@lmcp.ac.in`) for self-registration.  
+- Password must be **at least 8 characters** (you choose it at registration).  
+- **Forgot password?** on the login page sends a reset link by email (requires college SMTP configuration).  
+- **Admin-created** accounts receive a **temporary password**; first login opens **Set your password** before any other page.  
+- After login, use **Password** in the top menu to change password anytime.  
 - Admin/staff/IAEC accounts are **not** created through self-registration.
 
-### 3.2 Faculty requirement for submission
+### 3.2 Faculty and certified animal-handler rules for submission
 
-Before Form B can be submitted, the system checks that **at least one LMCP faculty investigator** is associated with the application (via the investigators list on Step 2, with investigator type **faculty**).  
-Applications led only by students or non-faculty members **will be rejected at submission**.
+Before Form B can be submitted, the system checks:
+
+1. **At least one LMCP faculty** on the team (Step 2, type **faculty**, or linked profile with **I am LMCP faculty**).  
+2. **At least one linked login** on the team whose account is **certified for animal handling** by the administrator (~10–15 faculty college-wide with documented animal-work experience).
+
+If you are not certified, add a certified colleague on Step 2 and **Link** their LMCPAFM account before **Submit Form B**. The **LMCP faculty** checkbox alone does **not** grant certification.
 
 ---
 
@@ -441,6 +447,7 @@ Click **Save and continue** → Review page.
 | Study plan (Annexure I) complete | |
 | Hazardous certificates uploaded if Step 7 references provided | |
 | At least one LMCP faculty on investigator team | |
+| At least one **certified animal-handling** faculty **linked** on Step 2 | |
 | You have submit permission on this Form B | |
 
 #### 7.8.2 Submit action
@@ -543,6 +550,9 @@ Supported upload format: **PDF** (recommended).
 | Step 5 special housing error | Special/Other housing without details | Fill **Special requirements** |
 | Step 7 certificate error | Reference entered but file missing | Upload matching certificate |
 | Submit blocked — faculty | No faculty on team | Add LMCP faculty member on Step 2 |
+| Submit blocked — certified faculty | No linked certified handler | Ask admin who is certified; link them on Step 2 |
+| No Requisitions menu | Account not certified | Certified colleague submits requisitions, or ask admin |
+| Forgot password / locked out | — | **Forgot password?** or contact admin for password reset |
 | Submit blocked — missing step | Step not saved | Open missing step and save |
 | Cannot edit after submit | Normal behaviour | Open **View submitted Form B** from project workspace; contact IAEC for approved amendments |
 | Wizard opens then redirects to view page | Form B already submitted | Expected — use read-only view and PDF download |
@@ -556,6 +566,8 @@ Supported upload format: **PDF** (recommended).
 |------|-----|
 | Register | `/register-investigator` |
 | Login | `/login` |
+| Forgot password | `/forgot-password` |
+| Change password (logged in) | `/account/password` |
 | Investigator profile | `/investigator-profile` |
 | Investigator dashboard | `/investigator-dashboard` |
 | Form B Step 1 | `/form-b/step-1` |

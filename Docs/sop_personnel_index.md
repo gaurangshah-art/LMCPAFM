@@ -5,8 +5,8 @@ Simple-English standard operating procedures by audience:
 | Audience | Document | Contents |
 |----------|----------|----------|
 | **Students / research scholars** | [sop_student_personnel.md](./sop_student_personnel.md) | Account, profile, helping on Form B, permissions, after approval |
-| **Faculty (PI / co-investigators)** | [sop_faculty_personnel.md](./sop_faculty_personnel.md) | Registration, roster, Form B overview, team linking, post-approval workflow |
-| **System administrators** | [sop_admin_personnel.md](./sop_admin_personnel.md) | Users, faculty roster CSV, master data, facility import, go-live checklist |
+| **Faculty (PI / co-investigators)** | [sop_faculty_personnel.md](./sop_faculty_personnel.md) | Registration, roster, certified animal-handling faculty, Form B, passwords, requisitions |
+| **System administrators** | [sop_admin_personnel.md](./sop_admin_personnel.md) | Users, roster CSV, certified faculty, passwords/SMTP, master data, go-live |
 | **Animal house staff (daily ops)** | [sop_facility_daily_operations.md](./sop_facility_daily_operations.md) | Cleaning, entry, env logs, cages, feeding, quarantine, waste |
 
 **Facility SOP sources:** [facility_sop_source_catalog.md](./facility_sop_source_catalog.md) — which industry files were selected from `Docs/source_industry/`.
