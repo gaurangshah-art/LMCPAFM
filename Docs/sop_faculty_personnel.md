@@ -28,11 +28,14 @@ You use LMCPAFM to prepare and **submit CPCSEA Form B**, track IAEC review, and 
 
 ### Path 2 — Administrator created your account
 
-1. Admin may add you under **Admin Dashboard → Create User** with role **investigator**, your email, and a **temporary password**.  
+1. Admin may add you under **Admin Dashboard → Create User** with role **investigator**, your email, and a **temporary password** (sent to you privately).  
 2. Use **Log in** (not Register).  
-3. Complete **Investigator Profile** immediately.
+3. On first login, LMCPAFM **requires you to set a new password** before any other page opens. Enter the temporary password as **Current password**, then choose your own **New password** (minimum 8 characters).  
+4. After that, complete **Investigator Profile** if prompted.
 
-**Support staff** with the same email domain use **staff** accounts — they do **not** use this faculty registration path.
+**Forgot your password later?** On the login page, click **Forgot password?**, enter your institutional email, and follow the link in the email (link expires after about one hour). If email does not arrive, contact the LMCPAFM administrator.
+
+**Support staff** with the same email domain use **staff** accounts — they do **not** use this faculty registration path. Admin-created **staff** and **IAEC** accounts also receive a temporary password and must change it on first login.
 
 ---
 
@@ -134,6 +137,8 @@ IAEC meeting workflow (assign meeting, record decision, protocol, finalize, invi
 |---------|------------|
 | Cannot register — roster | Ask admin to add your email via faculty roster import |
 | Email already exists | Use **Login**; you were pre-created |
+| Forgot password | **Forgot password?** on login page, or ask admin to set a new temporary password |
+| Stuck on password page after login | Required first-time change; use temp password as “current”, pick a new password |
 | Submit blocked — faculty | Add a **faculty** member on Step 2 |
 | Submit blocked — missing step | Open each step; save |
 | PI sees “not IAEC-approved” but protocol exists | IAEC must **Finalize approval** |

@@ -25,6 +25,7 @@ class UserRead(BaseModel):
     email: EmailStr
     roles: List[str]
     status: bool
+    must_change_password: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -71,10 +71,11 @@ Record issues using the **feedback form** (link from admin) or email the project
 
 1. Open https://lmcpafm-staging.lmcp.ac.in
 2. Click **Log in**
-3. Enter email and password provided by admin
-4. Confirm you reach the correct home screen for your role
+3. Enter email and **temporary password** provided by admin
+4. If this is your first login with an admin-created account, complete **Set your password** (required) before other pages
+5. Confirm you reach the correct home screen for your role
 
-**Pass criteria:** Login succeeds; wrong role cannot access restricted menus (should see “Not authorized” or redirect).
+**Pass criteria:** Login succeeds; first-time password change works; **Forgot password?** sends email when SMTP is configured; wrong role cannot access restricted menus (should see “Not authorized” or redirect).
 
 ### 4.2 Logout
 

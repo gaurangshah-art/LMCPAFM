@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { changePassword } from "../api/authApi";
 import { getApiErrorMessage } from "../api/errors";
@@ -25,7 +26,13 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>;
 
-export function ChangePasswordPage() {
+interface ChangePasswordPageProps {
+  onPasswordChanged?: () => void | Promise<void>;
+}
+
+export function ChangePasswordPage({ onPasswordChanged }: ChangePasswordPageProps) {
+  const [searchParams] = useSearchParams();
+  const required = searchParams.get("required") === "1";
   const {
     register,
     handleSubmit,
@@ -50,7 +57,14 @@ export function ChangePasswordPage() {
         new_password: values.newPassword,
       });
       reset();
-      succeed("Password updated. Use your new password the next time you log in.");
+      if (onPasswordChanged) {
+        await onPasswordChanged();
+      }
+      succeed(
+        required
+          ? "Password updated. You can continue using LMCPAFM."
+          : "Password updated. Use your new password the next time you log in.",
+      );
     } catch (error) {
       fail(getApiErrorMessage(error));
     }
@@ -59,8 +73,12 @@ export function ChangePasswordPage() {
   return (
     <div className="page-grid">
       <PageSection
-        title="Change password"
-        subtitle="Update the password for your LMCPAFM account."
+        title={required ? "Set your password" : "Change password"}
+        subtitle={
+          required
+            ? "Your account was created with a temporary password. Choose a new password (at least 8 characters) before continuing."
+            : "Update the password for your LMCPAFM account."
+        }
       >
         <form className="form-grid" onSubmit={(event) => void onSubmit(event)}>
           <label className="full-width">

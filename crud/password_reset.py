@@ -134,6 +134,7 @@ def reset_password_with_token(db: Session, *, plain_token: str, new_password: st
         raise CRUDValidationError("New password must differ from your current password.")
 
     user.password_hash = hash_password(new_password)
+    user.must_change_password = False
     record.used_at = now
     db.add(user)
     db.add(record)

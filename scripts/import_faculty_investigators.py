@@ -109,13 +109,20 @@ def _upsert_investigator(
             return "user_skipped"
         existing.name = name
         existing.password_hash = password_hash
+        existing.must_change_password = True
         existing.status = True
         if role not in existing.roles:
             existing.roles = list(existing.roles) + [role]
         create_profile_shell(db, existing, is_lmcp_faculty=True)
         return "user_updated"
 
-    user = User(name=name, email=email, password_hash=password_hash, status=True)
+    user = User(
+        name=name,
+        email=email,
+        password_hash=password_hash,
+        status=True,
+        must_change_password=True,
+    )
     user.roles = [role]
     db.add(user)
     db.flush()
@@ -207,7 +214,7 @@ def main() -> int:
         print(
             "Set LMCP_FACULTY_ROSTER_ENFORCE=true and restart backend to enforce roster on self-registration."
         )
-        print("Ask faculty to change passwords after first login.")
+        print("Faculty must change the temporary password on first login.")
     return 1 if stats["errors"] else 0
 
 

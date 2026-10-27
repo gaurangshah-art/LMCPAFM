@@ -42,7 +42,8 @@ If the administrator created an account for you:
 1. Open the LMCPAFM website (link from your college).  
 2. Click **Log in** (not Register).  
 3. Use the email and **temporary password** your guide or admin sent you.  
-4. Change your password later if your college policy requires it (use a strong password).
+4. On first login, the system **requires** you to choose a **new password** before you can open any other page (minimum 8 characters).  
+5. Later, use **Forgot password?** on the login page or **Password** in the menu after log in.
 
 ### Option B — You register yourself
 

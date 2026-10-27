@@ -57,6 +57,7 @@ def create_user(
         email=normalized_email,
         password_hash=hash_password(payload.password),
         status=payload.status,
+        must_change_password=True,
     )
     user.roles = db_roles
 
@@ -78,6 +79,7 @@ def create_user(
         "email": user.email,
         "roles": [r.name for r in user.roles],
         "status": user.status,
+        "must_change_password": user.must_change_password,
     }
 
 
@@ -94,6 +96,7 @@ def list_users(
             "email": u.email,
             "roles": [r.name for r in u.roles],
             "status": u.status,
+            "must_change_password": u.must_change_password,
         }
         for u in users
     ]
@@ -107,6 +110,7 @@ def me(current_user: User = Depends(get_current_user)):
         "email": current_user.email,
         "roles": [r.name for r in current_user.roles],
         "status": current_user.status,
+        "must_change_password": current_user.must_change_password,
     }
 
 

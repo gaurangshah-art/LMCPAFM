@@ -152,6 +152,7 @@ def change_password(
         )
 
     current_user.password_hash = hash_password(payload.new_password)
+    current_user.must_change_password = False
     db.add(current_user)
     db.commit()
 

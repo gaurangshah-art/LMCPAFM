@@ -48,7 +48,13 @@ The same **institutional email domain** (for example `@lmcp.ac.in`) is used by f
 2. **Log in** with your admin email and password.  
 3. You should land on **Admin Dashboard** (`/admin-dashboard`).
 
-If you cannot log in, use the server bootstrap script (see Section 10) or contact IT.
+If you cannot log in:
+
+1. Try **Forgot password?** on the login page (requires `IAEC_SMTP_*` and `FRONTEND_PUBLIC_URL` in `.env`).  
+2. Or use the server bootstrap script (see Section 10) with `--update-if-exists`.  
+3. Or ask another admin to **Reset password** for your account on the Admin Dashboard.
+
+To change your own password while logged in, use **Password** in the top navigation.
 
 ---
 
@@ -58,7 +64,7 @@ If you cannot log in, use the server bootstrap script (see Section 10) or contac
 |---------|---------|
 | **Facility summary** | Quick link to facility operations |
 | **Create User** | New staff, IAEC, admin, or **investigator** accounts |
-| **User Directory** | List users, filter by role, delete accounts (not yourself) |
+| **User Directory** | List users, filter by role, **reset password**, delete accounts (not yourself) |
 | **Activity Logs** | Recent admin actions |
 | **Quick Navigation** | IAEC Dashboard, Facility, Master Data, Form C, Allocations, Requisitions |
 
@@ -80,6 +86,12 @@ If you cannot log in, use the server bootstrap script (see Section 10) or contac
 | **investigator** | Faculty who should **log in without self-registering** |
 
 6. Click **Create User**.
+
+**Temporary password policy:**
+
+- Every account you create here gets a **temporary password**. The user **must change it on first login**; the app opens **Set your password** and blocks other menus until they do.  
+- Send the temporary password **privately** (not in a group chat).  
+- To issue a new temporary password later, use **User Directory → Reset password** (admin only) or **Forgot password?** on the login page if SMTP is configured.
 
 **Investigator pre-registration:**
 
@@ -250,6 +262,7 @@ Then rebuild/restart containers if instructed in release notes.
 
 - [ ] Production URL and HTTPS working  
 - [ ] `.env` secrets set (JWT, database, not defaults)  
+- [ ] `FRONTEND_PUBLIC_URL` and `IAEC_SMTP_*` set if using **Forgot password?** email  
 - [ ] At least one **admin** account  
 - [ ] **IAEC** and **staff** accounts created  
 - [ ] **Faculty roster** CSV imported  
@@ -266,7 +279,9 @@ Then rebuild/restart containers if instructed in release notes.
 | User says | You do |
 |-----------|--------|
 | “I cannot register as investigator” | Check roster + enforce flag; add email to CSV import; or pre-create investigator account |
-| “Email already exists” | Tell them to **Log in** or reset password (if policy allows manual reset via new temp password by recreating — prefer password change process your college uses) |
+| “Email already exists” | Tell them to **Log in**, use **Forgot password?**, or you **Reset password** in User Directory |
+| “Forgot password / locked out” | Confirm SMTP + public URL; or **Reset password** in User Directory; bootstrap only for emergencies |
+| “Stuck on password screen” | Normal for first login after admin create or CSV import — they must set a new password |
 | “Student cannot see Form B” | PI must link student on Form B Step 2; student profile complete |
 | “Support staff registered as investigator by mistake” | Delete wrong account if policy allows; recreate as **staff** |
 | “Form C is empty” | Normal until staff enter facility/allocation data |

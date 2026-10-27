@@ -36,6 +36,7 @@ import { AnimalRequisitionDetailPage } from "../pages/AnimalRequisitionDetailPag
 import { AllocationViewPage } from "../pages/AllocationViewPage";
 import { InvestigatorProfilePage } from "../pages/InvestigatorProfilePage";
 import { InvestigatorProfileGate } from "../components/common/InvestigatorProfileGate";
+import { MustChangePasswordGate } from "../components/common/MustChangePasswordGate";
 import { getMyInvestigatorProfile } from "../api/investigatorProfileApi";
 import { FormBStep1 } from "../pages/formB/FormBStep1";
 import { FormBStep2 } from "../pages/formB/FormBStep2";
@@ -134,6 +135,11 @@ export default function App() {
       setCurrentUser(user);
       setStoredUserId(user.id);
 
+      if (user.must_change_password) {
+        window.location.replace("/account/password?required=1");
+        return;
+      }
+
       const returnTo = preferredReturnTo ?? readReturnToPath();
       clearReturnToPath();
 
@@ -168,6 +174,15 @@ export default function App() {
     setIsAuthLoading(false);
   }
 
+  async function refreshCurrentUser() {
+    const user = await getCurrentUser();
+    setCurrentUser(user);
+    setStoredUserId(user.id);
+    if (!user.must_change_password) {
+      window.location.replace("/");
+    }
+  }
+
   return (
     <div className="app-shell">
       <SessionMonitor currentUser={currentUser} />
@@ -179,6 +194,7 @@ export default function App() {
 
       <main className="page-container">
         <InstitutionBanner />
+        <MustChangePasswordGate currentUser={currentUser}>
         <InvestigatorProfileGate currentUser={currentUser}>
         <Routes>
           {/* LOGIN */}
@@ -186,7 +202,11 @@ export default function App() {
             path="/login"
             element={
               getAccessToken() && currentUser ? (
-                <Navigate to="/" replace />
+                currentUser.must_change_password ? (
+                  <Navigate to="/account/password?required=1" replace />
+                ) : (
+                  <Navigate to="/" replace />
+                )
               ) : (
                 <LoginPage onAuthenticated={handleAuthenticated} />
               )
@@ -240,7 +260,7 @@ export default function App() {
             path="/account/password"
             element={
               <ProtectedRoute currentUser={currentUser} isAuthLoading={isAuthLoading}>
-                <ChangePasswordPage />
+                <ChangePasswordPage onPasswordChanged={refreshCurrentUser} />
               </ProtectedRoute>
             }
           />
@@ -791,6 +811,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </InvestigatorProfileGate>
+        </MustChangePasswordGate>
       </main>
     </div>
   );

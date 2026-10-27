@@ -61,6 +61,7 @@ def read_admin_users(
             "email": u.email,
             "roles": [r.name for r in u.roles],
             "status": u.status,
+            "must_change_password": u.must_change_password,
         }
         for u in users
     ]
@@ -110,6 +111,7 @@ def update_user_roles(
         "email": user.email,
         "roles": [r.name for r in user.roles],
         "status": user.status,
+        "must_change_password": user.must_change_password,
     }
 
 

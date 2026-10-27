@@ -35,6 +35,7 @@ from routers.router_admin_facility import router as admin_facility_router
 from routers.router_admin_masters import router as admin_masters_router
 from routers.router_facility import router as facility_router
 from routers.router_resources import router as resources_router
+from dependencies.password_change_enforcement import register_password_change_middleware
 
 def _cors_origins() -> list[str]:
     configured = os.getenv("CORS_ALLOW_ORIGINS")
@@ -52,6 +53,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+register_password_change_middleware(app)
 
 app.add_middleware(
     CORSMiddleware,

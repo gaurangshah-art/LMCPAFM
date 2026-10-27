@@ -67,6 +67,7 @@ export interface User {
   email: string;
   roles: UserRole[];
   status?: boolean;
+  must_change_password?: boolean;
 }
 
 export interface UserCreate {

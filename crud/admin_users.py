@@ -70,6 +70,7 @@ def reset_user_password(
         )
 
     user.password_hash = hash_password(new_password)
+    user.must_change_password = True
     db.add(user)
     db.flush()
     return user

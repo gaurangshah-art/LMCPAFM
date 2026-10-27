@@ -169,12 +169,14 @@ You can submit a test Form B yourself using an investigator test account.
 1. Log in as admin → **Admin Dashboard**  
 2. **Create institutional account** form  
 3. Enter name, `@lmcp.ac.in` email, temporary password (min 8 characters)  
-4. Select role(s): `iaec`, `staff`, and/or `admin`  
+4. Select role(s): `investigator`, `iaec`, `staff`, and/or `admin`  
 5. Mark account **Active**  
 6. Send credentials to evaluator **securely** (not by group WhatsApp)  
+7. Tell evaluators they **must set a new password on first login** (app enforces this for all admin-created accounts).
 
-**Assignable roles in UI:** `admin`, `iaec`, `staff` only.  
-**Investigator** cannot be created here — direct faculty to **Register as Investigator**.
+**Self-registration:** Faculty may still use **Register as Investigator** when roster policy allows. Pre-created accounts use **Log in** only.
+
+**Password recovery during UAT:** Login page **Forgot password?** (needs SMTP in `.env`); admins can **Reset password** in User Directory; emergency server reset via bootstrap `--update-if-exists`.
 
 ### 5.3 Create accounts via server (bulk / script)
 
@@ -188,7 +190,7 @@ sudo docker compose -f compose.yaml -f compose.postgres.yaml -f compose.prod.yam
   --update-if-exists
 ```
 
-Repeat for each staff/IAEC evaluator. Ask them to change password after first login (when password-change feature exists; until then use unique strong temp passwords).
+Repeat for each staff/IAEC evaluator. First login will force a password change in the app.
 
 ### 5.4 Investigator self-registration
 
@@ -232,7 +234,7 @@ sudo docker compose logs backend --tail 30
 
 | Issue type | Action |
 |:-----------|:-------|
-| Login failure | Verify account active; reset password via bootstrap `--update-if-exists` |
+| Login failure | Verify account active; **Forgot password?**, Admin **Reset password**, or bootstrap `--update-if-exists` |
 | 502 / site down | `docker compose ps`; restart unhealthy service |
 | CORS / API errors | Check `.env` URLs; rebuild frontend |
 | IAEC email fails | Verify `IAEC_SMTP_*` in `.env`; restart backend |
