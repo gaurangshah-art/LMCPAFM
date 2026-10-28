@@ -75,6 +75,36 @@ const roleHome: Record<string, string> = {
   admin: "/admin-dashboard",
 };
 
+function roleSet(user: User): Set<string> {
+  return new Set(user.roles);
+}
+
+function canUseReturnToPath(user: User, path: string): boolean {
+  const roles = roleSet(user);
+  if (path.startsWith("/admin-dashboard") || path.startsWith("/admin/")) {
+    return roles.has("admin");
+  }
+  if (path === "/users") {
+    return roles.has("admin");
+  }
+  if (path.startsWith("/iaec-dashboard") || path.startsWith("/iaec/")) {
+    return roles.has("iaec");
+  }
+  if (path.startsWith("/allocations") || path.startsWith("/facility")) {
+    return roles.has("staff") || roles.has("admin");
+  }
+  return true;
+}
+
+function defaultHomeForUser(user: User): string {
+  const roles = roleSet(user);
+  if (roles.has("admin")) return roleHome.admin;
+  if (roles.has("iaec")) return roleHome.iaec;
+  if (roles.has("staff")) return roleHome.staff;
+  if (roles.has("investigator")) return roleHome.investigator;
+  return "/";
+}
+
 function UsersRoute() {
   return <Navigate to="/admin-dashboard" replace />;
 }
@@ -138,8 +168,10 @@ export default function App() {
       const returnTo = preferredReturnTo ?? readReturnToPath();
       clearReturnToPath();
 
-      const primaryRole = user.roles[0];
-      let redirectPath = returnTo ?? (primaryRole ? (roleHome[primaryRole] ?? "/") : "/");
+      let redirectPath =
+        returnTo && canUseReturnToPath(user, returnTo)
+          ? returnTo
+          : defaultHomeForUser(user);
 
       if (!returnTo && user.roles.includes("investigator")) {
         try {
