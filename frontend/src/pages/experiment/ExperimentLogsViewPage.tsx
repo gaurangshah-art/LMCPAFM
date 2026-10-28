@@ -5,27 +5,43 @@ import { formatDisplayDate } from "../../utils/dateFormat";
 
 export function ExperimentLogsViewPage() {
   const { allocationId } = useParams();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<any[]>([]);
   const [allocation, setAllocation] = useState<any>(null);
+  const parsedAllocationId = Number(allocationId);
+  const [prevAllocationId, setPrevAllocationId] = useState(parsedAllocationId);
 
-  async function loadData() {
+  if (prevAllocationId !== parsedAllocationId) {
+    setPrevAllocationId(parsedAllocationId);
     setLoading(true);
-    try {
-      const entryRes = await api.get(`/experiment/entry/${allocationId}`);
-      setAllocation(entryRes.data.allocation);
-
-      const logsRes = await api.get(`/experiment/logs/${allocationId}`);
-      setLogs(logsRes.data || []);
-    } catch {
-      alert("Failed to load experiment logs.");
-    } finally {
-      setLoading(false);
-    }
   }
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const entryRes = await api.get(`/experiment/entry/${allocationId}`);
+        if (cancelled) return;
+        setAllocation(entryRes.data.allocation);
+
+        const logsRes = await api.get(`/experiment/logs/${allocationId}`);
+        if (cancelled) return;
+        setLogs(logsRes.data || []);
+      } catch {
+        if (!cancelled) {
+          alert("Failed to load experiment logs.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [allocationId]);
 
   if (loading) {

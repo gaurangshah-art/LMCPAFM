@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { hasAnyRole } from "../app/roles";
+import { userHasRequisitionAccess } from "../constants/adminRoles";
+import { RedirectToRoleHome } from "../components/common/RedirectToRoleHome";
 import { getApprovedRequisitionOptions } from "../api/lookupApi";
 import { getRequisition } from "../api/requisitionApi";
 import { getApiErrorMessage } from "../api/errors";
@@ -22,6 +25,15 @@ export function RequisitionPage({ currentUser }: RequisitionPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const requisitionOptions = useLookupOptions(getApprovedRequisitionOptions);
   const canAccessRequisitions = hasAnyRole(currentUser, ["investigator", "iaec", "staff"]);
+  const canCreateRequisitions = Boolean(currentUser && userHasRequisitionAccess(currentUser));
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!canAccessRequisitions) {
+    return <RedirectToRoleHome user={currentUser} />;
+  }
 
   async function handleLookup() {
     if (!lookupId) {
@@ -43,21 +55,16 @@ export function RequisitionPage({ currentUser }: RequisitionPageProps) {
 
   return (
     <div className="page-grid">
-      {!currentUser ? (
-        <PageSection title="Requisition Access" subtitle="Authentication required">
-          <ErrorAlert message="Log in with an investigator, IAEC, or staff account to create and view requisitions." />
+      {canCreateRequisitions ? (
+        <PageSection
+          title="Create Requisition"
+          subtitle="Certified pharmacology faculty only — select an IAEC-approved protocol"
+        >
+          <RequisitionForm currentUser={currentUser} onCreated={setRequisition} />
         </PageSection>
-      ) : !canAccessRequisitions ? (
-        <PageSection title="Requisition Access" subtitle="Investigator, IAEC, or staff role required">
-          <ErrorAlert message="Your account does not have one of the roles required for requisition workflows." />
-        </PageSection>
-      ) : (
-        <>
-          <PageSection title="Create Requisition" subtitle="POST /iaec/requisition">
-            <RequisitionForm currentUser={currentUser} onCreated={setRequisition} />
-          </PageSection>
+      ) : null}
 
-          <PageSection title="Requisition Lookup" subtitle="GET /iaec/requisition/{req_id}">
+      <PageSection title="Requisition Lookup" subtitle="GET /iaec/requisition/{req_id}">
             <div className="lookup-row">
               <select
                 value={lookupId}
@@ -80,9 +87,7 @@ export function RequisitionPage({ currentUser }: RequisitionPageProps) {
             {isLoading ? <LoadingState label="Fetching requisition..." /> : null}
             {lookupError ? <ErrorAlert message={lookupError} /> : null}
             <RequisitionTable requisition={requisition} />
-          </PageSection>
-        </>
-      )}
+      </PageSection>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../api/client";
 import { formatDisplayDate } from "../../utils/dateFormat";
@@ -15,7 +15,14 @@ type Procedure = {
 
 export function ExperimentLogsEntryPage() {
   const { allocationId } = useParams();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const parsedAllocationId = Number(allocationId);
+  const [prevAllocationId, setPrevAllocationId] = useState(parsedAllocationId);
+
+  if (prevAllocationId !== parsedAllocationId) {
+    setPrevAllocationId(parsedAllocationId);
+    setLoading(true);
+  }
 
   const [groups, setGroups] = useState<Group[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
@@ -29,7 +36,7 @@ export function ExperimentLogsEntryPage() {
   const [mortality, setMortality] = useState<string>("");
   const [endpoint, setEndpoint] = useState<string>("");
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const entryRes = await api.get(`/experiment/entry/${allocationId}`);
@@ -43,10 +50,35 @@ export function ExperimentLogsEntryPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [allocationId]);
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const entryRes = await api.get(`/experiment/entry/${allocationId}`);
+        if (cancelled) return;
+        setGroups(entryRes.data.groups || []);
+        setProcedures(entryRes.data.procedures || []);
+
+        const logsRes = await api.get(`/experiment/logs/${allocationId}`);
+        if (cancelled) return;
+        setLogs(logsRes.data || []);
+      } catch {
+        if (!cancelled) {
+          alert("Failed to load experiment logs.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [allocationId]);
 
   function validate() {

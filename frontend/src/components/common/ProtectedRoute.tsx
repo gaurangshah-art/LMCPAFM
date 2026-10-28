@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { RedirectToRoleHome } from "./RedirectToRoleHome";
 import type { User } from "../../api/types";
 
 interface ProtectedRouteProps {
@@ -23,12 +24,13 @@ export function ProtectedRoute({
 
   // Not logged in → redirect to login
   if (!currentUser) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    const returnTo = encodeURIComponent(`${location.pathname}${location.search}`);
+    return <Navigate to={`/login?returnTo=${returnTo}`} replace />;
   }
 
   // Role restriction exists → enforce it
   if (allowedRoles && !currentUser.roles.some((role) => allowedRoles.includes(role))) {
-    return <Navigate to="/not-authorized" replace />;
+    return <RedirectToRoleHome user={currentUser} />;
   }
 
   return <>{children}</>;

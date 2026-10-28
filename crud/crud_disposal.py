@@ -6,6 +6,7 @@ from database.lmcpafm_models import Animal
 from database.lmcpafm_experiments import Experiment
 from schemas.schemas_disposal import DisposalCreate
 from crud.exceptions import CRUDValidationError, CRUDNotFoundError, CRUDDatabaseError
+from utils.business_validation import assert_date_on_or_after
 
 
 def create_disposal(db: Session, disp: DisposalCreate):
@@ -19,6 +20,7 @@ def create_disposal(db: Session, disp: DisposalCreate):
         raise CRUDValidationError(f"Animal {animal.id} is already disposed.")
 
     # 2. Validate experiment (optional)
+    experiment = None
     if disp.experiment_id:
         experiment = (
             db.query(Experiment)
@@ -27,6 +29,12 @@ def create_disposal(db: Session, disp: DisposalCreate):
         )
         if not experiment:
             raise CRUDNotFoundError(f"Experiment {disp.experiment_id} not found.")
+        assert_date_on_or_after(
+            disp.date,
+            experiment.date,
+            value_label="Disposal date",
+            minimum_label="experiment date",
+        )
 
     # 3. Create disposal record
     db_disp = Disposal(

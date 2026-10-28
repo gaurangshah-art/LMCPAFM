@@ -24,6 +24,9 @@ class AnimalRequisition(Base):
     requester_role: Mapped[str] = mapped_column(String, nullable=False)
     date: Mapped[Date] = mapped_column(Date, nullable=False)
     purpose: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active")
+    amended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     protocol: Mapped["IAECProject"] = relationship(back_populates="requisitions")
     requester = relationship("models.user.User")  # fixed

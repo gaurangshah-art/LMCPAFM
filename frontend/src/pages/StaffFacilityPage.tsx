@@ -1,0 +1,187 @@
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  getStaffCageMap,
+  getStaffFacilityAnimals,
+  downloadBulkCageLabels,
+  downloadCageLabel,
+  type CageLabelCategory,
+} from "../api/facilityApi";
+import type { FacilityAnimal, FacilityCageMapRoom } from "../api/facilityTypes";
+import { getApiErrorMessage } from "../api/errors";
+import { AnimalTimelinePanel } from "../components/facility/AnimalTimelinePanel";
+import { CageMapView } from "../components/facility/CageMapView";
+import { CageLabelBulkActions } from "../components/facility/CageLabelBulkActions";
+import { CareLogPanel } from "../components/facility/CareLogPanel";
+import { FacilityDashboardPanel } from "../components/facility/FacilityDashboardPanel";
+import { FacilityOperationsHub } from "../components/facility/FacilityOperationsHub";
+import { EnvironmentLogPanel } from "../components/facility/EnvironmentLogPanel";
+import { SupplyInventoryPanel } from "../components/facility/SupplyInventoryPanel";
+import { ErrorAlert } from "../components/common/ErrorAlert";
+import { LoadingState } from "../components/common/LoadingState";
+import { PageSection } from "../components/common/PageSection";
+import { DataTable } from "../components/tables/DataTable";
+
+type TabKey = "overview" | "dashboards" | "care" | "supplies" | "environment" | "map" | "animals";
+
+export function StaffFacilityPage() {
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cageMap, setCageMap] = useState<FacilityCageMapRoom[]>([]);
+  const [animals, setAnimals] = useState<FacilityAnimal[]>([]);
+  const [selectedAnimalId, setSelectedAnimalId] = useState<number | null>(null);
+  const [printingCageId, setPrintingCageId] = useState<number | null>(null);
+  const [bulkLabelBusy, setBulkLabelBusy] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  const selectedAnimal = animals.find((animal) => animal.id === selectedAnimalId) ?? null;
+
+  const loadAll = useCallback(async () => {
+    try {
+      setError(null);
+      const [mapData, animalData] = await Promise.all([
+        getStaffCageMap(),
+        getStaffFacilityAnimals(),
+      ]);
+      setCageMap(mapData);
+      setAnimals(animalData);
+    } catch (loadError) {
+      setError(getApiErrorMessage(loadError));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
+
+  async function handlePrintCageLabel(cageId: number, cageLabel: string) {
+    try {
+      setActionMessage(null);
+      setPrintingCageId(cageId);
+      await downloadCageLabel(cageId, cageLabel);
+      setActionMessage(`Cage label downloaded for ${cageLabel}.`);
+    } catch (printError) {
+      setActionMessage(getApiErrorMessage(printError));
+    } finally {
+      setPrintingCageId(null);
+    }
+  }
+
+  async function handleBulkCageLabels(category: CageLabelCategory) {
+    try {
+      setActionMessage(null);
+      setBulkLabelBusy(true);
+      await downloadBulkCageLabels(category);
+      setActionMessage(`Bulk ${category} cage labels downloaded.`);
+    } catch (printError) {
+      setActionMessage(getApiErrorMessage(printError));
+    } finally {
+      setBulkLabelBusy(false);
+    }
+  }
+
+  if (loading) {
+    return <LoadingState label="Loading facility inventory..." />;
+  }
+
+  return (
+    <div className="page-card">
+      <header className="section-header">
+        <h1>Animal Facility</h1>
+        <p>Census, daily care logs, and cage operations for facility staff.</p>
+      </header>
+
+      <div className="info-card compact-info-card">
+        <strong>Issue animals</strong>
+        <p>Staff allocate available animals through approved requisitions.</p>
+        <Link to="/allocations" className="btn">
+          Go to Allocations
+        </Link>
+      </div>
+
+      {error ? <ErrorAlert message={error} /> : null}
+      {actionMessage ? <p className="success-text">{actionMessage}</p> : null}
+
+      <nav className="tab-nav">
+        {(
+          [
+            ["overview", "Operations Hub"],
+            ["dashboards", "Dashboards"],
+            ["care", "Care Logs"],
+            ["supplies", "Supplies"],
+            ["environment", "Environment"],
+            ["map", "Cage Map"],
+            ["animals", "Animals & Timeline"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={activeTab === key ? "tab-button active" : "tab-button"}
+            onClick={() => setActiveTab(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      {activeTab === "overview" ? <FacilityOperationsHub mode="staff" /> : null}
+
+      {activeTab === "dashboards" ? (
+        <PageSection title="Facility dashboards">
+          <FacilityDashboardPanel />
+        </PageSection>
+      ) : null}
+
+      {activeTab === "care" ? <CareLogPanel /> : null}
+
+      {activeTab === "supplies" ? <SupplyInventoryPanel mode="staff" /> : null}
+
+      {activeTab === "environment" ? <EnvironmentLogPanel /> : null}
+
+      {activeTab === "map" ? (
+        <PageSection title="Cage map">
+          <CageLabelBulkActions onPrintCategory={handleBulkCageLabels} busy={bulkLabelBusy} />
+          <CageMapView
+            rooms={cageMap}
+            printingCageId={printingCageId}
+            onPrintCageLabel={handlePrintCageLabel}
+            onSelectAnimal={(id) => {
+              setSelectedAnimalId(id);
+              setActiveTab("animals");
+            }}
+          />
+        </PageSection>
+      ) : null}
+
+      {activeTab === "animals" ? (
+        <>
+          <PageSection title="Animals">
+            <DataTable
+              columns={[
+                { header: "Number", cell: (row) => row.animal_number ?? row.id },
+                { header: "Species", cell: (row) => row.species_name ?? "-" },
+                { header: "Status", cell: (row) => row.status ?? "-" },
+                { header: "Cage", cell: (row) => row.cage_label ?? "-" },
+                {
+                  header: "Timeline",
+                  cell: (row) => (
+                    <button type="button" className="btn-secondary btn-small" onClick={() => setSelectedAnimalId(row.id)}>
+                      View
+                    </button>
+                  ),
+                },
+              ]}
+              rows={animals}
+              emptyText="No animals in inventory."
+            />
+          </PageSection>
+          <AnimalTimelinePanel animal={selectedAnimal} />
+        </>
+      ) : null}
+    </div>
+  );
+}
