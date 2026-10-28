@@ -29,7 +29,7 @@ import { ChangePasswordPage } from "../pages/ChangePasswordPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 import { RegisterInvestigatorPage } from "../pages/RegisterInvestigatorPage";
-import { NotAuthorizedPage } from "../pages/NotAuthorizedPage";
+import { canUseReturnToPath, defaultHomeForUser } from "./roles";
 import { IaecDashboard } from "../pages/iaec/IaecDashboard";
 import { AnimalRequisitionDetailPage } from "../pages/AnimalRequisitionDetailPage";
 import { AllocationViewPage } from "../pages/AllocationViewPage";
@@ -67,43 +67,6 @@ import { ExperimentLogsViewPage } from "../pages/experiment/ExperimentLogsViewPa
 import { FinalReportEntryPage } from "../pages/final/FinalReportEntryPage";
 import { FinalReportViewPage } from "../pages/final/FinalReportViewPage";
 
-
-const roleHome: Record<string, string> = {
-  iaec: "/iaec-projects",
-  staff: "/allocations",
-  investigator: "/",
-  admin: "/admin-dashboard",
-};
-
-function roleSet(user: User): Set<string> {
-  return new Set(user.roles);
-}
-
-function canUseReturnToPath(user: User, path: string): boolean {
-  const roles = roleSet(user);
-  if (path.startsWith("/admin-dashboard") || path.startsWith("/admin/")) {
-    return roles.has("admin");
-  }
-  if (path === "/users") {
-    return roles.has("admin");
-  }
-  if (path.startsWith("/iaec-dashboard") || path.startsWith("/iaec/")) {
-    return roles.has("iaec");
-  }
-  if (path.startsWith("/allocations") || path.startsWith("/facility")) {
-    return roles.has("staff") || roles.has("admin");
-  }
-  return true;
-}
-
-function defaultHomeForUser(user: User): string {
-  const roles = roleSet(user);
-  if (roles.has("admin")) return roleHome.admin;
-  if (roles.has("iaec")) return roleHome.iaec;
-  if (roles.has("staff")) return roleHome.staff;
-  if (roles.has("investigator")) return roleHome.investigator;
-  return "/";
-}
 
 function UsersRoute() {
   return <Navigate to="/admin-dashboard" replace />;
@@ -831,8 +794,7 @@ export default function App() {
             }
           />
 
-          {/* NOT AUTHORIZED */}
-          <Route path="/not-authorized" element={<NotAuthorizedPage />} />
+          <Route path="/not-authorized" element={<Navigate to="/" replace />} />
 
           {/* FALLBACK */}
           <Route path="*" element={<Navigate to="/" replace />} />
