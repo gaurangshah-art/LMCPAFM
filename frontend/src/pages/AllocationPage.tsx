@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { hasAnyRole } from "../app/roles";
+import { RedirectToRoleHome } from "../components/common/RedirectToRoleHome";
 import { getApprovedAllocationOptions } from "../api/lookupApi";
 import { getAllocation } from "../api/requisitionApi";
 import { getApiErrorMessage } from "../api/errors";
@@ -25,6 +27,14 @@ export function AllocationPage({ currentUser }: AllocationPageProps) {
   const canViewAllocations = hasAnyRole(currentUser, ["investigator", "iaec", "staff"]);
   const canCreateAllocations = hasAnyRole(currentUser, ["iaec", "staff"]);
 
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!canViewAllocations) {
+    return <RedirectToRoleHome user={currentUser} />;
+  }
+
   async function handleLookup() {
     if (!lookupId) {
       setLookupError("Enter an allocation id.");
@@ -45,32 +55,20 @@ export function AllocationPage({ currentUser }: AllocationPageProps) {
 
   return (
     <div className="page-grid">
-      {!currentUser ? (
-        <PageSection title="Allocation Access" subtitle="Authentication required">
-          <ErrorAlert message="Log in with an investigator, IAEC, or staff account to access allocation workflows." />
-        </PageSection>
-      ) : !canViewAllocations ? (
-        <PageSection title="Allocation Access" subtitle="Investigator, IAEC, or staff role required">
-          <ErrorAlert message="Your account does not have one of the roles required to view allocations." />
-        </PageSection>
-      ) : (
-        <>
-          <ResourcesEntryPanel />
+      <ResourcesEntryPanel />
 
-          {canCreateAllocations ? (
-            <PageSection title="Create Allocation" subtitle="POST /iaec/allocation">
-              <p>
-                <a href="/facility" className="btn-secondary">View facility inventory</a>
-              </p>
-              <AllocationForm onCreated={setAllocation} />
-            </PageSection>
-          ) : (
-            <PageSection title="Create Allocation" subtitle="IAEC or staff role required">
-              <ErrorAlert message="Only IAEC and staff users can create allocations. Lookup remains available with your current role." />
-            </PageSection>
-          )}
+      {canCreateAllocations ? (
+        <PageSection title="Create Allocation" subtitle="POST /iaec/allocation">
+          <p>
+            <a href="/facility" className="btn-secondary">
+              View facility inventory
+            </a>
+          </p>
+          <AllocationForm onCreated={setAllocation} />
+        </PageSection>
+      ) : null}
 
-          <PageSection title="Allocation Lookup" subtitle="GET /iaec/allocation/{alloc_id}">
+      <PageSection title="Allocation Lookup" subtitle="GET /iaec/allocation/{alloc_id}">
             <div className="lookup-row">
               <select
                 value={lookupId}
@@ -93,9 +91,7 @@ export function AllocationPage({ currentUser }: AllocationPageProps) {
             {isLoading ? <LoadingState label="Fetching allocation..." /> : null}
             {lookupError ? <ErrorAlert message={lookupError} /> : null}
             <AllocationTable allocation={allocation} />
-          </PageSection>
-        </>
-      )}
+      </PageSection>
     </div>
   );
 }

@@ -311,13 +311,7 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
                 onCreated={() => void loadWorkspace()}
               />
             </PageSection>
-          ) : (
-            <PageSection title="Create Requisition">
-              <p className="muted-text">
-                Only certified pharmacology faculty (investigator accounts) may submit requisitions.
-              </p>
-            </PageSection>
-          )}
+          ) : null}
 
           <PageSection title="Submitted Requisitions">
             <DataTable

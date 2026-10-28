@@ -794,8 +794,6 @@ export default function App() {
             }
           />
 
-          <Route path="/not-authorized" element={<Navigate to="/" replace />} />
-
           {/* FALLBACK */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

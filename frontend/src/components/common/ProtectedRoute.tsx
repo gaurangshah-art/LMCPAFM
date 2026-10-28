@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { defaultHomeForUser } from "../../app/roles";
+import { RedirectToRoleHome } from "./RedirectToRoleHome";
 import type { User } from "../../api/types";
 
 interface ProtectedRouteProps {
@@ -30,7 +30,7 @@ export function ProtectedRoute({
 
   // Role restriction exists → enforce it
   if (allowedRoles && !currentUser.roles.some((role) => allowedRoles.includes(role))) {
-    return <Navigate to={defaultHomeForUser(currentUser)} replace />;
+    return <RedirectToRoleHome user={currentUser} />;
   }
 
   return <>{children}</>;
