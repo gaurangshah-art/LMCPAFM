@@ -215,7 +215,7 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
             </div>
           </PageSection>
 
-          <PageSection title="Project Team" subtitle="Linked accounts can access this workspace">
+          <PageSection title="Project Team" subtitle="Team members listed on Form B">
             <DataTable
               rows={workspace.investigators}
               emptyText="No investigators listed on Form B."
@@ -224,13 +224,8 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
                 { header: "Role", cell: (row) => row.project_role },
                 { header: "Type", cell: (row) => row.investigator_type ?? "—" },
                 {
-                  header: "Account",
-                  cell: (row) => (row.is_linked ? `Linked (#${row.user_id})` : "Not linked"),
-                },
-                {
-                  header: "Can edit",
-                  cell: (row) =>
-                    workspace.form_b_submitted ? "No (submitted)" : row.can_edit_forms ? "Yes" : "No",
+                  header: "LMCP account",
+                  cell: (row) => (row.is_linked ? "Linked" : "Not linked"),
                 },
               ]}
             />

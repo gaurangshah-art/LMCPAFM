@@ -61,7 +61,7 @@ function InvestigatorLinkCell({
   }, [investigator.user_id, query]);
 
   if (investigator.user_id) {
-    return <span className="status-pill status-pill-success">Linked (user #{investigator.user_id})</span>;
+    return <span className="status-pill status-pill-success">LMCP account linked</span>;
   }
 
   async function handleLink(userId: number) {
@@ -189,8 +189,7 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
               <th>Name</th>
               <th>Role</th>
               <th>Type</th>
-              <th>Account</th>
-              <th>Permissions</th>
+              <th>LMCP account</th>
               <th />
             </tr>
           </thead>
@@ -206,16 +205,6 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
                     investigator={investigator}
                     onLinked={loadInvestigators}
                   />
-                </td>
-                <td>
-                  {[
-                    investigator.can_view_status ? "status" : null,
-                    investigator.can_edit_forms ? "edit" : null,
-                    investigator.can_submit_form_b ? "submit" : null,
-                    investigator.can_view_approval_letters ? "letters" : null,
-                  ]
-                    .filter(Boolean)
-                    .join(", ") || "none"}
                 </td>
                 <td>
                   {investigator.project_role !== "principal_investigator" ? (
