@@ -23,6 +23,12 @@ export function InvestigatorProfileGate({ currentUser, children }: InvestigatorP
       return;
     }
 
+    if (currentUser.must_change_password) {
+      setChecking(false);
+      setIsComplete(null);
+      return;
+    }
+
     let cancelled = false;
     setChecking(true);
 
@@ -45,10 +51,15 @@ export function InvestigatorProfileGate({ currentUser, children }: InvestigatorP
 
     return () => {
       cancelled = true;
+      setChecking(false);
     };
-  }, [currentUser, location.pathname]);
+  }, [currentUser?.id, currentUser?.must_change_password, location.pathname]);
 
   if (!currentUser?.roles.includes("investigator")) {
+    return <>{children}</>;
+  }
+
+  if (currentUser.must_change_password) {
     return <>{children}</>;
   }
 
