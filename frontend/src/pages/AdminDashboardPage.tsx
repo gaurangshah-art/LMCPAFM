@@ -24,6 +24,7 @@ import { DataTable } from "../components/tables/DataTable";
 import {
   type AssignableAdminRole,
   userHasInvestigatorRole,
+  userHasRequisitionAccess,
 } from "../constants/adminRoles";
 import { formatDisplayDate } from "../utils/dateFormat";
 
@@ -74,12 +75,23 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
     void loadAll();
   }, [loadAll]);
 
+  const requisitionEligibleInvestigators = useMemo(
+    () =>
+      users
+        .filter((user) => userHasRequisitionAccess(user))
+        .sort((a, b) => (a.name ?? a.email).localeCompare(b.name ?? b.email, undefined, { sensitivity: "base" })),
+    [users],
+  );
+
   const filteredUsers = useMemo(() => {
     if (roleFilter === "all") {
       return users;
     }
+    if (roleFilter === "requisition_access") {
+      return requisitionEligibleInvestigators;
+    }
     return users.filter((user) => user.roles.includes(roleFilter as User["roles"][number]));
-  }, [roleFilter, users]);
+  }, [roleFilter, requisitionEligibleInvestigators, users]);
 
   function handleUserCreated(created: User) {
     setUsers((prev) => [created, ...prev]);
@@ -234,6 +246,25 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
         <CreateStaffUserForm onCreated={handleUserCreated} />
       </PageSection>
 
+      <PageSection
+        title="Requisition access"
+        subtitle={`Pharmacology faculty (investigators) certified for animal handling — ${requisitionEligibleInvestigators.length} account(s). Grant access when creating a user (Investigator + certification checkbox) or via faculty CSV import.`}
+      >
+        <DataTable
+          rows={requisitionEligibleInvestigators}
+          emptyText="No certified investigators yet. Create an investigator with “Certified for animal requisitions” checked."
+          columns={[
+            { header: "Name", cell: (row) => row.name ?? "—" },
+            { header: "Email", cell: (row) => row.email },
+            { header: "Status", cell: (row) => (row.status ? "Active" : "Inactive") },
+            {
+              header: "Must change password",
+              cell: (row) => (row.must_change_password ? "Yes" : "No"),
+            },
+          ]}
+        />
+      </PageSection>
+
       <PageSection title="User Directory" subtitle="Manage roles and remove institutional accounts">
         <div className="user-directory-header">
           <label>
@@ -243,7 +274,8 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
               <option value="admin">Admin</option>
               <option value="staff">Staff</option>
               <option value="iaec">IAEC</option>
-              <option value="investigator">Investigator</option>
+              <option value="investigator">Investigator (all)</option>
+              <option value="requisition_access">Investigator — requisition access</option>
             </select>
           </label>
           <button type="button" className="btn btn-secondary" onClick={() => void loadAll()}>
@@ -261,6 +293,15 @@ export function AdminDashboardPage({ currentUser }: AdminDashboardPageProps) {
             { header: "Name", cell: (row) => row.name ?? "—" },
             { header: "Email", cell: (row) => row.email },
             { header: "Roles", cell: (row) => row.roles.join(", ") },
+            {
+              header: "Requisition access",
+              cell: (row) =>
+                userHasInvestigatorRole(row.roles)
+                  ? userHasRequisitionAccess(row)
+                    ? "Yes (certified)"
+                    : "No"
+                  : "—",
+            },
             { header: "Status", cell: (row) => (row.status ? "Active" : "Inactive") },
             {
               header: "Actions",

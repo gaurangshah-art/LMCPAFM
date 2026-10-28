@@ -13,6 +13,14 @@ export function userHasInvestigatorRole(roles: UserRole[]): boolean {
   return roles.includes("investigator");
 }
 
+/** Investigators who may use Requisitions / Allocations in the app. */
+export function userHasRequisitionAccess(user: {
+  roles: UserRole[];
+  is_certified_animal_handler?: boolean;
+}): boolean {
+  return userHasInvestigatorRole(user.roles) && Boolean(user.is_certified_animal_handler);
+}
+
 export function assignableRolesFromUser(roles: UserRole[]): AssignableAdminRole[] {
   return roles.filter(isAssignableAdminRole);
 }
