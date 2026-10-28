@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { hasAnyRole } from "../app/roles";
+import { userHasRequisitionAccess } from "../constants/adminRoles";
 import { getApprovedRequisitionOptions } from "../api/lookupApi";
 import { getRequisition } from "../api/requisitionApi";
 import { getApiErrorMessage } from "../api/errors";
@@ -22,6 +23,7 @@ export function RequisitionPage({ currentUser }: RequisitionPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const requisitionOptions = useLookupOptions(getApprovedRequisitionOptions);
   const canAccessRequisitions = hasAnyRole(currentUser, ["investigator", "iaec", "staff"]);
+  const canCreateRequisitions = Boolean(currentUser && userHasRequisitionAccess(currentUser));
 
   async function handleLookup() {
     if (!lookupId) {
@@ -53,9 +55,23 @@ export function RequisitionPage({ currentUser }: RequisitionPageProps) {
         </PageSection>
       ) : (
         <>
-          <PageSection title="Create Requisition" subtitle="POST /iaec/requisition">
-            <RequisitionForm currentUser={currentUser} onCreated={setRequisition} />
-          </PageSection>
+          {canCreateRequisitions ? (
+            <PageSection
+              title="Create Requisition"
+              subtitle="Certified pharmacology faculty only — select an IAEC-approved protocol"
+            >
+              <RequisitionForm currentUser={currentUser} onCreated={setRequisition} />
+            </PageSection>
+          ) : (
+            <PageSection title="Create Requisition" subtitle="Certified faculty only">
+              <p className="muted-text">
+                New requisitions must be submitted by an investigator account that the administrator
+                has marked <strong>certified for animal requisitions</strong>. Animal house staff and
+                IAEC can look up existing requisitions below and record allocations on the Allocations
+                page.
+              </p>
+            </PageSection>
+          )}
 
           <PageSection title="Requisition Lookup" subtitle="GET /iaec/requisition/{req_id}">
             <div className="lookup-row">

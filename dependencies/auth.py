@@ -93,7 +93,7 @@ require_admin_or_staff = require_any_role("admin", "staff")
 def require_investigator_requisition_access(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    """Investigators need certified animal-handler status; staff/IAEC/admin unchanged."""
+    """Certified investigators for create/amend; staff/IAEC/admin may read without certification."""
     roles = _user_role_name_set(current_user)
     if roles.isdisjoint({"investigator"}):
         return current_user

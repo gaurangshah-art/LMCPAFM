@@ -77,7 +77,9 @@ def test_group_creation_validates_total_cap(client, iaec_auth_headers):
     assert "exceed the approved limit" in second.json()["detail"]
 
 
-def test_requisition_blocked_without_groups(client, staff_auth_headers, iaec_auth_headers):
+def test_requisition_blocked_without_groups(
+    client, certified_investigator_auth_headers, iaec_auth_headers
+):
     project_id = _create_approved_project(client, iaec_auth_headers)
     species_id, strain_id = _create_species_strain()
 
@@ -97,13 +99,15 @@ def test_requisition_blocked_without_groups(client, staff_auth_headers, iaec_aut
                 {"species_id": species_id, "strain_id": strain_id, "requested_count": 2}
             ],
         },
-        headers=staff_auth_headers,
+        headers=certified_investigator_auth_headers,
     )
     assert response.status_code == 400
     assert "experiment group" in response.json()["detail"].lower()
 
 
-def test_requisition_allowed_with_complete_groups(client, staff_auth_headers, iaec_auth_headers):
+def test_requisition_allowed_with_complete_groups(
+    client, certified_investigator_auth_headers, iaec_auth_headers
+):
     project_id = _create_approved_project(client, iaec_auth_headers)
     species_id, strain_id = _create_species_strain()
 
@@ -135,14 +139,14 @@ def test_requisition_allowed_with_complete_groups(client, staff_auth_headers, ia
                 {"species_id": species_id, "strain_id": strain_id, "requested_count": 5}
             ],
         },
-        headers=staff_auth_headers,
+        headers=certified_investigator_auth_headers,
     )
     assert response.status_code == 200, response.text
 
 
 def test_requisition_blocked_when_exceeds_planned_total(
     client,
-    staff_auth_headers,
+    certified_investigator_auth_headers,
     iaec_auth_headers,
 ):
     project_id = _create_approved_project(client, iaec_auth_headers)
@@ -167,7 +171,7 @@ def test_requisition_blocked_when_exceeds_planned_total(
                 {"species_id": species_id, "strain_id": strain_id, "requested_count": 4}
             ],
         },
-        headers=staff_auth_headers,
+        headers=certified_investigator_auth_headers,
     )
     assert response.status_code == 400
     assert "planned total" in response.json()["detail"].lower()

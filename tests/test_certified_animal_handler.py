@@ -70,3 +70,31 @@ def test_uncertified_investigator_cannot_post_requisition(client, admin_auth_hea
     )
     assert req_res.status_code == 403
     assert "certified" in req_res.json()["detail"].lower()
+
+
+def test_staff_cannot_post_requisition(client, staff_auth_headers):
+    req_res = client.post(
+        "/iaec/requisition",
+        json={
+            "protocol_id": 1,
+            "date": "2026-01-15",
+            "purpose": "Test",
+            "items": [],
+        },
+        headers=staff_auth_headers,
+    )
+    assert req_res.status_code == 403
+
+
+def test_iaec_cannot_post_requisition(client, iaec_auth_headers):
+    req_res = client.post(
+        "/iaec/requisition",
+        json={
+            "protocol_id": 1,
+            "date": "2026-01-15",
+            "purpose": "Test",
+            "items": [],
+        },
+        headers=iaec_auth_headers,
+    )
+    assert req_res.status_code == 403

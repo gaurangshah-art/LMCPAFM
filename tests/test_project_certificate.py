@@ -42,7 +42,9 @@ def test_provisional_certificate_before_experiments(client, iaec_auth_headers):
     assert "NOT valid for journal publication" in (data["disclaimer"] or "")
 
 
-def test_final_certificate_after_complete_workflow(client, staff_auth_headers, iaec_auth_headers):
+def test_final_certificate_after_complete_workflow(
+    client, staff_auth_headers, certified_investigator_auth_headers, iaec_auth_headers
+):
     project_id = _create_approved_project(client, iaec_auth_headers, "CERT-FINAL-001")
     suffix = uuid4().hex[:8]
 
@@ -75,7 +77,7 @@ def test_final_certificate_after_complete_workflow(client, staff_auth_headers, i
             "purpose": "Certificate workflow",
             "items": [{"species_id": species.id, "strain_id": strain.id, "requested_count": 2}],
         },
-        headers=staff_auth_headers,
+        headers=certified_investigator_auth_headers,
     )
     assert req_res.status_code == 200, req_res.text
     req_item_id = req_res.json()["items"][0]["id"]

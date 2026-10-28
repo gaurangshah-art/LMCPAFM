@@ -6,7 +6,9 @@ from database.lmcpafm_models import Species, Strain
 from tests.planning_helpers import create_experiment_group, create_iaec_project_db, seed_project_animal_cap
 
 
-def test_create_and_get_requisition(client, staff_auth_headers, iaec_auth_headers):
+def test_create_and_get_requisition(
+    client, staff_auth_headers, certified_investigator_auth_headers, iaec_auth_headers
+):
     suffix = uuid4().hex[:8]
     project = create_iaec_project_db(
         title="Requisition Test Project",
@@ -50,7 +52,9 @@ def test_create_and_get_requisition(client, staff_auth_headers, iaec_auth_header
             {"species_id": species.id, "strain_id": strain.id, "requested_count": 2}
         ]
     }
-    resp = client.post("/iaec/requisition", json=payload, headers=staff_auth_headers)
+    resp = client.post(
+        "/iaec/requisition", json=payload, headers=certified_investigator_auth_headers
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data.get("id") is not None

@@ -6,7 +6,9 @@ from database.lmcpafm_models import Species, Strain, Animal
 from tests.planning_helpers import create_iaec_project_db, create_experiment_group, seed_project_animal_cap
 
 
-def test_integration_project_requisition_allocation_experiment(client, staff_auth_headers, iaec_auth_headers):
+def test_integration_project_requisition_allocation_experiment(
+    client, staff_auth_headers, certified_investigator_auth_headers, iaec_auth_headers
+):
     # 1) Create IAEC project (protocol)
     project = create_iaec_project_db(
         title="Integration Project",
@@ -61,7 +63,11 @@ def test_integration_project_requisition_allocation_experiment(client, staff_aut
         "purpose": "Integration test requisition",
         "items": [{"species_id": sp.id, "strain_id": st.id, "requested_count": 2}],
     }
-    resp = client.post("/iaec/requisition", json=req_payload, headers=staff_auth_headers)
+    resp = client.post(
+        "/iaec/requisition",
+        json=req_payload,
+        headers=certified_investigator_auth_headers,
+    )
     assert resp.status_code == 200
     requisition = resp.json()
     req_id = requisition["id"]

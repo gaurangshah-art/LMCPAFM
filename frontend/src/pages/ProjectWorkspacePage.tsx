@@ -15,6 +15,7 @@ import { RequisitionForm } from "../components/forms/RequisitionForm";
 import { ExperimentGroupManageTable } from "../components/tables/ExperimentGroupManageTable";
 import { GroupAssignmentPanel } from "../components/facility/GroupAssignmentPanel";
 import { DataTable } from "../components/tables/DataTable";
+import { userHasRequisitionAccess } from "../constants/adminRoles";
 import { formatDisplayDate } from "../utils/dateFormat";
 import { projectStatusLabel } from "../utils/projectStatus";
 
@@ -302,13 +303,21 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
             </div>
           </PageSection>
 
-          <PageSection title="Create Requisition">
-            <RequisitionForm
-              currentUser={currentUser}
-              defaultProtocolId={numericProjectId}
-              onCreated={() => void loadWorkspace()}
-            />
-          </PageSection>
+          {userHasRequisitionAccess(currentUser) ? (
+            <PageSection title="Create Requisition">
+              <RequisitionForm
+                currentUser={currentUser}
+                defaultProtocolId={numericProjectId}
+                onCreated={() => void loadWorkspace()}
+              />
+            </PageSection>
+          ) : (
+            <PageSection title="Create Requisition">
+              <p className="muted-text">
+                Only certified pharmacology faculty (investigator accounts) may submit requisitions.
+              </p>
+            </PageSection>
+          )}
 
           <PageSection title="Submitted Requisitions">
             <DataTable

@@ -139,7 +139,9 @@ def test_group_cage_label_download(client, staff_auth_headers, iaec_auth_headers
     assert preview_res.json()["group_id"] == group_id
 
 
-def test_allocation_with_experiment_group(client, staff_auth_headers, iaec_auth_headers):
+def test_allocation_with_experiment_group(
+    client, staff_auth_headers, certified_investigator_auth_headers, iaec_auth_headers
+):
     suffix = uuid4().hex[:6]
     project_id = _create_approved_project(client, iaec_auth_headers, suffix)
 
@@ -180,7 +182,7 @@ def test_allocation_with_experiment_group(client, staff_auth_headers, iaec_auth_
             "purpose": "Group allocation test",
             "items": [{"species_id": species_id, "strain_id": strain_id, "requested_count": 2}],
         },
-        headers=staff_auth_headers,
+        headers=certified_investigator_auth_headers,
     )
     assert req_res.status_code == 200, req_res.text
     req_item_id = req_res.json()["items"][0]["id"]

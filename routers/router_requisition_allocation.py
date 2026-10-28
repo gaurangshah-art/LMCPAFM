@@ -49,7 +49,7 @@ def _current_user_roles(current_user: User) -> list[str]:
 def submit_requisition(
     req: AnimalRequisitionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("investigator", "iaec", "staff")),
+    current_user: User = Depends(require_any_role("investigator")),
     _animal_access: User = Depends(require_investigator_requisition_access),
 ):
     try:

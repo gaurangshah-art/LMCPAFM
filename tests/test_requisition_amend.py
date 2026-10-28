@@ -3,6 +3,7 @@ from uuid import uuid4
 from database.database import SessionLocal
 from database.lmcpafm_models import FormB, FormBInvestigator, Species, Strain
 
+from tests.conftest import certify_user_email
 from tests.planning_helpers import create_iaec_project_db, create_experiment_group, seed_project_animal_cap
 
 
@@ -15,6 +16,7 @@ def _register_investigator(client, monkeypatch):
         "password": "StrongPass@123",
     }
     client.post("/auth/register-investigator", json=payload)
+    certify_user_email(payload["email"])
     login_res = client.post(
         "/auth/login",
         json={"email": payload["email"], "password": payload["password"]},

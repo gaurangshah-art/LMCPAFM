@@ -56,7 +56,9 @@ def _seed_inventory(project_id: int, cap: int = 5):
         db.close()
 
 
-def test_requisition_date_cannot_precede_approval(client, staff_auth_headers, iaec_auth_headers):
+def test_requisition_date_cannot_precede_approval(
+    client, certified_investigator_auth_headers, iaec_auth_headers
+):
     project_id = _create_approved_project(client, iaec_auth_headers, "VAL-REQ-001", "2026-02-01")
     species_id, strain_id = _seed_inventory(project_id)
     group_res = create_experiment_group(client, iaec_auth_headers, project_id, "Validation Group", 5)
@@ -70,13 +72,15 @@ def test_requisition_date_cannot_precede_approval(client, staff_auth_headers, ia
             "purpose": "Too early",
             "items": [{"species_id": species_id, "strain_id": strain_id, "requested_count": 1}],
         },
-        headers=staff_auth_headers,
+        headers=certified_investigator_auth_headers,
     )
     assert response.status_code == 400
     assert "approval date" in response.json()["detail"].lower()
 
 
-def test_allocation_date_cannot_precede_requisition(client, staff_auth_headers, iaec_auth_headers):
+def test_allocation_date_cannot_precede_requisition(
+    client, staff_auth_headers, certified_investigator_auth_headers, iaec_auth_headers
+):
     project_id = _create_approved_project(client, iaec_auth_headers, "VAL-ALLOC-001", "2026-02-01")
     species_id, strain_id = _seed_inventory(project_id)
     group_res = create_experiment_group(client, iaec_auth_headers, project_id, "Validation Group", 5)
@@ -90,7 +94,7 @@ def test_allocation_date_cannot_precede_requisition(client, staff_auth_headers, 
             "purpose": "Allocation validation",
             "items": [{"species_id": species_id, "strain_id": strain_id, "requested_count": 2}],
         },
-        headers=staff_auth_headers,
+        headers=certified_investigator_auth_headers,
     )
     assert req_res.status_code == 200, req_res.text
     req_item_id = req_res.json()["items"][0]["id"]
@@ -113,6 +117,7 @@ def test_allocation_date_cannot_precede_requisition(client, staff_auth_headers, 
 def test_experiment_date_cannot_precede_meeting_or_allocation(
     client,
     staff_auth_headers,
+    certified_investigator_auth_headers,
     iaec_auth_headers,
 ):
     project_id = _create_approved_project(client, iaec_auth_headers, "VAL-EXP-001", "2026-02-10")
@@ -154,7 +159,7 @@ def test_experiment_date_cannot_precede_meeting_or_allocation(
             "purpose": "Experiment validation",
             "items": [{"species_id": species_id, "strain_id": strain_id, "requested_count": 2}],
         },
-        headers=staff_auth_headers,
+        headers=certified_investigator_auth_headers,
     )
     assert req_res.status_code == 200, req_res.text
     req_item_id = req_res.json()["items"][0]["id"]

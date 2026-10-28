@@ -119,3 +119,23 @@ def iaec_auth_headers(client, admin_auth_headers):
     )
     assert create_res.status_code == 201, create_res.text
     return _login_headers(client, email, password)
+
+
+@pytest.fixture
+def certified_investigator_auth_headers(client, admin_auth_headers):
+    email = f"certinv_{uuid4().hex[:8]}@lmcp.ac.in"
+    password = "StrongPass@123"
+    create_res = client.post(
+        "/users/",
+        json={
+            "name": "Certified Investigator",
+            "email": email,
+            "password": password,
+            "roles": ["investigator"],
+            "status": True,
+            "is_certified_animal_handler": True,
+        },
+        headers=admin_auth_headers,
+    )
+    assert create_res.status_code == 201, create_res.text
+    return _login_headers(client, email, password)
