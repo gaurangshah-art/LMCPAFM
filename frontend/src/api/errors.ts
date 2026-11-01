@@ -4,7 +4,7 @@ import type { ApiErrorResponse } from "./types";
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
     if (error.code === "ERR_NETWORK") {
-      return "Network error — check that the backend is running and reachable.";
+      return "Network error — LMCPAFM could not reach the server. Check your connection or try again shortly.";
     }
     if (error.code === "ECONNABORTED") {
       return "Request timed out. If uploading a file, try a smaller file; otherwise wait and retry.";

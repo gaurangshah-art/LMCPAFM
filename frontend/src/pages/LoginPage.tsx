@@ -41,10 +41,8 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
   const {
     isSubmitting,
     errorMessage,
-    successMessage,
     start,
     fail,
-    succeed,
   } = useSubmitState();
 
   const onSubmit = handleSubmit(async (values) => {
@@ -54,9 +52,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
 
       await onAuthenticated(token.access_token, returnTo);
 
-      succeed("Authenticated successfully.");
-
-      // ⭐ No redirect here — App.tsx handles role-based redirect
+      // App.tsx handles role-based redirect after session is established
     } catch (error) {
       fail(getApiErrorMessage(error));
     }
@@ -72,7 +68,6 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
         </p>
       </header>
 
-      {/* ⭐ Show session expired message */}
       {expired && (
         <ErrorAlert message="Your session has expired. Please log in again. Any work you saved to the server or restored from this browser is still available." />
       )}
@@ -107,7 +102,6 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
         </button>
 
         {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
-        {successMessage ? <SuccessNote message={successMessage} /> : null}
       </form>
 
       <p className="auth-footer">

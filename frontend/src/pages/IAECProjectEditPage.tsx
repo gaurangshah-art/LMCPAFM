@@ -52,7 +52,7 @@ export function IAECProjectEditPage() {
     <div className="page-grid">
       <PageSection
         title={`Edit IAEC Project #${project.id}`}
-        subtitle="PUT /iaec/project/:id"
+        subtitle="Update protocol metadata for this IAEC project record"
       >
         <IAECProjectForm
           initialValues={project}

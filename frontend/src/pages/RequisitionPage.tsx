@@ -64,7 +64,7 @@ export function RequisitionPage({ currentUser }: RequisitionPageProps) {
         </PageSection>
       ) : null}
 
-      <PageSection title="Requisition Lookup" subtitle="GET /iaec/requisition/{req_id}">
+      <PageSection title="Requisition Lookup" subtitle="Open an existing requisition by ID">
             <div className="lookup-row">
               <select
                 value={lookupId}

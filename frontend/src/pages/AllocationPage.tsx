@@ -58,7 +58,7 @@ export function AllocationPage({ currentUser }: AllocationPageProps) {
       <ResourcesEntryPanel />
 
       {canCreateAllocations ? (
-        <PageSection title="Create Allocation" subtitle="POST /iaec/allocation">
+        <PageSection title="Create Allocation" subtitle="Record animals issued against an approved requisition">
           <p>
             <a href="/facility" className="btn-secondary">
               View facility inventory
@@ -68,7 +68,7 @@ export function AllocationPage({ currentUser }: AllocationPageProps) {
         </PageSection>
       ) : null}
 
-      <PageSection title="Allocation Lookup" subtitle="GET /iaec/allocation/{alloc_id}">
+      <PageSection title="Allocation Lookup" subtitle="Open an existing allocation by ID">
             <div className="lookup-row">
               <select
                 value={lookupId}
