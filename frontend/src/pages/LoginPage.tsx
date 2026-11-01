@@ -66,7 +66,10 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
     <section className="page-card auth-card">
       <header className="section-header">
         <h2>Sign In</h2>
-        <p>Use a backend user account to unlock authenticated workflow routes.</p>
+        <p>
+          Sign in with your LMCP institutional email and password. Animal house staff and IAEC
+          members receive accounts from the administrator; faculty may register when allowed.
+        </p>
       </header>
 
       {/* ⭐ Show session expired message */}
