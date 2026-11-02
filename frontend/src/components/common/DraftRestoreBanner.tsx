@@ -1,14 +1,15 @@
 interface DraftRestoreBannerProps {
   onRestore: () => void;
   onDismiss: () => void;
+  detail?: string;
 }
 
-export function DraftRestoreBanner({ onRestore, onDismiss }: DraftRestoreBannerProps) {
+export function DraftRestoreBanner({ onRestore, onDismiss, detail }: DraftRestoreBannerProps) {
   return (
     <div className="notice-banner warning-banner" role="status">
       <p>
-        Unsaved work from your previous session is available on this step. Restore it, or discard
-        to keep the last saved server draft.
+        {detail ??
+          "Unsaved work from a previous visit is available on this step. Restore it, or discard to keep the last version saved on the server."}
       </p>
       <div className="table-actions">
         <button type="button" className="btn btn-sm" onClick={onRestore}>

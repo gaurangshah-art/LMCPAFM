@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getFormBStudyPlan,
@@ -31,6 +31,7 @@ import {
 import {
   buildStudyPlanPayloadPhases,
   computeAnimalSummary,
+  countStudyPlanStats,
   defaultEndpoints,
   defaultFate,
   emptyEndpoint,
@@ -251,17 +252,42 @@ export function FormBStep2b() {
     [designRationale, animalRationale, phases],
   );
 
+  type Step2bDraft = typeof step2bDraft;
+
+  const shouldOfferStep2bRestore = useCallback((saved: Step2bDraft, current: Step2bDraft) => {
+    const savedStats = countStudyPlanStats(saved.phases);
+    const currentStats = countStudyPlanStats(current.phases);
+    if (
+      savedStats.groups !== currentStats.groups ||
+      savedStats.animals !== currentStats.animals ||
+      savedStats.phases !== currentStats.phases
+    ) {
+      return true;
+    }
+    return JSON.stringify(saved) !== JSON.stringify(current);
+  }, []);
+
   const { restoreOffer, acceptRestore, dismissRestore, clearDraft } = useFormDraftPersistence({
     formBId,
     stepKey: "step2b",
     draft: step2bDraft,
     hydrated: !loadingSaved,
+    shouldOfferRestore: shouldOfferStep2bRestore,
     applyDraft: (saved) => {
       setDesignRationale(saved.designRationale);
       setAnimalRationale(saved.animalRationale);
       setPhases(saved.phases);
     },
   });
+
+  const restoreBannerDetail = useMemo(() => {
+    if (!restoreOffer) {
+      return undefined;
+    }
+    const saved = countStudyPlanStats(restoreOffer.phases);
+    const onServer = countStudyPlanStats(phases);
+    return `Local draft: ${saved.groups} group(s), ${saved.animals} animal(s). Last saved on server: ${onServer.groups} group(s), ${onServer.animals} animal(s). Restore to recover work that was not saved to the server.`;
+  }, [restoreOffer, phases]);
 
   useEffect(() => {
     if (totalAnimals <= 0) return;
@@ -668,7 +694,11 @@ export function FormBStep2b() {
       </FormBWizardPageHeader>
 
       {restoreOffer ? (
-        <DraftRestoreBanner onRestore={acceptRestore} onDismiss={dismissRestore} />
+        <DraftRestoreBanner
+          detail={restoreBannerDetail}
+          onRestore={acceptRestore}
+          onDismiss={dismissRestore}
+        />
       ) : null}
 
       <FormRequiredLegend />

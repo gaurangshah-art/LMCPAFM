@@ -62,6 +62,22 @@ export function defaultFate(count: number): FormBGroupFateEntry[] {
   ];
 }
 
+export function countStudyPlanStats(phases: FormBStudyPhaseEntry[]): {
+  phases: number;
+  groups: number;
+  animals: number;
+} {
+  let groups = 0;
+  let animals = 0;
+  for (const phase of phases) {
+    groups += phase.groups.length;
+    for (const group of phase.groups) {
+      animals += group.animal_count;
+    }
+  }
+  return { phases: phases.length, groups, animals };
+}
+
 export function computeAnimalSummary(phases: FormBStudyPhaseEntry[]): FormBAnimalSummary {
   let totalUsed = 0;
   let sacrificed = 0;
