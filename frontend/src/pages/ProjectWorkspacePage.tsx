@@ -147,7 +147,7 @@ export function ProjectWorkspacePage({ currentUser }: ProjectWorkspacePageProps)
 
   return (
     <div className="page-grid">
-      <section className="hero-panel hero-panel-wide">
+      <section className="hero-panel hero-panel-wide hero-panel-long-title">
         <p className="eyebrow">Project workspace</p>
         <h1>{project.title}</h1>
         <p>

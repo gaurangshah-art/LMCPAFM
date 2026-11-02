@@ -479,6 +479,19 @@ body.nav-menu-open {
   line-height: 1.08;
 }
 
+/* Full protocol / study titles (project workspace, etc.) */
+.hero-panel-wide.hero-panel-long-title {
+  min-height: auto;
+  align-content: start;
+}
+
+.hero-panel-wide.hero-panel-long-title h1 {
+  max-width: min(48rem, 100%);
+  font-size: clamp(1.05rem, 1.75vw, 1.35rem);
+  line-height: 1.4;
+  font-weight: 650;
+}
+
 .hero-panel-wide p {
   margin: 0;
   max-width: 62ch;
@@ -1493,6 +1506,11 @@ input[type="number"] {
 
   .hero-panel-wide h1 {
     max-width: none;
+  }
+
+  .hero-panel-wide.hero-panel-long-title h1 {
+    font-size: clamp(1rem, 4vw, 1.2rem);
+    line-height: 1.45;
   }
 
   .user-directory-header,
