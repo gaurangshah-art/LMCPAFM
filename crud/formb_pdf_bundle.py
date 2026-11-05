@@ -50,9 +50,11 @@ def render_form_b_complete_pdf(
         content, filename, content_type = read_attachment_bytes(funding_attachment)
         funding_pdf = attachment_bytes_to_pdf(
             content,
-            title="Annexure – Funding Proof / Sponsor Letter",
+            title="Annexure - Funding Proof / Sponsor Letter",
             content_type=content_type,
             filename=filename,
+            embed_first_page_only=True,
+            include_title_on_generated_pages=False,
         )
         if funding_pdf:
             parts.append(funding_pdf)

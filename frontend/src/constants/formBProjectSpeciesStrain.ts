@@ -6,6 +6,10 @@ export interface FormBProjectSpeciesStrain {
   strain_id: number | null;
   species_other: string | null;
   strain_other: string | null;
+  sex: string;
+  age: string;
+  weight_range: string;
+  feeding_diet: string;
 }
 
 export function createDefaultProjectSpeciesStrain(): FormBProjectSpeciesStrain {
@@ -15,6 +19,10 @@ export function createDefaultProjectSpeciesStrain(): FormBProjectSpeciesStrain {
     strain_id: null,
     species_other: null,
     strain_other: null,
+    sex: "Both",
+    age: "8-10 weeks",
+    weight_range: "200-250 g",
+    feeding_diet: "Standard pellet diet",
   };
 }
 
@@ -28,6 +36,36 @@ export function speciesStrainKey(group: {
     return `other:${(group.species_other ?? "").trim().toLowerCase()}|${(group.strain_other ?? "").trim().toLowerCase()}`;
   }
   return `id:${group.species_id ?? ""}|${group.strain_id ?? ""}|${(group.strain_other ?? "").trim().toLowerCase()}`;
+}
+
+export function detectUniformDemographics(
+  phases: FormBStudyPhaseEntry[],
+): Pick<FormBProjectSpeciesStrain, "sex" | "age" | "weight_range" | "feeding_diet"> | null {
+  const defaults = createDefaultProjectSpeciesStrain();
+  let sample: FormBStudyGroupEntry | null = null;
+  for (const phase of phases) {
+    for (const group of phase.groups) {
+      if (!sample) {
+        sample = group;
+        continue;
+      }
+      if (
+        group.sex !== sample.sex ||
+        group.age !== sample.age ||
+        group.weight_range !== sample.weight_range ||
+        group.feeding_diet !== sample.feeding_diet
+      ) {
+        return null;
+      }
+    }
+  }
+  if (!sample) return null;
+  return {
+    sex: sample.sex || defaults.sex,
+    age: sample.age || defaults.age,
+    weight_range: sample.weight_range || defaults.weight_range,
+    feeding_diet: sample.feeding_diet || defaults.feeding_diet,
+  };
 }
 
 export function detectUniformProjectSpeciesStrain(
@@ -50,11 +88,16 @@ export function detectUniformProjectSpeciesStrain(
     }
   }
   if (!sample) return null;
+  const defaults = createDefaultProjectSpeciesStrain();
   return {
     species_id: sample.species_id ?? null,
     strain_id: sample.strain_id ?? null,
     species_other: sample.species_other ?? null,
     strain_other: sample.strain_other ?? null,
+    sex: sample.sex || defaults.sex,
+    age: sample.age || defaults.age,
+    weight_range: sample.weight_range || defaults.weight_range,
+    feeding_diet: sample.feeding_diet || defaults.feeding_diet,
   };
 }
 
@@ -69,6 +112,10 @@ export function applyProjectSpeciesStrainToGroup(
     strain_id: project.strain_id,
     species_other: project.species_other,
     strain_other: project.strain_other,
+    sex: project.sex,
+    age: project.age,
+    weight_range: project.weight_range,
+    feeding_diet: project.feeding_diet,
   };
 }
 
@@ -93,6 +140,10 @@ export function parseProjectSpeciesStrain(raw: unknown): FormBProjectSpeciesStra
     strain_id: row.strain_id != null ? Number(row.strain_id) : null,
     species_other: row.species_other != null ? String(row.species_other) : null,
     strain_other: row.strain_other != null ? String(row.strain_other) : null,
+    sex: String(row.sex ?? defaults.sex),
+    age: String(row.age ?? defaults.age),
+    weight_range: String(row.weight_range ?? defaults.weight_range),
+    feeding_diet: String(row.feeding_diet ?? defaults.feeding_diet),
   };
 }
 
@@ -118,6 +169,10 @@ export function serializeProjectSpeciesStrain(project: FormBProjectSpeciesStrain
     enabled: project.enabled,
     species_id: project.species_id,
     strain_id: project.strain_id,
+    sex: project.sex.trim(),
+    age: project.age.trim(),
+    weight_range: project.weight_range.trim(),
+    feeding_diet: project.feeding_diet.trim(),
     species_other: (project.species_other ?? "").trim() || null,
     strain_other: (project.strain_other ?? "").trim() || null,
   };

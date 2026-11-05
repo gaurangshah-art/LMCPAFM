@@ -15,6 +15,8 @@ interface FormBAttachmentFieldProps {
   label: string;
   helpText?: string;
   required?: boolean;
+  /** File picker filter; Form B attachments are PDF-only on the server. */
+  accept?: string;
 }
 
 export function FormBAttachmentField({
@@ -23,6 +25,7 @@ export function FormBAttachmentField({
   label,
   helpText,
   required = false,
+  accept = ".pdf,application/pdf",
 }: FormBAttachmentFieldProps) {
   const [attachment, setAttachment] = useState<FormBAttachmentRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +51,11 @@ export function FormBAttachmentField({
 
   async function handleUpload(file: File | null) {
     if (!file) return;
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".pdf")) {
+      setErrorMessage("Only PDF files are accepted. Export or print your document to PDF first.");
+      return;
+    }
 
     setUploading(true);
     setErrorMessage(null);
@@ -84,7 +92,7 @@ export function FormBAttachmentField({
         {required ? " *" : ""}
         <input
           type="file"
-          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+          accept={accept}
           disabled={uploading}
           onChange={(event) => void handleUpload(event.target.files?.[0] ?? null)}
         />

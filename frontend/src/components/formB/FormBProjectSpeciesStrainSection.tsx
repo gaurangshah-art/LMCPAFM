@@ -46,12 +46,11 @@ export function FormBProjectSpeciesStrainSection({
           checked={value.enabled}
           onChange={(e) => onChange({ ...value, enabled: e.target.checked })}
         />
-        This project uses <strong>one species and strain</strong> for all groups (typical for
-        single-model studies)
+        One <strong>species, strain, and animal profile</strong> for all groups (typical studies)
       </label>
       <p className="field-help">
-        When checked, you set species/strain once here; every phase and group inherits it. Uncheck
-        only if you need different models (e.g. rat and mouse) in the same Form B.
+        Set these once; every group inherits them. Uncheck only for mixed models (e.g. rat and
+        mouse).
       </p>
 
       {value.enabled ? (
@@ -153,6 +152,39 @@ export function FormBProjectSpeciesStrainSection({
               />
             </label>
           ) : null}
+
+          <label>
+            Sex
+            <input
+              value={value.sex}
+              onChange={(e) => onChange({ ...value, sex: e.target.value })}
+              placeholder="e.g. Both, Male, Female"
+            />
+          </label>
+          <label>
+            Age
+            <input
+              value={value.age}
+              onChange={(e) => onChange({ ...value, age: e.target.value })}
+              placeholder="e.g. 8-10 weeks"
+            />
+          </label>
+          <label>
+            Weight range
+            <input
+              value={value.weight_range}
+              onChange={(e) => onChange({ ...value, weight_range: e.target.value })}
+              placeholder="e.g. 200-250 g"
+            />
+          </label>
+          <label className="full-width">
+            Feeding / diet
+            <input
+              value={value.feeding_diet}
+              onChange={(e) => onChange({ ...value, feeding_diet: e.target.value })}
+              placeholder="e.g. Standard pellet diet"
+            />
+          </label>
 
           {validationError ? <p className="error-text full-width">{validationError}</p> : null}
         </div>

@@ -9,7 +9,7 @@ from crud.exceptions import CRUDValidationError
 
 DEFAULT_ATTACHMENT_ROOT = Path("data/form_b_attachments")
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
-ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"}
+ALLOWED_EXTENSIONS = {".pdf"}
 
 FORM_B_ATTACHMENT_CATEGORIES = frozenset(
     {
@@ -36,11 +36,11 @@ def _sanitize_filename(name: str) -> str:
 def validate_attachment_upload(filename: str, content: bytes) -> None:
     extension = Path(filename).suffix.lower()
     if extension not in ALLOWED_EXTENSIONS:
-        raise CRUDValidationError(
-            "Unsupported file type. Upload PDF, Word, JPG, or PNG files."
-        )
+        raise CRUDValidationError("Only PDF attachments are allowed. Save or export your file as PDF and upload again.")
     if not content:
         raise CRUDValidationError("Uploaded file is empty.")
+    if not content.startswith(b"%PDF"):
+        raise CRUDValidationError("The file is not a valid PDF. Re-export the document as PDF and try again.")
     if len(content) > MAX_ATTACHMENT_BYTES:
         raise CRUDValidationError("Attachment exceeds the 10 MB size limit.")
 

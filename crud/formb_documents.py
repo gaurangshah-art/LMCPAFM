@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDNotFoundError
 from crud.formb_pdf_bundle import render_form_b_complete_pdf
 from crud.formb_internal import get_meeting_form_b_summary
+from crud.formb_application_pdf import _format_requirement_row
 from crud.formb_study_plan import load_study_plan_for_pdf
 from crud.project_certificate import (
     FINAL_ATTESTATION,
@@ -152,13 +154,30 @@ def _write_table_row(
     if pdf.get_y() + row_height > pdf.page_break_trigger:
         pdf.add_page()
     y_start = pdf.get_y()
-    x_start = pdf.l_margin
-    x = x_start
+    x = pdf.l_margin
     for width, cell in zip(col_widths, cells):
         pdf.set_xy(x, y_start)
-        pdf.multi_cell(width, line_height, _safe_text(cell), border=1)
+        pdf.multi_cell(
+            width,
+            line_height,
+            _safe_text(cell),
+            border=1,
+            new_x=XPos.RIGHT,
+            new_y=YPos.TOP,
+            max_line_height=row_height,
+        )
         x += width
-    pdf.set_y(y_start + row_height)
+    pdf.set_xy(pdf.l_margin, y_start + row_height)
+
+
+def _shared_group_animal_profile(groups: list[dict]) -> str | None:
+    if not groups:
+        return None
+    profile = _format_group_animal_cell(groups[0])
+    for group in groups[1:]:
+        if _format_group_animal_cell(group) != profile:
+            return None
+    return profile
 
 
 def _write_phase_groups_table(pdf: FPDF, groups: list[dict]) -> None:
@@ -168,29 +187,41 @@ def _write_phase_groups_table(pdf: FPDF, groups: list[dict]) -> None:
 
     pdf.ln(1)
     _write_multiline(pdf, "Experimental groups", 6, bold=True)
-    col_widths = [pdf.epw * 0.18, pdf.epw * 0.27, pdf.epw * 0.10, pdf.epw * 0.45]
+    shared_profile = _shared_group_animal_profile(groups)
+    if shared_profile:
+        _write_multiline(pdf, f"Animal model (all groups): {shared_profile}", 5)
+        col_widths = [pdf.epw * 0.30, pdf.epw * 0.08, pdf.epw * 0.62]
+        header = ["Group", "n", "Treatment"]
+        header_font = 9
+    else:
+        col_widths = [pdf.epw * 0.20, pdf.epw * 0.24, pdf.epw * 0.08, pdf.epw * 0.48]
+        header = ["Group", "Animal (species, strain, sex)", "n", "Treatment"]
+        header_font = 8
+
     _write_table_row(
         pdf,
         col_widths,
-        [
-            "Group name",
-            "Animal (species, strain, gender)",
-            "No. of animals",
-            "Treatment (drug; dose; route; frequency; duration)",
-        ],
+        header,
         header=True,
+        font_size=header_font,
+        line_height=4.5,
     )
     for group in groups:
-        _write_table_row(
-            pdf,
-            col_widths,
-            [
+        treatment = _format_group_treatment_cell(group)
+        if shared_profile:
+            row = [
+                _format_group_name(group),
+                str(group.get("animal_count") or 0),
+                treatment,
+            ]
+        else:
+            row = [
                 _format_group_name(group),
                 _format_group_animal_cell(group),
                 str(group.get("animal_count") or 0),
-                _format_group_treatment_cell(group),
-            ],
-        )
+                treatment,
+            ]
+        _write_table_row(pdf, col_widths, row, font_size=8, line_height=4.5)
     pdf.ln(1)
 
 
@@ -229,6 +260,11 @@ def render_form_b_application_pdf(db: Session, project_id: int) -> bytes:
 
 def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
     plan = load_study_plan_for_pdf(db, form_b_id)
+    form_b = db.query(FormB).filter(FormB.id == form_b_id).first()
+    application_data = (form_b.application_data or {}) if form_b else {}
+    step3 = application_data.get("step3") or {}
+    requirements = step3.get("requirements") or []
+
     pdf = _init_annexure_pdf()
     pdf.add_page()
     _write_multiline(pdf, "Annexure I - Experimental Study Plan", 8, bold=True)
@@ -243,6 +279,26 @@ def render_study_plan_annexure_pdf(db: Session, form_b_id: int) -> bytes:
             6,
         )
     _write_multiline(pdf, f"Total animals across phases: {plan['total_animals']}", 6)
+
+    if plan.get("summary") or plan.get("objectives") or plan.get("expected_outcomes"):
+        pdf.ln(2)
+        _write_multiline(pdf, "Project overview (Form B item 6)", 6, bold=True)
+        if plan.get("summary"):
+            _write_multiline(pdf, f"Summary: {plan['summary']}", 6)
+        if plan.get("objectives"):
+            _write_multiline(pdf, f"Objectives: {plan['objectives']}", 6)
+        if plan.get("expected_outcomes"):
+            _write_multiline(pdf, f"Expected outcomes: {plan['expected_outcomes']}", 6)
+
+    if requirements:
+        pdf.ln(2)
+        _write_multiline(pdf, "Animals required (Form B item 7)", 6, bold=True)
+        for index, req in enumerate(requirements, start=1):
+            pdf.ln(1)
+            _write_multiline(pdf, f"Requirement {index}", 6, bold=True)
+            for line in _format_requirement_row(req):
+                _write_multiline(pdf, line, 5)
+
     if plan.get("design_rationale"):
         pdf.ln(2)
         _write_multiline(pdf, "Design rationale", 6, bold=True)

@@ -300,6 +300,7 @@ def get_study_plan(db: Session, user: User, form_b_id: int) -> dict:
         "animal_rationale": step2b.get("animal_rationale")
         or _animal_rationale_from_step3(application_data.get("step3")),
         "project_species_strain": step2b.get("project_species_strain"),
+        "hazard_profile": step2b.get("hazard_profile"),
     }
 
 
@@ -551,6 +552,8 @@ def save_study_plan(db: Session, user: User, payload: FormBStudyPlanSave) -> dic
     }
     if payload.project_species_strain is not None:
         step2b_payload["project_species_strain"] = payload.project_species_strain.model_dump()
+    if payload.hazard_profile is not None:
+        step2b_payload["hazard_profile"] = payload.hazard_profile.model_dump()
     application_data[STEP2B_KEY] = step2b_payload
     form_b.application_data = application_data
     _sync_step3_from_study_plan(db, form_b, payload)
@@ -942,6 +945,9 @@ def load_study_plan_for_pdf(db: Session, form_b_id: int) -> dict:
         "principal_investigator": project.principal_investigator if project else "",
         "proposed_start_date": step2.get("proposed_start_date"),
         "proposed_completion_date": step2.get("proposed_completion_date"),
+        "summary": (step2.get("summary") or "").strip(),
+        "objectives": (step2.get("objectives") or "").strip(),
+        "expected_outcomes": (step2.get("expected_outcomes") or "").strip(),
         "design_rationale": step2b.get("design_rationale") or "",
         "phases": phase_dicts,
         "total_animals": sum(phase.animal_cap for phase in phases),

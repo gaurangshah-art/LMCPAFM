@@ -426,7 +426,12 @@ export function FormBStep4() {
             validationError={validationError ?? errorMessage}
             actionRef={validationRef}
           >
-            <button className="btn-secondary" onClick={() => navigate("/form-b/step-2b")}>
+            <button
+              className="btn-secondary"
+              onClick={() =>
+                navigate(formBId ? `/form-b/step-2b/rationale?formBId=${formBId}` : "/form-b/step-2b")
+              }
+            >
               ← Back
             </button>
             <button className="btn" onClick={handleNext} disabled={loading}>

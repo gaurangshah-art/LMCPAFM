@@ -115,6 +115,11 @@ def _format_breeder_details(name: str | None, address: str | None, reg_no: str |
     return body
 
 
+FORM_B_BODY_SIZE = 9
+FORM_B_ANSWER_INDENT_MM = 10.0
+FORM_B_SUBQUESTION_INDENT_MM = 4.0
+
+
 def _ensure_space(pdf: FPDF, height: float = 12) -> None:
     if pdf.get_y() + height > pdf.page_break_trigger:
         pdf.add_page()
@@ -125,6 +130,58 @@ def _write_paragraph(pdf: FPDF, text: str, *, bold: bool = False, size: int = 9)
     pdf.set_x(pdf.l_margin)
     pdf.set_font("Helvetica", "B" if bold else "", size)
     pdf.multi_cell(pdf.epw, 4.5, _safe_text(text))
+
+
+def _write_form_question(
+    pdf: FPDF,
+    text: str,
+    *,
+    indent: float = 0.0,
+    size: int = FORM_B_BODY_SIZE,
+) -> None:
+    _ensure_space(pdf, 8)
+    pdf.set_x(pdf.l_margin + indent)
+    pdf.set_font("Helvetica", "B", size)
+    pdf.multi_cell(pdf.epw - indent, 4.5, _safe_text(text))
+
+
+def _write_form_answer(
+    pdf: FPDF,
+    text: str,
+    *,
+    indent: float = FORM_B_ANSWER_INDENT_MM,
+    size: int = FORM_B_BODY_SIZE,
+) -> None:
+    body = str(text).strip() if text is not None else ""
+    if not body:
+        body = "-"
+    _ensure_space(pdf, 8)
+    pdf.set_x(pdf.l_margin + indent)
+    pdf.set_font("Helvetica", "", size)
+    pdf.multi_cell(pdf.epw - indent, 4.5, _safe_text(body))
+
+
+def _write_form_labeled_answer(pdf: FPDF, label: str, value) -> None:
+    label_text = label.strip()
+    if label_text and not label_text.endswith(":"):
+        label_text = f"{label_text}:"
+    _write_form_question(pdf, label_text, indent=FORM_B_SUBQUESTION_INDENT_MM)
+    _write_form_answer(pdf, _d(value))
+
+
+def _write_form_body_line(pdf: FPDF, line: str) -> None:
+    """Render a numbered-block body line (sub-label + value or free text)."""
+    text = line.strip()
+    if not text:
+        return
+    if text.endswith(":") and text.count(":") == 1:
+        _write_form_question(pdf, text, indent=FORM_B_SUBQUESTION_INDENT_MM)
+        return
+    if ": " in text:
+        label, _, value = text.partition(": ")
+        _write_form_labeled_answer(pdf, label, value)
+        return
+    _write_form_answer(pdf, text)
 
 
 def _count_wrapped_lines(
@@ -203,11 +260,12 @@ def _write_section_i_table(pdf: FPDF, rows: list[tuple[str, str]]) -> None:
         row_top = y_cursor
         text_top = row_top + cell_padding_v
 
-        pdf.set_font("Helvetica", "", font_size)
+        pdf.set_font("Helvetica", "B", font_size)
         pdf.set_xy(x_start + cell_padding_h, text_top)
         pdf.multi_cell(label_text_width, line_height, _safe_text(label), border=0)
         label_bottom = pdf.get_y()
 
+        pdf.set_font("Helvetica", "", font_size)
         pdf.set_xy(x_start + label_width + cell_padding_h, text_top)
         pdf.multi_cell(value_text_width, line_height, _safe_text(value), border=0)
         value_bottom = pdf.get_y()
@@ -234,15 +292,18 @@ def _write_numbered_block(
 ) -> None:
     _ensure_space(pdf, 10)
     pdf.ln(1)
-    _write_paragraph(pdf, f"{number}. {title}", bold=True)
+    _write_form_question(pdf, f"{number}. {title}")
     for line in lines:
-        if line.strip():
-            _write_paragraph(pdf, f"   {line}")
+        _write_form_body_line(pdf, line)
 
 
 def _write_sub_items(pdf: FPDF, items: list[tuple[str, str]]) -> None:
     for label, value in items:
-        _write_paragraph(pdf, f"   {label}: {_d(value)}")
+        if value is None or (isinstance(value, str) and not str(value).strip()):
+            _write_form_body_line(pdf, label)
+            continue
+        _write_form_question(pdf, label.strip(), indent=FORM_B_SUBQUESTION_INDENT_MM)
+        _write_form_answer(pdf, _d(value))
 
 
 def _format_year_wise_breakup(entries: list[dict]) -> str:
@@ -362,21 +423,27 @@ def _render_section_i(pdf: _FormBPDF, ctx: dict) -> None:
     _write_section_i_table(pdf, rows)
 
     research_type = _d(step1.get("research_type"))
-    _write_paragraph(
+    _write_form_question(
         pdf,
-        f"Type of research involved (Basic Research / Educational/ Regulatory/ Contract Research): {research_type}",
+        "Type of research involved (Basic Research / Educational/ Regulatory/ Contract Research):",
     )
+    _write_form_answer(pdf, research_type)
     pdf.ln(2)
-    _write_paragraph(pdf, "Signature", bold=True)
-    _write_paragraph(
+    _write_form_question(pdf, "Signature")
+    _write_form_labeled_answer(
         pdf,
-        f"Name and Designation of Investigator: {_d(step1.get('principal_investigator'))}, "
-        f"{_d(step1.get('designation'))}",
+        "Name and Designation of Investigator",
+        f"{_d(step1.get('principal_investigator'))}, {_d(step1.get('designation'))}",
     )
-    _write_paragraph(
+    _write_form_labeled_answer(
         pdf,
-        f"Date: {_date((ctx['step7'] or {}).get('declaration_date'))}    "
-        f"Place: {_d((ctx['step7'] or {}).get('declaration_place'))}",
+        "Date",
+        _date((ctx["step7"] or {}).get("declaration_date")),
+    )
+    _write_form_labeled_answer(
+        pdf,
+        "Place",
+        _d((ctx["step7"] or {}).get("declaration_place")),
     )
 
 
@@ -417,9 +484,9 @@ def _render_section_ii(pdf: _FormBPDF, ctx: dict) -> None:
         co_lines = [
             f"- {row['name']} ({row['role']}, {row['type']})" for row in ctx["co_investigators"]
         ]
-        _write_paragraph(pdf, "   Co-investigators / co-guides:")
+        _write_form_question(pdf, "Co-investigators / co-guides:", indent=FORM_B_SUBQUESTION_INDENT_MM)
         for line in co_lines:
-            _write_paragraph(pdf, f"   {line}")
+            _write_form_answer(pdf, line.lstrip("- ").strip())
 
     personnel = step6.get("authorized_personnel") or []
     personnel_lines = []
@@ -476,18 +543,25 @@ def _render_section_ii(pdf: _FormBPDF, ctx: dict) -> None:
         ],
     )
 
-    study_plan_lines = [
-        f"Summary: {_d(step2.get('summary'))}",
-        f"Objectives: {_d(step2.get('objectives'))}",
-        f"Expected outcomes: {_d(step2.get('expected_outcomes'))}",
-        f"Design rationale: {_d(step2b.get('design_rationale'))}",
-        f"Annexure reference: {_d(step2.get('study_plan_annexure_reference'))}",
-        "Detailed experimental study plan is enclosed as Annexure I.",
-    ]
+    annexure_ref = _d(step2.get("study_plan_annexure_reference"))
     if ctx["study_plan"]:
-        study_plan_lines.append(
-            f"Total animals across phases (Annexure I): {ctx['study_plan'].get('total_animals', '-')}"
-        )
+        total = ctx["study_plan"].get("total_animals", "-")
+        phase_count = len(ctx["study_plan"].get("phases") or [])
+        study_plan_lines = [
+            "Detailed study plan (overview, experimental phases, groups, procedures, endpoints, "
+            "design rationale, and animal requirement register) is enclosed as Annexure I.",
+            f"Total animals: {total} across {phase_count} phase(s).",
+        ]
+        if annexure_ref and annexure_ref != "-":
+            study_plan_lines.append(f"Applicant note: {annexure_ref}")
+    else:
+        study_plan_lines = [
+            f"Project summary: {_d(step2.get('summary'))}",
+            f"Objectives: {_d(step2.get('objectives'))}",
+            f"Expected outcomes: {_d(step2.get('expected_outcomes'))}",
+        ]
+        if annexure_ref and annexure_ref != "-":
+            study_plan_lines.append(f"Brief annexure note (Step 2): {annexure_ref}")
     _write_numbered_block(
         pdf,
         "6",
@@ -497,9 +571,17 @@ def _render_section_ii(pdf: _FormBPDF, ctx: dict) -> None:
 
     requirements = step3.get("requirements") or []
     animal_lines: list[str] = []
-    for index, req in enumerate(requirements, start=1):
-        animal_lines.append(f"Requirement {index}:")
-        animal_lines.extend(_format_requirement_row(req))
+    if ctx["study_plan"]:
+        total = ctx["study_plan"].get("total_animals", "-")
+        animal_lines.append(f"Total animals for this protocol: {total}.")
+        animal_lines.append(
+            "Species, strain, year-wise breakup, breeder, source, housing, and group-wise "
+            "experimental design: see Annexure I. Rationale for animal usage: Section 8 below."
+        )
+    elif requirements:
+        for index, req in enumerate(requirements, start=1):
+            animal_lines.append(f"Requirement {index}:")
+            animal_lines.extend(_format_requirement_row(req))
     _write_numbered_block(pdf, "7", "Animals required", animal_lines or ["-"])
 
     rationale_items = [
@@ -629,14 +711,13 @@ def _render_declarations(pdf: _FormBPDF, ctx: dict) -> None:
     _write_paragraph(pdf, "Investigator's declaration.", bold=True, size=10)
     for index, (key, label) in enumerate(DECLARATION_LABELS.items(), start=1):
         accepted = "Yes" if step7.get(key) else "No"
-        _write_paragraph(pdf, f"{index}. [{accepted}] {label}")
+        _write_form_question(pdf, f"{index}. {label}")
+        _write_form_answer(pdf, accepted)
     pdf.ln(2)
-    _write_paragraph(pdf, f"Signature: {_d(step7.get('declaration_signature_name'))}")
-    _write_paragraph(
-        pdf,
-        f"Name of Investigator: {_d(step7.get('declaration_signature_name'))}    "
-        f"Date: {_date(step7.get('declaration_date'))}    Place: {_d(step7.get('declaration_place'))}",
-    )
+    _write_form_question(pdf, "Signature")
+    _write_form_labeled_answer(pdf, "Name of Investigator", _d(step7.get("declaration_signature_name")))
+    _write_form_labeled_answer(pdf, "Date", _date(step7.get("declaration_date")))
+    _write_form_labeled_answer(pdf, "Place", _d(step7.get("declaration_place")))
 
 
 def render_cpcsea_form_b_application_pdf(db: Session, project_id: int) -> bytes:

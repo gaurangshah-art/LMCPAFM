@@ -362,12 +362,17 @@ export interface FormBProjectSpeciesStrainPayload {
   strain_other?: string | null;
 }
 
+export interface FormBStudyPlanHazardProfilePayload {
+  uses_special_hazards: "none" | "yes";
+}
+
 export interface FormBStudyPlanPayload {
   form_b_id: number;
   design_rationale: string;
   phases: FormBStudyPhaseEntry[];
   animal_rationale: Record<string, unknown>;
   project_species_strain?: FormBProjectSpeciesStrainPayload | null;
+  hazard_profile?: FormBStudyPlanHazardProfilePayload | null;
 }
 
 export interface FormBStudyPlanRead {
@@ -379,6 +384,7 @@ export interface FormBStudyPlanRead {
   group_count: number;
   animal_rationale?: Record<string, unknown> | null;
   project_species_strain?: FormBProjectSpeciesStrainPayload | null;
+  hazard_profile?: FormBStudyPlanHazardProfilePayload | null;
 }
 
 export async function getFormBStudyPlan(formBId: number): Promise<FormBStudyPlanRead> {

@@ -56,17 +56,19 @@ export function parseAnimalRationale(saved: Record<string, unknown> | null | und
       })
     : empty.yearWiseBreakup;
 
+  const whyNumber = String(saved.why_number_essential ?? "");
+  const numberJustification = String(saved.number_justification ?? "");
   return {
     whyAnimalNecessary: String(saved.why_animal_necessary ?? ""),
     inVitroStudyDetails: String(saved.in_vitro_study_details ?? ""),
     whySpeciesSelected: String(saved.why_species_selected ?? ""),
-    whyNumberEssential: String(saved.why_number_essential ?? ""),
+    whyNumberEssential: whyNumber || numberJustification,
     similarExperimentsInEstablishment: String(saved.similar_experiments_in_establishment ?? ""),
     justifyNewExperiment: String(saved.justify_new_experiment ?? ""),
     similarExperimentsElsewhere: String(saved.similar_experiments_elsewhere ?? ""),
     animalSource: String(saved.animal_source ?? ""),
     daysHoused: Number(saved.days_housed ?? 0),
-    numberJustification: String(saved.number_justification ?? ""),
+    numberJustification: numberJustification || whyNumber,
     yearWiseBreakup,
     breederName: String(saved.breeder_name ?? empty.breederName),
     breederAddress: String(saved.breeder_address ?? empty.breederAddress),
@@ -77,17 +79,20 @@ export function parseAnimalRationale(saved: Record<string, unknown> | null | und
 }
 
 export function serializeAnimalRationale(form: FormBAnimalRationaleForm) {
+  const numberText =
+    form.whyNumberEssential.trim() || form.numberJustification.trim();
   return {
     why_animal_necessary: form.whyAnimalNecessary.trim(),
-    in_vitro_study_details: form.inVitroStudyDetails.trim(),
+    in_vitro_study_details:
+      form.inVitroStudyDetails.trim() || form.whyAnimalNecessary.trim(),
     why_species_selected: form.whySpeciesSelected.trim(),
-    why_number_essential: form.whyNumberEssential.trim(),
+    why_number_essential: numberText,
     similar_experiments_in_establishment: form.similarExperimentsInEstablishment.trim(),
     justify_new_experiment: form.justifyNewExperiment.trim(),
     similar_experiments_elsewhere: form.similarExperimentsElsewhere.trim(),
     animal_source: form.animalSource.trim(),
     days_housed: Number(form.daysHoused),
-    number_justification: form.numberJustification.trim(),
+    number_justification: numberText,
     year_wise_breakup: form.yearWiseBreakup.map((row) => ({
       year: row.year.trim(),
       count: Number(row.count),

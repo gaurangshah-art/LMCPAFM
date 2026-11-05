@@ -108,6 +108,9 @@ def test_form_b_annexure_pdf_includes_animal_summary_table(client, monkeypatch):
         pdf_bytes = render_study_plan_annexure_pdf(db, form_b_id)
 
     assert pdf_bytes.startswith(b"%PDF")
+    from crud.formb_documents import _shared_group_animal_profile
+
+    assert _shared_group_animal_profile(plan["phases"][0]["groups"]) is not None
     summary = plan["animal_summary"]
     assert summary["total_used"] == 20
     assert summary["sacrificed"] >= 13

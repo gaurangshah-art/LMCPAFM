@@ -343,7 +343,7 @@ export function FormBStep2() {
                 formBId={formBId}
                 category="funding_proof"
                 label="Funding proof attachment"
-                helpText="Upload PDF, Word, JPG, or PNG up to 10 MB for the proof type(s) selected above."
+                helpText="PDF only (max 10 MB). The first page is included in your merged Form B download. Export Word or email to PDF before uploading."
                 required
               />
             ) : null}

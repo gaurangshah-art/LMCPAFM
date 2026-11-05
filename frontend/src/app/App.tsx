@@ -39,7 +39,10 @@ import { MustChangePasswordGate } from "../components/common/MustChangePasswordG
 import { getMyInvestigatorProfile } from "../api/investigatorProfileApi";
 import { FormBStep1 } from "../pages/formB/FormBStep1";
 import { FormBStep2 } from "../pages/formB/FormBStep2";
-import { FormBStep2b } from "../pages/formB/FormBStep2b";
+import { FormBStudyPlanProvider } from "../pages/formB/studyPlan/FormBStudyPlanContext";
+import { FormBStep2bPlanPage } from "../pages/formB/studyPlan/FormBStep2bPlanPage";
+import { FormBStep2bGroupsPage } from "../pages/formB/studyPlan/FormBStep2bGroupsPage";
+import { FormBStep2bRationalePage } from "../pages/formB/studyPlan/FormBStep2bRationalePage";
 import { FormBStep4 } from "../pages/formB/FormBStep4";
 import { FormBStep5 } from "../pages/formB/FormBStep5";
 import { FormBStep6 } from "../pages/formB/FormBStep6";
@@ -518,10 +521,14 @@ export default function App() {
                   isAuthLoading={isAuthLoading}
                   allowedRoles={["investigator"]}
                 >
-                  <FormBStep2b />
+                  <FormBStudyPlanProvider />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<FormBStep2bPlanPage />} />
+              <Route path="groups" element={<FormBStep2bGroupsPage />} />
+              <Route path="rationale" element={<FormBStep2bRationalePage />} />
+            </Route>
 
             <Route
               path="/form-b/step-3"

@@ -145,12 +145,26 @@ class FormBStudyPlanAnimalRationale(BaseModel):
         return self
 
 
+class FormBStudyPlanHazardProfile(BaseModel):
+    """Declared on study plan; Step 7 hazardous-agent section can inherit when unset."""
+
+    uses_special_hazards: str = Field(
+        "none",
+        pattern="^(none|yes)$",
+        description="none = no radionuclides, infectious agents, rDNA, or other IAEC-regulated hazards",
+    )
+
+
 class FormBProjectSpeciesStrain(BaseModel):
     enabled: bool = True
     species_id: int | None = Field(None, ge=1)
     strain_id: int | None = Field(None, ge=1)
     species_other: str | None = Field(None, max_length=200)
     strain_other: str | None = Field(None, max_length=200)
+    sex: str = Field("Both", max_length=50)
+    age: str = Field("8-10 weeks", max_length=100)
+    weight_range: str = Field("200-250 g", max_length=100)
+    feeding_diet: str = Field("Standard pellet diet", max_length=200)
 
 
 class FormBStudyPlanSave(BaseModel):
@@ -159,6 +173,7 @@ class FormBStudyPlanSave(BaseModel):
     phases: list[FormBStudyPhaseEntry] = Field(..., min_length=1)
     animal_rationale: FormBStudyPlanAnimalRationale
     project_species_strain: FormBProjectSpeciesStrain | None = None
+    hazard_profile: FormBStudyPlanHazardProfile | None = None
 
     @model_validator(mode="after")
     def validate_unique_phase_order(self):
@@ -177,3 +192,4 @@ class FormBStudyPlanRead(BaseModel):
     group_count: int = 0
     animal_rationale: dict | None = None
     project_species_strain: FormBProjectSpeciesStrain | None = None
+    hazard_profile: FormBStudyPlanHazardProfile | None = None

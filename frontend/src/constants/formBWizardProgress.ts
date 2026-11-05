@@ -4,6 +4,8 @@ export type FormBWizardStepId =
   | "step-1"
   | "step-2"
   | "step-2b"
+  | "step-2b-groups"
+  | "step-2b-rationale"
   | "step-4"
   | "step-5"
   | "step-6"
@@ -37,8 +39,22 @@ export const FORM_B_WIZARD_STEPS: FormBWizardStepDef[] = [
   {
     id: "step-2b",
     route: "/form-b/step-2b",
-    shortLabel: "2b · Study plan",
-    minutes: 45,
+    shortLabel: "2b · Plan",
+    minutes: 15,
+    reviewKey: "step2b",
+  },
+  {
+    id: "step-2b-groups",
+    route: "/form-b/step-2b/groups",
+    shortLabel: "2b · Groups",
+    minutes: 20,
+    reviewKey: "step2b",
+  },
+  {
+    id: "step-2b-rationale",
+    route: "/form-b/step-2b/rationale",
+    shortLabel: "2b · Animals",
+    minutes: 10,
     reviewKey: "step2b",
   },
   {

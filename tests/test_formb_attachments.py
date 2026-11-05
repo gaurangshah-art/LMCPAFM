@@ -122,6 +122,19 @@ def test_form_b_attachment_upload_list_download_delete(client, monkeypatch):
     assert client.get(f"/formb/{form_b_id}/attachments", headers=headers).json() == []
 
 
+def test_form_b_attachment_rejects_non_pdf(client, monkeypatch):
+    headers, payload = _register_and_login(client, monkeypatch)
+    form_b_id = _start_form_b(client, headers, payload)
+
+    upload_res = client.post(
+        f"/formb/{form_b_id}/attachments?category=funding_proof",
+        files={"file": ("letter.doc", b"not a pdf", "application/msword")},
+        headers=headers,
+    )
+    assert upload_res.status_code == 400
+    assert "pdf" in upload_res.json()["detail"].lower()
+
+
 def test_form_b_submit_requires_mandatory_attachments(client, monkeypatch):
     headers, payload = _register_and_login(client, monkeypatch)
     form_b_id = _start_form_b(client, headers, payload)

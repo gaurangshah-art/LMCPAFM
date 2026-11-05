@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../../api/errors";
-import { saveFormBStep7 } from "../../api/formbApi";
+import { getFormBStudyPlan, saveFormBStep7 } from "../../api/formbApi";
 import { LoadingState } from "../../components/common/LoadingState";
 import { FormRequiredLegend } from "../../components/common/FormRequiredLegend";
 import { RequiredMark } from "../../components/common/RequiredMark";
@@ -80,6 +80,32 @@ export function FormBStep7() {
   useEffect(() => {
     if (saved) setForm(saved);
   }, [saved]);
+
+  useEffect(() => {
+    if (!formBId || loadingSaved) {
+      return;
+    }
+    if (saved?.hazardousAgentsUsed) {
+      return;
+    }
+    let cancelled = false;
+    getFormBStudyPlan(formBId)
+      .then((plan) => {
+        if (cancelled || plan.hazard_profile?.uses_special_hazards !== "none") {
+          return;
+        }
+        setForm((current) => ({
+          ...current,
+          hazardousAgentsUsed: "No",
+          hazardousAgentDetails:
+            "Not applicable — declared on study plan: no radionuclides, infectious agents, recombinant DNA, or other IAEC-regulated hazardous agents.",
+        }));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [formBId, loadingSaved, saved?.hazardousAgentsUsed]);
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -237,68 +263,78 @@ export function FormBStep7() {
                 <option value="No">No</option>
               </select>
             </label>
-            <label className="full-width">
-              Hazardous agent details (agents, biosafety level, disposal)
-              <textarea
-                value={form.hazardousAgentDetails}
-                onChange={(e) => updateField("hazardousAgentDetails", e.target.value)}
-              />
-            </label>
-            <label>
-              AERB approval reference (radionucleotides)
-              <input
-                value={form.aerbApprovalReference}
-                onChange={(e) => updateField("aerbApprovalReference", e.target.value)}
-              />
-            </label>
-            {form.hazardousAgentsUsed === "Yes" && formBId ? (
-              <FormBAttachmentField
-                formBId={formBId}
-                category="aerb_certificate"
-                label="AERB certificate attachment"
-              />
+            {form.hazardousAgentsUsed === "No" ? (
+              <p className="field-help full-width" role="note">
+                No AERB, IBSC, or RCGM entries are required when hazardous agents are not used.
+                This may match your answer on the study plan.
+              </p>
             ) : null}
-            <label>
-              IBSC approval reference (microorganisms / infectious agents)
-              <input
-                value={form.ibscApprovalReference}
-                onChange={(e) => updateField("ibscApprovalReference", e.target.value)}
-              />
-            </label>
-            {form.hazardousAgentsUsed === "Yes" && formBId ? (
-              <FormBAttachmentField
-                formBId={formBId}
-                category="ibsc_certificate"
-                label="IBSC certificate attachment"
-              />
-            ) : null}
-            <label>
-              RCGM approval reference (recombinant DNA)
-              <input
-                value={form.rcgmApprovalReference}
-                onChange={(e) => updateField("rcgmApprovalReference", e.target.value)}
-              />
-            </label>
-            {form.hazardousAgentsUsed === "Yes" && formBId ? (
-              <FormBAttachmentField
-                formBId={formBId}
-                category="rcgm_certificate"
-                label="RCGM certificate attachment"
-              />
-            ) : null}
-            <label>
-              Other hazardous chemical / drug approval reference
-              <input
-                value={form.otherHazardousReference}
-                onChange={(e) => updateField("otherHazardousReference", e.target.value)}
-              />
-            </label>
-            {form.hazardousAgentsUsed === "Yes" && formBId ? (
-              <FormBAttachmentField
-                formBId={formBId}
-                category="other_hazardous_certificate"
-                label="Other hazardous certificate attachment"
-              />
+            {form.hazardousAgentsUsed === "Yes" ? (
+              <>
+                <label className="full-width">
+                  Hazardous agent details (agents, biosafety level, disposal)
+                  <textarea
+                    value={form.hazardousAgentDetails}
+                    onChange={(e) => updateField("hazardousAgentDetails", e.target.value)}
+                  />
+                </label>
+                <label>
+                  AERB approval reference (radionucleotides)
+                  <input
+                    value={form.aerbApprovalReference}
+                    onChange={(e) => updateField("aerbApprovalReference", e.target.value)}
+                  />
+                </label>
+                {formBId ? (
+                  <FormBAttachmentField
+                    formBId={formBId}
+                    category="aerb_certificate"
+                    label="AERB certificate attachment"
+                  />
+                ) : null}
+                <label>
+                  IBSC approval reference (microorganisms / infectious agents)
+                  <input
+                    value={form.ibscApprovalReference}
+                    onChange={(e) => updateField("ibscApprovalReference", e.target.value)}
+                  />
+                </label>
+                {formBId ? (
+                  <FormBAttachmentField
+                    formBId={formBId}
+                    category="ibsc_certificate"
+                    label="IBSC certificate attachment"
+                  />
+                ) : null}
+                <label>
+                  RCGM approval reference (recombinant DNA)
+                  <input
+                    value={form.rcgmApprovalReference}
+                    onChange={(e) => updateField("rcgmApprovalReference", e.target.value)}
+                  />
+                </label>
+                {formBId ? (
+                  <FormBAttachmentField
+                    formBId={formBId}
+                    category="rcgm_certificate"
+                    label="RCGM certificate attachment"
+                  />
+                ) : null}
+                <label>
+                  Other hazardous chemical / drug approval reference
+                  <input
+                    value={form.otherHazardousReference}
+                    onChange={(e) => updateField("otherHazardousReference", e.target.value)}
+                  />
+                </label>
+                {formBId ? (
+                  <FormBAttachmentField
+                    formBId={formBId}
+                    category="other_hazardous_certificate"
+                    label="Other hazardous certificate attachment"
+                  />
+                ) : null}
+              </>
             ) : null}
             <label>
               CPCSEA guidelines adherence
