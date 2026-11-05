@@ -14,8 +14,16 @@ class User(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[str] = mapped_column(String, nullable=False, default="investigator")
     status: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    is_certified_animal_handler: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    admin_provisioned: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

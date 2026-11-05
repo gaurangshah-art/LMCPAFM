@@ -1,0 +1,4 @@
+meeting_date,meeting_number,protocol_number,project_title,principal_investigator,pi_email,approval_date,approved_animal_count,remaining_animal_count,decision,decision_remarks,ongoing
+2025-09-10,41,LMCP/IAEC/2025/41/0244,Example study title (replace),Dr Amit Example,amit.chaudhari@lmcp.ac.in,2025-09-10,40,30,approved,Historical import from minutes; 10 animals used before LMCPAFM,Y
+2025-11-05,42,LMCP/IAEC/2025/42/0245,Second example project,Dr Anuradha Example,anuradha.gajjar@lmcp.ac.in,2025-11-05,24,,approved,Historical import,Y
+2026-01-08,43,LMCP/IAEC/2026/43/0246,Third example project,Dr Avani Example,avani.chokshi@lmcp.ac.in,2026-01-08,16,16,approved,Historical import,N

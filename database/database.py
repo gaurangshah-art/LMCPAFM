@@ -1,5 +1,6 @@
 # database/database.py
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -12,12 +13,26 @@ DEFAULT_DB_URL = "sqlite:///database/LMCPAFM.db"
 DATABASE_URL = os.environ.get("DATABASE_URL", DEFAULT_DB_URL)
 
 
-def _create_engine_and_session(db_url: str):
-    """Create an engine and SessionLocal configured for SQLAlchemy 2.x.
+def _ensure_sqlite_directory(db_url: str) -> None:
+    """Create parent directories for file-backed SQLite databases when missing."""
+    if not db_url.startswith("sqlite"):
+        return
 
-    For SQLite in-memory use StaticPool so the same DB persists across
-    connections/threads (useful for tests). Returns (engine, SessionLocal).
-    """
+    url = make_url(db_url)
+    database = url.database
+    if not database or database == ":memory:":
+        return
+
+    db_path = Path(database)
+    if not db_path.is_absolute():
+        db_path = Path.cwd() / db_path
+
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _create_engine_and_session(db_url: str):
+    """Create an engine and SessionLocal configured for SQLAlchemy 2.x."""
+    _ensure_sqlite_directory(db_url)
     connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
     if db_url.startswith("sqlite") and ":memory:" in db_url:
         engine = create_engine(
@@ -73,5 +88,7 @@ def init_db() -> None:
     if db_url != DATABASE_URL:
         engine, SessionLocal = _create_engine_and_session(db_url)
         DATABASE_URL = db_url
+    else:
+        _ensure_sqlite_directory(db_url)
 
     Base.metadata.create_all(bind=engine)

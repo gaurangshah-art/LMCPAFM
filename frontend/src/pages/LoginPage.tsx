@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { login } from "../api/authApi";
 import { getApiErrorMessage } from "../api/errors";
@@ -16,13 +16,15 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface LoginPageProps {
-  onAuthenticated: (accessToken: string, refreshToken: string) => Promise<void>;
+  onAuthenticated: (accessToken: string, returnTo?: string | null) => Promise<void>;
 }
 
 export function LoginPage({ onAuthenticated }: LoginPageProps) {
   const location = useLocation();
 
   const expired = new URLSearchParams(location.search).get("expired") === "1";
+  const registered = new URLSearchParams(location.search).get("registered") === "1";
+  const returnTo = new URLSearchParams(location.search).get("returnTo");
 
   const {
     register,
@@ -39,10 +41,8 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
   const {
     isSubmitting,
     errorMessage,
-    successMessage,
     start,
     fail,
-    succeed,
   } = useSubmitState();
 
   const onSubmit = handleSubmit(async (values) => {
@@ -50,12 +50,9 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
     try {
       const token = await login(values);
 
-      // ⭐ Pass both tokens to App.tsx
-      await onAuthenticated(token.access_token, token.refresh_token ?? "");
+      await onAuthenticated(token.access_token, returnTo);
 
-      succeed("Authenticated successfully.");
-
-      // ⭐ No redirect here — App.tsx handles role-based redirect
+      // App.tsx handles role-based redirect after session is established
     } catch (error) {
       fail(getApiErrorMessage(error));
     }
@@ -65,12 +62,18 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
     <section className="page-card auth-card">
       <header className="section-header">
         <h2>Sign In</h2>
-        <p>Use a backend user account to unlock authenticated workflow routes.</p>
+        <p>
+          Sign in with your LMCP institutional email and password. Animal house staff and IAEC
+          members receive accounts from the administrator; faculty may register when allowed.
+        </p>
       </header>
 
-      {/* ⭐ Show session expired message */}
       {expired && (
-        <ErrorAlert message="Your session has expired. Please log in again." />
+        <ErrorAlert message="Your session has expired. Please log in again. Any work you saved to the server or restored from this browser is still available." />
+      )}
+
+      {registered && (
+        <SuccessNote message="Registration successful. Please sign in with your institutional email." />
       )}
 
       <form className="form-grid" onSubmit={onSubmit}>
@@ -84,19 +87,27 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
 
         <label>
           Password
-          <input type="password" {...register("password")} />
+          <input type="password" autoComplete="current-password" {...register("password")} />
           {errors.password ? (
             <small className="field-error">{errors.password.message}</small>
           ) : null}
         </label>
+
+        <p className="auth-inline-link">
+          <Link to="/forgot-password">Forgot password?</Link>
+        </p>
 
         <button className="btn" type="submit" disabled={isSubmitting}>
           Log In
         </button>
 
         {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
-        {successMessage ? <SuccessNote message={successMessage} /> : null}
       </form>
+
+      <p className="auth-footer">
+        LMCP faculty?{" "}
+        <Link to="/register-investigator">Register as Investigator</Link>
+      </p>
     </section>
   );
 }

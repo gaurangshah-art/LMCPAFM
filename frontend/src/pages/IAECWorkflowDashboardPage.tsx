@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -21,7 +21,7 @@ export function IAECWorkflowDashboardPage() {
 
   const navigate = useNavigate();
 
-  async function loadProjects() {
+  const loadProjects = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getProjects();
@@ -31,10 +31,31 @@ export function IAECWorkflowDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    void loadProjects();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const data = await getProjects();
+        if (!cancelled) {
+          setProjects(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load IAEC workflow data.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleApprove(id: number) {

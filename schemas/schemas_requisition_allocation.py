@@ -39,6 +39,12 @@ class AnimalRequisitionCreateInternal(AnimalRequisitionCreate):
     requester_role: str
 
 
+class AnimalRequisitionAmend(BaseModel):
+    date: date
+    purpose: str
+    items: list[AnimalRequisitionItemCreate]
+
+
 class AnimalRequisition(BaseModel):
     id: int
     protocol_id: int
@@ -47,6 +53,12 @@ class AnimalRequisition(BaseModel):
     requester_role: str
     date: date
     purpose: str
+    status: str = "active"
+    amended_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    has_allocation: bool = False
+    can_amend: bool = False
+    can_cancel: bool = False
     items: list[AnimalRequisitionItem]
     model_config = ConfigDict(from_attributes=True)
 
@@ -72,6 +84,8 @@ class AnimalAllocationAnimal(BaseModel):
     cage_id: int | None = None
     status: str | None = None
     protocol_id: int | None = None
+    experiment_group_id: int | None = None
+    animal_number: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -93,6 +107,7 @@ class AnimalAllocationBase(BaseModel):
 
 class AnimalAllocationCreate(AnimalAllocationBase):
     items: list[AnimalAllocationItemCreate]
+    experiment_group_id: int | None = None
 
 
 class AnimalAllocation(AnimalAllocationBase):

@@ -19,5 +19,9 @@ def test_format_display_date_already_formatted():
     assert format_display_date("01/02/2026") == "01/02/2026"
 
 
+def test_format_display_date_ordinal_text():
+    assert format_display_date("16th June, 2000") == "16/06/2000"
+
+
 def test_format_display_date_none():
     assert format_display_date(None) == "—"

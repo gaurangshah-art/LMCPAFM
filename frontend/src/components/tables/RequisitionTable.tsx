@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { AnimalRequisition } from "../../api/types";
 import { formatDisplayDate } from "../../utils/dateFormat";
 
@@ -20,7 +21,9 @@ export function RequisitionTable({ requisition }: RequisitionTableProps) {
             <th>Requester</th>
             <th>Date</th>
             <th>Purpose</th>
+            <th>Status</th>
             <th>Items</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -30,12 +33,16 @@ export function RequisitionTable({ requisition }: RequisitionTableProps) {
             <td>{requisition.requester_name}</td>
             <td>{formatDisplayDate(requisition.date)}</td>
             <td>{requisition.purpose}</td>
+            <td>{requisition.status ?? "active"}</td>
             <td>
               {requisition.items.map((item) => (
                 <div key={item.id}>
                   Item {item.id}: species {item.species_id}, strain {item.strain_id}, requested {item.requested_count}
                 </div>
               ))}
+            </td>
+            <td>
+              <Link to={`/requisitions/${requisition.id}`}>Manage</Link>
             </td>
           </tr>
         </tbody>

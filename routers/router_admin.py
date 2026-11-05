@@ -1,0 +1,182 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from crud.activity_log import list_activity_logs, record_activity
+from crud.admin_users import delete_user as delete_user_record
+from crud.admin_users import reset_user_password
+from crud.exceptions import CRUDValidationError
+from database.database import get_db
+from database.lmcpafm_models import IAECProject
+from database.lmcpafm_requisition_allocation import AnimalRequisition
+from database.lmcpafm_experiments import Experiment
+from dependencies.auth import require_admin, require_admin_or_staff
+from models.user import User
+from schemas.schemas_users import AdminResetPasswordRequest
+from utils.security import verify_password
+
+router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+@router.get("/summary")
+def read_system_summary(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin_or_staff),
+):
+    return {
+        "total_users": db.query(User).count(),
+        "total_projects": db.query(IAECProject).count(),
+        "total_requisitions": db.query(AnimalRequisition).count(),
+        "total_allocations": 0,
+        "total_experiments": db.query(Experiment).count(),
+    }
+
+
+@router.get("/logs")
+def read_activity_logs(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin_or_staff),
+):
+    logs = list_activity_logs(db)
+    return [
+        {
+            "timestamp": log.created_at.isoformat(),
+            "user_name": log.user_name,
+            "action": log.action,
+            "details": log.details,
+        }
+        for log in logs
+    ]
+
+
+@router.get("/users")
+def read_admin_users(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    users = db.query(User).order_by(User.id.asc()).all()
+    return [
+        {
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "roles": [r.name for r in u.roles],
+            "status": u.status,
+            "must_change_password": u.must_change_password,
+            "is_certified_animal_handler": u.is_certified_animal_handler,
+            "admin_provisioned": u.admin_provisioned,
+        }
+        for u in users
+    ]
+
+
+@router.put("/users/{user_id}/roles")
+def update_user_roles(
+    user_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_admin),
+):
+    from models.role import Role
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    role_names = payload.get("roles") or []
+    if "investigator" in role_names:
+        raise HTTPException(
+            status_code=400,
+            detail="Investigator accounts are created on Admin Dashboard → Create User.",
+        )
+
+    db_roles = []
+    for name in role_names:
+        role = db.query(Role).filter(Role.name == name).first()
+        if role is None:
+            role = Role(name=name)
+            db.add(role)
+            db.flush()
+        db_roles.append(role)
+
+    user.roles = db_roles
+    db.commit()
+    db.refresh(user)
+    record_activity(
+        db,
+        user=_current_user,
+        action="user.roles.updated",
+        details=f"Updated roles for {user.email} to {', '.join(role_names)}",
+    )
+    return {
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "roles": [r.name for r in user.roles],
+        "status": user.status,
+        "must_change_password": user.must_change_password,
+    }
+
+
+@router.put("/users/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
+def admin_reset_user_password(
+    user_id: int,
+    payload: AdminResetPasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if verify_password(payload.new_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must differ from the user's current password",
+        )
+
+    try:
+        target = reset_user_password(
+            db,
+            actor=current_user,
+            user_id=user_id,
+            new_password=payload.new_password,
+        )
+        db.commit()
+    except CRUDValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    record_activity(
+        db,
+        user=current_user,
+        action="user.password_reset",
+        details=f"Admin reset password for {target.email}",
+    )
+    db.commit()
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_admin_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    email = user.email
+    try:
+        delete_user_record(db, actor=current_user, user_id=user_id)
+        db.commit()
+    except CRUDValidationError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    record_activity(
+        db,
+        user=current_user,
+        action="user.deleted",
+        details=f"Deleted user {email}",
+    )
+    db.commit()

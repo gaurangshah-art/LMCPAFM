@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 from database.lmcpafm_requisition_allocation import (
@@ -11,6 +13,11 @@ from schemas.schemas_requisition_allocation import (
     AnimalAllocationCreate,
 )
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
+from crud.experiment_group_planning import assert_requisition_allowed
+from crud.formb_membership import user_is_principal_investigator
+from models.user import User
+from crud.experiment_group_assignment import validate_group_assignment_capacity
+from utils.business_validation import assert_allocation_date_valid, assert_requisition_date_valid
 
 
 # =========================================================
@@ -62,11 +69,57 @@ def get_total_allocated_for_requisition_item(
     return sum([t[0] for t in total]) if total else 0
 
 
+REQUISITION_STATUS_ACTIVE = "active"
+REQUISITION_STATUS_CANCELLED = "cancelled"
+
+
+def requisition_has_allocations(db: Session, requisition_id: int) -> bool:
+    count = (
+        db.query(AnimalAllocation)
+        .filter(AnimalAllocation.requisition_id == requisition_id)
+        .count()
+    )
+    return count > 0
+
+
+def get_requisition_manage_flags(db: Session, requisition: AnimalRequisition, user: User) -> dict:
+    has_alloc = requisition_has_allocations(db, requisition.id)
+    is_pi = user_is_principal_investigator(db, user.id, requisition.protocol_id)
+    is_active = (requisition.status or REQUISITION_STATUS_ACTIVE) == REQUISITION_STATUS_ACTIVE
+    can_manage = is_pi and is_active and not has_alloc
+    return {
+        "status": requisition.status or REQUISITION_STATUS_ACTIVE,
+        "has_allocation": has_alloc,
+        "can_amend": can_manage,
+        "can_cancel": can_manage,
+    }
+
+
+def assert_pi_can_manage_requisition(db: Session, requisition: AnimalRequisition, user: User) -> None:
+    flags = get_requisition_manage_flags(db, requisition, user)
+    if not flags["can_amend"]:
+        if (requisition.status or REQUISITION_STATUS_ACTIVE) == REQUISITION_STATUS_CANCELLED:
+            raise CRUDValidationError("This requisition has been cancelled.")
+        if flags["has_allocation"]:
+            raise CRUDValidationError(
+                "This requisition cannot be changed after animal house staff have recorded an allocation."
+            )
+        if not user_is_principal_investigator(db, user.id, requisition.protocol_id):
+            raise CRUDValidationError(
+                "Only the principal investigator for this project can amend or cancel the requisition."
+            )
+        raise CRUDValidationError("This requisition cannot be amended or cancelled.")
+
+
 # =========================================================
 # CREATE REQUISITION
 # =========================================================
 
 def create_requisition(db: Session, req: AnimalRequisitionCreateInternal):
+    requested_total = sum(item.requested_count for item in req.items)
+    assert_requisition_allowed(db, req.protocol_id, requested_total)
+    assert_requisition_date_valid(db, req.protocol_id, req.date)
+
     db_req = AnimalRequisition(
         protocol_id=req.protocol_id,
         requester_user_id=req.requester_user_id,
@@ -74,6 +127,7 @@ def create_requisition(db: Session, req: AnimalRequisitionCreateInternal):
         requester_role=req.requester_role,
         date=req.date,
         purpose=req.purpose,
+        status=REQUISITION_STATUS_ACTIVE,
     )
     db.add(db_req)
     db.commit()
@@ -102,6 +156,47 @@ def create_requisition(db: Session, req: AnimalRequisitionCreateInternal):
 # =========================================================
 
 def create_allocation(db: Session, alloc: AnimalAllocationCreate):
+    requisition = (
+        db.query(AnimalRequisition)
+        .filter(AnimalRequisition.id == alloc.requisition_id)
+        .first()
+    )
+    if not requisition:
+        raise CRUDNotFoundError(f"Requisition {alloc.requisition_id} not found.")
+
+    if (requisition.status or REQUISITION_STATUS_ACTIVE) != REQUISITION_STATUS_ACTIVE:
+        raise CRUDValidationError(
+            "Cannot allocate animals for a cancelled requisition. "
+            "Ask the PI to submit a new requisition if needed."
+        )
+
+    assert_allocation_date_valid(
+        db,
+        protocol_id=requisition.protocol_id,
+        requisition_date=requisition.date,
+        allocation_date=alloc.date,
+    )
+
+    experiment_group = None
+    if alloc.experiment_group_id is not None:
+        from database.lmcpafm_models import ExperimentGroup
+
+        experiment_group = (
+            db.query(ExperimentGroup)
+            .filter(ExperimentGroup.id == alloc.experiment_group_id)
+            .first()
+        )
+        if experiment_group is None:
+            raise CRUDNotFoundError(f"Experiment group {alloc.experiment_group_id} not found.")
+        if experiment_group.project_id != requisition.protocol_id:
+            raise CRUDValidationError(
+                "Experiment group does not belong to the requisition protocol."
+            )
+
+    total_to_allocate = sum(item.allocated_count for item in alloc.items)
+    if experiment_group is not None and total_to_allocate > 0:
+        validate_group_assignment_capacity(db, experiment_group, total_to_allocate)
+
     db_alloc = AnimalAllocation(
         requisition_id=alloc.requisition_id,
         date=alloc.date,
@@ -189,6 +284,8 @@ def create_allocation(db: Session, alloc: AnimalAllocationCreate):
         for animal in animals_to_allocate:
             animal.status = "allocated"
             animal.protocol_id = protocol.id
+            if experiment_group is not None:
+                animal.experiment_group_id = experiment_group.id
             db.add(animal)
 
         # Remaining count after this allocation
@@ -220,6 +317,73 @@ def create_allocation(db: Session, alloc: AnimalAllocationCreate):
 # GET REQUISITION
 # =========================================================
 
+def amend_requisition(
+    db: Session,
+    req_id: int,
+    user: User,
+    *,
+    date,
+    purpose: str,
+    items,
+) -> AnimalRequisition:
+    requisition = get_requisition(db, req_id)
+    if not requisition:
+        raise CRUDNotFoundError(f"Requisition {req_id} not found.")
+
+    assert_pi_can_manage_requisition(db, requisition, user)
+
+    requested_total = sum(item.requested_count for item in items)
+    assert_requisition_allowed(db, requisition.protocol_id, requested_total)
+    assert_requisition_date_valid(db, requisition.protocol_id, date)
+
+    requisition.date = date
+    requisition.purpose = purpose
+    requisition.amended_at = datetime.now(timezone.utc)
+
+    for existing in list(requisition.items):
+        db.delete(existing)
+    db.flush()
+
+    for item in items:
+        db.add(
+            AnimalRequisitionItem(
+                requisition_id=requisition.id,
+                species_id=item.species_id,
+                strain_id=item.strain_id,
+                requested_count=item.requested_count,
+            )
+        )
+
+    try:
+        db.commit()
+        db.refresh(requisition)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise CRUDDatabaseError(str(exc)) from exc
+
+    return get_requisition(db, req_id)
+
+
+def cancel_requisition(db: Session, req_id: int, user: User) -> AnimalRequisition:
+    requisition = get_requisition(db, req_id)
+    if not requisition:
+        raise CRUDNotFoundError(f"Requisition {req_id} not found.")
+
+    assert_pi_can_manage_requisition(db, requisition, user)
+
+    requisition.status = REQUISITION_STATUS_CANCELLED
+    requisition.cancelled_at = datetime.now(timezone.utc)
+
+    try:
+        db.commit()
+        db.refresh(requisition)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise CRUDDatabaseError(str(exc)) from exc
+
+    return get_requisition(db, req_id)
+
+
 def get_requisition(db: Session, req_id: int):
     return (
         db.query(AnimalRequisition)
@@ -230,6 +394,16 @@ def get_requisition(db: Session, req_id: int):
             )
         )
         .first()
+    )
+
+
+def list_requisitions_by_protocol(db: Session, protocol_id: int) -> list[AnimalRequisition]:
+    return (
+        db.query(AnimalRequisition)
+        .filter(AnimalRequisition.protocol_id == protocol_id)
+        .options(selectinload(AnimalRequisition.items))
+        .order_by(AnimalRequisition.date.desc(), AnimalRequisition.id.asc())
+        .all()
     )
 
 

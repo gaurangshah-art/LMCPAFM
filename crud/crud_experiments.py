@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from database.lmcpafm_experiments import Experiment, ExperimentAnimal
-from database.lmcpafm_models import IAECProject, Animal
+from database.lmcpafm_models import IAECProject, Animal, ExperimentGroup
 from database.lmcpafm_requisition_allocation import AnimalAllocation
 from schemas.schemas_experiments import ExperimentCreate
 from crud.exceptions import CRUDNotFoundError, CRUDValidationError, CRUDDatabaseError
+from utils.business_validation import assert_experiment_date_valid
 
 
 def create_experiment(db: Session, exp: ExperimentCreate):
@@ -43,12 +44,45 @@ def create_experiment(db: Session, exp: ExperimentCreate):
     if not allocation:
         raise CRUDNotFoundError("Allocation not found.")
 
+    requisition = allocation.requisition
+    if requisition is None or requisition.protocol_id != exp.protocol_id:
+        raise CRUDValidationError(
+            "Allocation does not belong to the selected protocol."
+        )
+
+    group = (
+        db.query(ExperimentGroup)
+        .filter(ExperimentGroup.id == exp.experiment_group_id)
+        .first()
+    )
+    if not group:
+        raise CRUDNotFoundError("Experiment group not found.")
+    if group.project_id != exp.protocol_id:
+        raise CRUDValidationError(
+            "Experiment group does not belong to the selected protocol."
+        )
+
+    animal_count = len(exp.animals)
+    if animal_count > (group.planned_animal_count or 0):
+        raise CRUDValidationError(
+            f"Experiment uses {animal_count} animals but group "
+            f"'{group.name}' is planned for {group.planned_animal_count}."
+        )
+
+    assert_experiment_date_valid(
+        db,
+        project_id=exp.protocol_id,
+        allocation_date=allocation.date,
+        experiment_date=exp.date,
+    )
+
     # -------------------------------------------------------
     # 3. Create experiment header
     # -------------------------------------------------------
     db_exp = Experiment(
         protocol_id=exp.protocol_id,
         allocation_id=exp.allocation_id,
+        experiment_group_id=exp.experiment_group_id,
 
         date=exp.date,
         performed_by=exp.performed_by,
@@ -85,6 +119,7 @@ def create_experiment(db: Session, exp: ExperimentCreate):
             )
 
         animal.status = "in_experiment"
+        animal.experiment_group_id = exp.experiment_group_id
         db.add(animal)
 
         link = ExperimentAnimal(
@@ -115,6 +150,16 @@ def list_experiments_by_allocation(db: Session, allocation_id: int) -> list[Expe
     return (
         db.query(Experiment)
         .filter(Experiment.allocation_id == allocation_id)
+        .order_by(Experiment.date.desc(), Experiment.id.asc())
+        .all()
+    )
+
+
+def list_experiments_by_protocol(db: Session, protocol_id: int) -> list[Experiment]:
+    return (
+        db.query(Experiment)
+        .filter(Experiment.protocol_id == protocol_id)
+        .options(selectinload(Experiment.animals))
         .order_by(Experiment.date.desc(), Experiment.id.asc())
         .all()
     )
