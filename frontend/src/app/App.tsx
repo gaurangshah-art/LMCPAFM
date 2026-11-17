@@ -29,6 +29,7 @@ import { ChangePasswordPage } from "../pages/ChangePasswordPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 import { RegisterInvestigatorPage } from "../pages/RegisterInvestigatorPage";
+import { RegisterCollaboratingResearcherPage } from "../pages/RegisterStudentScholarPage";
 import { canUseReturnToPath, defaultHomeForUser } from "./roles";
 import { IaecDashboard } from "../pages/iaec/IaecDashboard";
 import { AnimalRequisitionDetailPage } from "../pages/AnimalRequisitionDetailPage";
@@ -216,6 +217,19 @@ export default function App() {
               )
             }
           />
+
+          <Route
+            path="/register-collaborator"
+            element={
+              getAccessToken() && currentUser ? (
+                <Navigate to="/" replace />
+              ) : (
+                <RegisterCollaboratingResearcherPage />
+              )
+            }
+          />
+
+          <Route path="/register-student" element={<Navigate to="/register-collaborator" replace />} />
 
           <Route
             path="/forgot-password"

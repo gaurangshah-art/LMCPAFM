@@ -22,6 +22,9 @@ class InvestigatorProfile(Base):
     years_experience: Mapped[int | None] = mapped_column(Integer, nullable=True)
     animal_handling_experience: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_lmcp_faculty: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_self_registered_scholar: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

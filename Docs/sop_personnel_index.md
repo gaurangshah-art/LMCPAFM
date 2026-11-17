@@ -4,7 +4,7 @@ Simple-English standard operating procedures by audience:
 
 | Audience | Document | Contents |
 |----------|----------|----------|
-| **Students / research scholars** | [sop_student_personnel.md](./sop_student_personnel.md) | Account, profile, helping on Form B, permissions, after approval |
+| **Collaborating researchers** (LMCP students & external institutes) | [sop_student_personnel.md](./sop_student_personnel.md) | Account, profile, Form B with LMCP Pharmacology faculty, permissions |
 | **Faculty (PI / co-investigators)** | [sop_faculty_personnel.md](./sop_faculty_personnel.md) | Registration, roster, certified animal-handling faculty, Form B, passwords, requisitions |
 | **System administrators** | [sop_admin_personnel.md](./sop_admin_personnel.md) | Users, roster CSV, certified faculty, passwords/SMTP, master data, go-live |
 | **Animal house staff (daily ops)** | [sop_facility_daily_operations.md](./sop_facility_daily_operations.md) | Cleaning, entry, env logs, cages, feeding, quarantine, waste |

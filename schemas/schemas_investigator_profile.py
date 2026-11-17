@@ -27,6 +27,7 @@ class InvestigatorProfileRead(BaseModel):
     years_experience: Optional[int] = None
     animal_handling_experience: Optional[str] = None
     is_lmcp_faculty: bool
+    is_self_registered_scholar: bool = False
     is_complete: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

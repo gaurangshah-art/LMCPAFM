@@ -139,6 +139,7 @@ def start_form_b(db: Session, user: User, *, force_new: bool = False) -> FormB:
     db.add(form_b)
     db.flush()
 
+    collaborator_pi = profile.is_self_registered_scholar
     investigator = FormBInvestigator(
         form_b_id=form_b.id,
         name=user.name,
@@ -147,9 +148,9 @@ def start_form_b(db: Session, user: User, *, force_new: bool = False) -> FormB:
         investigator_profile_user_id=user.id,
         investigator_type="faculty" if profile.is_lmcp_faculty else "investigator",
         can_view_status=True,
-        can_view_approval_letters=True,
+        can_view_approval_letters=not collaborator_pi,
         can_edit_forms=True,
-        can_submit_form_b=True,
+        can_submit_form_b=not collaborator_pi,
     )
     db.add(investigator)
     db.commit()

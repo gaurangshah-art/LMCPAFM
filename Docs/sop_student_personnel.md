@@ -1,23 +1,24 @@
-# LMCPAFM — Standard Operating Procedure for Students and Research Scholars
+# LMCPAFM — Standard Operating Procedure for Collaborating Researchers
 
-**Who should read this:** M.Pharm, Ph.D., or other **research students** who help prepare an animal ethics (**Form B**) application under a faculty guide.  
-**Who should NOT use this as their main guide:** Animal house **support staff** (they get a **staff** account from the administrator, not student self-registration).
+**Who should read this:** LMCP **students and research scholars**, and **faculty or students from other institutes** preparing **Form B** with **LMCP Pharmacology faculty** (including use of the LMCP animal facility under LMCP supervision).  
+**Who should NOT use this as their main guide:** Animal house **support staff** (they get a **staff** account from the administrator, not collaborating-researcher self-registration).
 
 **System:** LMCP Animal Facility Management (LMCPAFM)  
 **Institution:** L. M. College of Pharmacy (LMCP), Ahmedabad  
 
 ---
 
-## 1. What students do in LMCPAFM
+## 1. What collaborating researchers do in LMCPAFM
 
-Students usually **do not submit** Form B to IAEC. Your faculty guide (Principal Investigator) submits. Your typical jobs are:
+You **prepare** draft Form B content; **LMCP Pharmacology faculty** on your team **submits** to IAEC. Typical jobs:
 
-1. Create your own login (if your guide asks you to).  
-2. Complete a short **Investigator Profile**.  
-3. Help **type and save** Form B sections after your guide **adds and links** you on the project team.  
-4. After IAEC approval, help with **experiment records** only if your guide allows it on the **Project Workspace**.
+1. Create your own login (self-registration or account from your guide).  
+2. Complete a short **Investigator Profile** (use your **home institution name** if you are from another college).  
+3. **Start a new Form B** or help **type and save** sections after an LMCP guide **adds and links** you on Step 2.  
+4. On Step 2, ensure at least one **LMCP Pharmacology department faculty** member is on the team and **linked** to their LMCPAFM account.  
+5. After IAEC approval, help with **experiment records** only if your LMCP faculty guide allows it on the **Project Workspace**.
 
-You **cannot** replace your guide for IAEC approval. At least one **LMCP faculty member** and one **admin-certified animal-handling faculty** (linked on Step 2) must be on every Form B before submission. Students do **not** receive requisition/allocation menus.
+You **cannot** submit Form B without linked **administrator-provisioned LMCP Pharmacology faculty** and **certified animal-handling** faculty on the form. Collaborating researchers do **not** receive requisition/allocation menus unless policy assigns that role separately.
 
 ---
 
@@ -25,8 +26,8 @@ You **cannot** replace your guide for IAEC approval. At least one **LMCP faculty
 
 | You need | Why |
 |----------|-----|
-| LMCP institutional email (for example `@lmcp.ac.in`) | Login and identity |
-| Approval from your guide to use LMCPAFM | They must add you on Form B Step 2 |
+| A working email address you can access | Login and identity |
+| Agreement with LMCP Pharmacology faculty to collaborate | They must be on Form B Step 2 and linked |
 | PDFs ready if your guide asks you to upload | Funding proof, certificates (guide decides) |
 
 **Do not** register as an investigator if you are **only** animal house support staff. Ask the administrator for a **staff** account instead.
@@ -47,9 +48,9 @@ If the administrator created an account for you:
 
 ### Option B — You register yourself
 
-1. Open the login page → **Register as Investigator**.  
-2. Enter your **full name**, **institutional email**, and a **password** (at least 8 characters).  
-3. If you see an error that your email is **not on the faculty roster**, that means only **approved faculty emails** can self-register. **Students:** your guide must either add you on Form B after registering themselves, or ask the administrator to create your investigator account.  
+1. Open the login page → **Register as a collaborating researcher**.  
+2. Enter your **full name**, **email**, and a **password** (at least 8 characters).  
+3. **LMCP faculty** must use **Register as Investigator** with an `@lmcp.ac.in` address (and may need to be on the approved faculty roster).  
 4. After registration, log in.
 
 ---
@@ -58,12 +59,12 @@ If the administrator created an account for you:
 
 1. After login, open **Investigator Profile** from the menu.  
 2. Fill in all required fields:
-   - Institutional email  
+   - Email (same as login; institutional only if you checked **I am LMCP faculty**)  
    - Institution name  
    - Department  
    - Designation (for example “Research Scholar”, “M.Pharm Student”)  
    - Qualification  
-3. **Important:** If you are **not** LMCP faculty, **uncheck** **“I am LMCP faculty”**.  
+3. Collaborating-researcher accounts do **not** show **“I am LMCP faculty”** — you cannot mark yourself as LMCP faculty. Faculty must use **Register as Investigator** with `@lmcp.ac.in`.  
 4. Click **Save**.
 
 Until this profile is complete, you may not be able to open Form B steps, even if your guide linked you.

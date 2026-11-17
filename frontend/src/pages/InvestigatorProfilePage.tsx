@@ -17,30 +17,36 @@ import {
   isLmcpInstitutionalEmail,
 } from "../utils/institutionalEmail";
 
-const schema = z.object({
-  institutional_email: z
-    .string()
-    .trim()
-    .email("Enter a valid institutional email address.")
-    .refine(
-      (value) => isLmcpInstitutionalEmail(value),
-      `Use an LMCP institutional email (${institutionalEmailHint()}).`,
-    ),
-  institution_name: z.string().trim().min(1, "Institution name is required."),
-  department: z.string().trim().min(1, "Department is required."),
-  designation: z.string().trim().min(1, "Designation is required."),
-  qualification: z.string().trim().min(1, "Qualification is required."),
-  age: z
-    .union([z.literal(""), z.coerce.number().int().min(18).max(120)])
-    .optional()
-    .transform((value) => (value === "" || value === undefined ? null : value)),
-  years_experience: z
-    .union([z.literal(""), z.coerce.number().int().min(0).max(80)])
-    .optional()
-    .transform((value) => (value === "" || value === undefined ? null : value)),
-  animal_handling_experience: z.string().trim().optional(),
-  is_lmcp_faculty: z.boolean(),
-});
+const schema = z
+  .object({
+    institutional_email: z.string().trim().email("Enter a valid email address."),
+    institution_name: z.string().trim().min(1, "Institution name is required."),
+    department: z.string().trim().min(1, "Department is required."),
+    designation: z.string().trim().min(1, "Designation is required."),
+    qualification: z.string().trim().min(1, "Qualification is required."),
+    age: z
+      .union([z.literal(""), z.coerce.number().int().min(18).max(120)])
+      .optional()
+      .transform((value) => (value === "" || value === undefined ? null : value)),
+    years_experience: z
+      .union([z.literal(""), z.coerce.number().int().min(0).max(80)])
+      .optional()
+      .transform((value) => (value === "" || value === undefined ? null : value)),
+    animal_handling_experience: z.string().trim().optional(),
+    is_lmcp_faculty: z.boolean(),
+  })
+  .superRefine((values, ctx) => {
+    if (
+      values.is_lmcp_faculty &&
+      !isLmcpInstitutionalEmail(values.institutional_email)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Use an LMCP institutional email (${institutionalEmailHint()}).`,
+        path: ["institutional_email"],
+      });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -51,12 +57,14 @@ export function InvestigatorProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSelfRegisteredScholar, setIsSelfRegisteredScholar] = useState(false);
   const { isSubmitting, errorMessage, successMessage, start, fail, succeed } = useSubmitState();
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -73,6 +81,8 @@ export function InvestigatorProfilePage() {
     },
   });
 
+  const isLmcpFaculty = watch("is_lmcp_faculty");
+
   useEffect(() => {
     let cancelled = false;
 
@@ -80,6 +90,7 @@ export function InvestigatorProfilePage() {
       try {
         const profile = await getMyInvestigatorProfile();
         if (cancelled) return;
+        setIsSelfRegisteredScholar(profile.is_self_registered_scholar);
         reset({
           institutional_email: profile.institutional_email ?? "",
           institution_name: profile.institution_name ?? "LMCP",
@@ -120,7 +131,7 @@ export function InvestigatorProfilePage() {
           age: values.age,
           years_experience: values.years_experience,
           animal_handling_experience: values.animal_handling_experience?.trim() || null,
-          is_lmcp_faculty: values.is_lmcp_faculty,
+          is_lmcp_faculty: isSelfRegisteredScholar ? false : values.is_lmcp_faculty,
         });
 
         if (profile.is_complete) {
@@ -168,7 +179,7 @@ export function InvestigatorProfilePage() {
 
       <form className="form-grid" onSubmit={onSubmit}>
         <label>
-          Institutional email
+          {isLmcpFaculty ? "Institutional email" : "Email"}
           <input type="email" autoComplete="email" {...register("institutional_email")} />
           {errors.institutional_email ? (
             <span className="field-error">{errors.institutional_email.message}</span>
@@ -226,10 +237,18 @@ export function InvestigatorProfilePage() {
           <textarea rows={4} {...register("animal_handling_experience")} />
         </label>
 
-        <label className="checkbox-row">
-          <input type="checkbox" {...register("is_lmcp_faculty")} />
-          I am LMCP faculty
-        </label>
+        {isSelfRegisteredScholar ? (
+          <p className="auth-note full-width" role="note">
+            You registered as a collaborating researcher. LMCP faculty status cannot be
+            self-assigned. LMCP faculty must use <strong>Register as Investigator</strong> with{" "}
+            <strong>@lmcp.ac.in</strong>.
+          </p>
+        ) : (
+          <label className="checkbox-row">
+            <input type="checkbox" {...register("is_lmcp_faculty")} />
+            I am LMCP faculty
+          </label>
+        )}
 
         <div className="form-actions full-width">
           <button type="submit" className="btn" disabled={isSubmitting}>

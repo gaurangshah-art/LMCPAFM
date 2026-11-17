@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { login } from "../api/authApi";
 import { getApiErrorMessage } from "../api/errors";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { useSubmitState } from "../hooks/useSubmitState";
 import { ErrorAlert } from "../components/common/ErrorAlert";
 import { SuccessNote } from "../components/common/SuccessNote";
@@ -20,6 +21,7 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onAuthenticated }: LoginPageProps) {
+  usePageTitle("Login");
   const location = useLocation();
 
   const expired = new URLSearchParams(location.search).get("expired") === "1";
@@ -61,10 +63,10 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
   return (
     <section className="page-card auth-card">
       <header className="section-header">
-        <h2>Sign In</h2>
+        <h2>Login</h2>
         <p>
-          Sign in with your LMCP institutional email and password. Animal house staff and IAEC
-          members receive accounts from the administrator; faculty may register when allowed.
+          Sign in with your email and password. Pharmacology faculty, staff, and IAEC use
+          administrator-issued accounts.
         </p>
       </header>
 
@@ -73,7 +75,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
       )}
 
       {registered && (
-        <SuccessNote message="Registration successful. Please sign in with your institutional email." />
+        <SuccessNote message="Registration successful. Please sign in with your email and password." />
       )}
 
       <form className="form-grid" onSubmit={onSubmit}>
@@ -105,8 +107,9 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
       </form>
 
       <p className="auth-footer">
-        LMCP faculty?{" "}
-        <Link to="/register-investigator">Register as Investigator</Link>
+        <Link to="/register-investigator">Faculty registration</Link>
+        {" · "}
+        <Link to="/register-collaborator">Collaborating researcher registration</Link>
       </p>
     </section>
   );

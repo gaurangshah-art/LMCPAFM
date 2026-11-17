@@ -5,6 +5,7 @@ import { z } from "zod";
 import { registerInvestigator } from "../api/authApi";
 import { getApiErrorMessage } from "../api/errors";
 import { ErrorAlert } from "../components/common/ErrorAlert";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { useSubmitState } from "../hooks/useSubmitState";
 import {
   institutionalEmailHint,
@@ -35,6 +36,7 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 export function RegisterInvestigatorPage() {
+  usePageTitle("Registration");
   const navigate = useNavigate();
 
   const {
@@ -70,17 +72,14 @@ export function RegisterInvestigatorPage() {
   return (
     <section className="page-card auth-card">
       <header className="section-header">
-        <h2>Register as Investigator</h2>
+        <h2>Registration</h2>
         <p>
-          Self-registration is for approved LMCP faculty only ({institutionalEmailHint()}).
-          Your email must be on the administrator&apos;s faculty roster when roster
-          enforcement is enabled.
+          LMCP faculty outside the Pharmacology department ({institutionalEmailHint()}).
         </p>
       </header>
 
       <p className="auth-note" role="note">
-        Staff, IAEC office-bearers, caretakers, and admin accounts are created by
-        the system administrator and cannot be registered here.
+        Pharmacology faculty, staff, IAEC, and admin accounts are created by the administrator.
       </p>
 
       <form className="form-grid" onSubmit={onSubmit}>
@@ -128,7 +127,9 @@ export function RegisterInvestigatorPage() {
       </form>
 
       <p className="auth-footer">
-        Already have an account? <Link to="/login">Sign in</Link>
+        <Link to="/register-collaborator">Collaborating researcher registration</Link>
+        {" · "}
+        <Link to="/login">Sign in</Link>
       </p>
     </section>
   );

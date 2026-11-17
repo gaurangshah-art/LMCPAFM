@@ -38,6 +38,7 @@ def profile_to_read(profile: InvestigatorProfile) -> dict:
         "years_experience": profile.years_experience,
         "animal_handling_experience": profile.animal_handling_experience,
         "is_lmcp_faculty": profile.is_lmcp_faculty,
+        "is_self_registered_scholar": profile.is_self_registered_scholar,
         "is_complete": is_profile_complete(profile),
         "created_at": profile.created_at,
         "updated_at": profile.updated_at,
@@ -49,6 +50,7 @@ def create_profile_shell(
     user: User,
     *,
     is_lmcp_faculty: bool = False,
+    is_self_registered_scholar: bool = False,
 ) -> InvestigatorProfile:
     existing = (
         db.query(InvestigatorProfile)
@@ -56,15 +58,21 @@ def create_profile_shell(
         .first()
     )
     if existing:
-        if is_lmcp_faculty and not existing.is_lmcp_faculty:
-            existing.is_lmcp_faculty = True
+        if is_self_registered_scholar and not existing.is_self_registered_scholar:
+            existing.is_self_registered_scholar = True
+            existing.is_lmcp_faculty = False
             existing.updated_at = datetime.now(timezone.utc)
+        elif is_lmcp_faculty and not existing.is_lmcp_faculty:
+            if not existing.is_self_registered_scholar:
+                existing.is_lmcp_faculty = True
+                existing.updated_at = datetime.now(timezone.utc)
         return existing
 
     profile = InvestigatorProfile(
         user_id=user.id,
         institutional_email=user.email,
-        is_lmcp_faculty=is_lmcp_faculty,
+        is_lmcp_faculty=is_lmcp_faculty if not is_self_registered_scholar else False,
+        is_self_registered_scholar=is_self_registered_scholar,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
@@ -100,9 +108,18 @@ def update_profile(
     profile = get_or_create_profile(db, user_id)
     data = payload.model_dump(exclude_unset=True)
 
+    if profile.is_self_registered_scholar:
+        if data.get("is_lmcp_faculty") is True:
+            raise CRUDValidationError(
+                "Collaborating researcher accounts cannot be marked as LMCP faculty. "
+                "LMCP faculty must register with an institutional email."
+            )
+        data["is_lmcp_faculty"] = False
+
     if "institutional_email" in data and data["institutional_email"] is not None:
         normalized = normalize_email(data["institutional_email"])
-        if not is_lmcp_institutional_email(normalized):
+        require_institutional = profile.is_lmcp_faculty or data.get("is_lmcp_faculty") is True
+        if require_institutional and not is_lmcp_institutional_email(normalized):
             raise CRUDValidationError(
                 "Institutional email must use an allowed LMCP domain."
             )

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -17,6 +17,7 @@ class InvestigatorRegisterRequest(BaseModel):
     name: str = Field(min_length=1)
     email: EmailStr
     password: str = Field(min_length=8)
+    account_type: Literal["faculty", "student"] = "faculty"
 
 
 class InvestigatorRegisterResponse(BaseModel):

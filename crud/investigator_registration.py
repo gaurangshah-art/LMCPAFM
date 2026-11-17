@@ -22,7 +22,14 @@ def _get_or_create_investigator_role(db: Session) -> Role:
     return role
 
 
-def register_investigator(db: Session, name: str, email: str, password: str) -> User:
+def register_investigator(
+    db: Session,
+    name: str,
+    email: str,
+    password: str,
+    *,
+    account_type: str = "faculty",
+) -> User:
     normalized_email = normalize_email(email)
     normalized_name = name.strip()
 
@@ -32,12 +39,13 @@ def register_investigator(db: Session, name: str, email: str, password: str) -> 
     if not password:
         raise CRUDValidationError("Password is required.")
 
-    if not is_lmcp_institutional_email(normalized_email):
-        raise CRUDValidationError(
-            "Registration is restricted to LMCP institutional email addresses."
-        )
-
-    assert_investigator_registration_allowed(db, normalized_email)
+    is_student = account_type == "student"
+    if not is_student:
+        if not is_lmcp_institutional_email(normalized_email):
+            raise CRUDValidationError(
+                "Registration is restricted to LMCP institutional email addresses."
+            )
+        assert_investigator_registration_allowed(db, normalized_email)
 
     existing = db.query(User).filter(User.email == normalized_email).first()
     if existing:
@@ -54,7 +62,23 @@ def register_investigator(db: Session, name: str, email: str, password: str) -> 
 
     db.add(user)
     db.flush()
-    create_profile_shell(db, user)
+    create_profile_shell(
+        db,
+        user,
+        is_lmcp_faculty=not is_student,
+        is_self_registered_scholar=is_student,
+    )
     db.commit()
     db.refresh(user)
     return user
+
+
+def register_student_scholar(db: Session, name: str, email: str, password: str) -> User:
+    """Self-registration for scholars without an @lmcp.ac.in mailbox."""
+    return register_investigator(
+        db,
+        name=name,
+        email=email,
+        password=password,
+        account_type="student",
+    )

@@ -1,3 +1,4 @@
+import axios from "axios";
 import { apiClient, setAccessToken } from "./client";
 import { setStoredAccessToken } from "../auth/session";
 import type {
@@ -24,9 +25,31 @@ export async function registerInvestigator(
 ): Promise<InvestigatorRegisterResponse> {
   const { data } = await apiClient.post<InvestigatorRegisterResponse>(
     "/auth/register-investigator",
-    payload,
+    { ...payload, account_type: payload.account_type ?? "faculty" },
   );
   return data;
+}
+
+export async function registerStudentScholar(
+  payload: Omit<InvestigatorRegisterRequest, "account_type">,
+): Promise<InvestigatorRegisterResponse> {
+  const body = { ...payload, account_type: "student" as const };
+  try {
+    const { data } = await apiClient.post<InvestigatorRegisterResponse>(
+      "/auth/register-student",
+      body,
+    );
+    return data;
+  } catch (error) {
+    if (!axios.isAxiosError(error) || error.response?.status !== 404) {
+      throw error;
+    }
+    const { data } = await apiClient.post<InvestigatorRegisterResponse>(
+      "/auth/register-investigator",
+      body,
+    );
+    return data;
+  }
 }
 
 export async function refreshSession(): Promise<TokenResponse> {

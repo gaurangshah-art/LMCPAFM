@@ -174,8 +174,10 @@ export function FormBInvestigatorsSection({ formBId }: FormBInvestigatorsSection
     <section className="dashboard-section">
       <h3>Project Investigators</h3>
       <p>
-        Add co-investigators, faculty, or student contributors. Link each person to their registered
-        LMCP account so students can fill operational data while faculty retains oversight.
+        Add co-investigators, LMCP Pharmacology faculty, student contributors, or external
+        collaborators. Link each person to their LMCPAFM account so they can edit the draft. Every
+        Form B must include at least one linked <strong>LMCP Pharmacology faculty</strong> member
+        (administrator-created account) before IAEC submission.
       </p>
 
       {errorMessage ? <p className="error-text">{errorMessage}</p> : null}

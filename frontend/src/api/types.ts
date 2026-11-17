@@ -28,6 +28,7 @@ export interface InvestigatorRegisterRequest {
   name: string;
   email: string;
   password: string;
+  account_type?: "faculty" | "student";
 }
 
 export interface InvestigatorRegisterResponse {

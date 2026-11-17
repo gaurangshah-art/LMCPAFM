@@ -11,6 +11,7 @@ export interface InvestigatorProfile {
   years_experience: number | null;
   animal_handling_experience: string | null;
   is_lmcp_faculty: boolean;
+  is_self_registered_scholar: boolean;
   is_complete: boolean;
   created_at: string | null;
   updated_at: string | null;

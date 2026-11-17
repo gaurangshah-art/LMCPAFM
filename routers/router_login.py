@@ -38,15 +38,17 @@ def register_investigator_account(
             name=payload.name,
             email=str(payload.email),
             password=payload.password,
+            account_type=payload.account_type,
         )
     except CRUDValidationError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
+    action = "student.registered" if payload.account_type == "student" else "investigator.registered"
     record_activity(
         db,
         user=user,
-        action="investigator.registered",
-        details=f"Investigator self-registration for {user.email}",
+        action=action,
+        details=f"Self-registration ({payload.account_type}) for {user.email}",
     )
 
     return {
@@ -56,6 +58,20 @@ def register_investigator_account(
         "roles": [role.name for role in user.roles],
         "status": user.status,
     }
+
+
+@router.post(
+    "/register-student",
+    response_model=InvestigatorRegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def register_student_account(
+    payload: InvestigatorRegisterRequest,
+    db: Session = Depends(get_db),
+):
+    """Scholars may use any valid email (Gmail, etc.); no faculty roster check."""
+    payload_faculty = payload.model_copy(update={"account_type": "student"})
+    return register_investigator_account(payload_faculty, db)
 
 
 @router.post("/login", response_model=TokenResponse)

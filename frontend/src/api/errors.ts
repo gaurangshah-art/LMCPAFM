@@ -10,6 +10,10 @@ export function getApiErrorMessage(error: unknown): string {
       return "Request timed out. If uploading a file, try a smaller file; otherwise wait and retry.";
     }
 
+    if (error.response?.status === 404) {
+      return "The server does not have this feature yet. Restart or update the LMCPAFM backend, then try again.";
+    }
+
     const detail = error.response?.data?.detail;
     if (typeof detail === "string" && detail.trim()) {
       return detail;
