@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getApiErrorMessage } from "../api/errors";
 import {
+  downloadStudentFormBSopPdf,
   getResourceCatalog,
   getResourceDocument,
   type ResourceCatalogItem,
@@ -84,6 +85,20 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
     );
   }
 
+  async function handleDownloadStudentSopPdf() {
+    try {
+      const { blob, filename } = await downloadStudentFormBSopPdf();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
   function handleSaveAsPdf() {
     document.body.classList.add("resources-print-mode");
     window.print();
@@ -109,6 +124,11 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
         actions={
           guide ? (
             <div className="inline-actions">
+              {guide.slug === "student-guide" ? (
+                <button type="button" className="btn" onClick={() => void handleDownloadStudentSopPdf()}>
+                  Download PDF
+                </button>
+              ) : null}
               <button type="button" className="btn" onClick={handleSaveAsPdf}>
                 Save as PDF
               </button>

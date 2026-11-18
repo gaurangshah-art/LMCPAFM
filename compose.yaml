@@ -8,7 +8,8 @@ services:
       - ${LMCPAFM_ENV_FILE:-.env}
     environment:
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/LMCPAFM.db}
-      PORT: ${PORT:-8000}
+      # Always listen on 8000 inside the container; host binding uses PORT below.
+      PORT: "8000"
     ports:
       - "${PORT:-8000}:8000"
     volumes:

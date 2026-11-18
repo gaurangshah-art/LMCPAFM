@@ -53,6 +53,9 @@ def test_qa_sop_pack_download(client, monkeypatch):
     assert b"QA Validation Pack" in md_res.content or b"LMCPAFM" in md_res.content
 
     pdf_res = client.get("/resources/qa-pack/combined.pdf", headers=headers)
+    student_pdf = client.get("/resources/docs/student-guide.pdf", headers=headers)
+    assert student_pdf.status_code == 200, student_pdf.text
+    assert student_pdf.headers["content-type"].startswith("application/pdf")
     assert pdf_res.status_code == 200, pdf_res.text
     assert pdf_res.headers["content-type"] == "application/pdf"
     assert pdf_res.content.startswith(b"%PDF")

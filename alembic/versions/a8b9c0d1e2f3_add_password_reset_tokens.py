@@ -10,6 +10,8 @@ from __future__ import annotations
 import sqlalchemy as sa
 from alembic import op
 
+from migration_helpers import table_exists
+
 revision = "a8b9c0d1e2f3"
 down_revision = "b8c9d0e1f2a3"
 branch_labels = None
@@ -17,6 +19,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    if table_exists("password_reset_tokens"):
+        return
+
     op.create_table(
         "password_reset_tokens",
         sa.Column("id", sa.Integer(), nullable=False),

@@ -57,8 +57,8 @@ CATALOG: tuple[AppResourceDoc, ...] = (
     ),
     AppResourceDoc(
         slug="student-guide",
-        title="Student / scholar guide",
-        summary="Linked on Form B — permissions and responsibilities.",
+        title="Collaborating researcher Form B guide",
+        summary="Students and external institutes — account, profile, helping on Form B.",
         relative_path="Docs/sop_student_personnel.md",
         category="Investigator",
         audiences=("investigator",),

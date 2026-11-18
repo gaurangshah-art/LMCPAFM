@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -17,6 +19,10 @@ from utils.app_resource_catalog import (
     read_doc_markdown,
     user_can_view_doc,
 )
+from utils.markdown_pdf import markdown_to_pdf_bytes
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_STUDENT_SOP = _REPO_ROOT / "Docs" / "sop_student_personnel.md"
 
 router = APIRouter(prefix="/resources", tags=["Resources"])
 
@@ -63,6 +69,25 @@ def list_resource_catalog(current_user: User = Depends(get_current_user)):
         for doc in available_docs_for_user(roles)
     ]
     return ResourceCatalogResponse(items=items)
+
+
+@router.get("/docs/student-guide.pdf")
+def download_student_form_b_sop_pdf(current_user: User = Depends(get_current_user)):
+    """Form B guide for collaborating researchers (students / external institutes)."""
+    del current_user
+    if not _STUDENT_SOP.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student / collaborating researcher SOP is not deployed on this server",
+        )
+    pdf_bytes = markdown_to_pdf_bytes(_STUDENT_SOP.read_text(encoding="utf-8"))
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="LMCPAFM-Student-Form-B-SOP.pdf"'
+        },
+    )
 
 
 @router.get("/docs/{slug}", response_model=ResourceDocumentResponse)

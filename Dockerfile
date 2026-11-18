@@ -27,7 +27,9 @@ COPY static ./static
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 \
-    CMD ["python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health/ready').read()"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
+    CMD ["python", "-c", "import os; from urllib.request import urlopen; p=os.environ.get('PORT','8000'); urlopen(f'http://127.0.0.1:{p}/health/ready').read()"]
 
-CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+RUN chmod +x /app/scripts/docker_entrypoint.sh
+
+CMD ["/app/scripts/docker_entrypoint.sh"]
