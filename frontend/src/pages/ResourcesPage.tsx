@@ -126,12 +126,13 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
             <div className="inline-actions">
               {guide.slug === "student-guide" ? (
                 <button type="button" className="btn" onClick={() => void handleDownloadStudentSopPdf()}>
-                  Download PDF
+                  Download PDF (official)
                 </button>
-              ) : null}
-              <button type="button" className="btn" onClick={handleSaveAsPdf}>
-                Save as PDF
-              </button>
+              ) : (
+                <button type="button" className="btn" onClick={handleSaveAsPdf}>
+                  Save as PDF
+                </button>
+              )}
               <Link to="/resources" className="btn btn-secondary">
                 All guides
               </Link>
@@ -144,12 +145,32 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
 
       {guide ? (
         <>
-          <p className="field-help resources-pdf-hint">
-            <strong>Save as PDF:</strong> use the button above, or press{" "}
-            <kbd>Ctrl</kbd>+<kbd>P</kbd> (Mac: <kbd>⌘</kbd>+<kbd>P</kbd>), choose{" "}
-            <strong>Save as PDF</strong> / <strong>Microsoft Print to PDF</strong> as the printer,
-            then Save.
-          </p>
+          {guide.slug === "student-guide" ? (
+            <p className="field-help resources-pdf-hint">
+              The on-screen guide and <strong>Download PDF (official)</strong> use the same source
+              on the server. If this page looks shorter than
+              your saved PDF, the server is running an older build — ask admin to redeploy the
+              backend, then refresh.
+              {guide.source_updated_at ? (
+                <>
+                  {" "}
+                  Server copy updated{" "}
+                  {new Date(guide.source_updated_at).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                  .
+                </>
+              ) : null}
+            </p>
+          ) : (
+            <p className="field-help resources-pdf-hint">
+              <strong>Save as PDF:</strong> use the button above, or press{" "}
+              <kbd>Ctrl</kbd>+<kbd>P</kbd> (Mac: <kbd>⌘</kbd>+<kbd>P</kbd>), choose{" "}
+              <strong>Save as PDF</strong> / <strong>Microsoft Print to PDF</strong> as the printer,
+              then Save.
+            </p>
+          )}
           <article
             className="page-card markdown-doc resources-print-target"
             dangerouslySetInnerHTML={{ __html: guide.html }}
@@ -157,11 +178,15 @@ export function ResourcesPage({ currentUser }: ResourcesPageProps) {
         </>
       ) : (
         <>
-          <QaSopPackDownloadPanel />
+          {currentUser?.roles.some((role) => role === "admin" || role === "iaec") ? (
+            <QaSopPackDownloadPanel />
+          ) : null}
 
           <p className="field-help">
-            To read online, open a guide below. To share with QA, use{" "}
-            <strong>Download QA pack (PDF)</strong> above.
+            Open the guide for your role below.
+            {currentUser?.roles.some((role) => role === "admin" || role === "iaec")
+              ? " To share with QA, use Download QA pack (PDF) above."
+              : null}
           </p>
           {catalog.length === 0 ? (
             <div className="page-card">

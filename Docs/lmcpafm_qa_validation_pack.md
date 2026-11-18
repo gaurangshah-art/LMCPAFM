@@ -1,7 +1,7 @@
 ---
 title: "LMCPAFM — QA Validation Pack"
 subtitle: "L. M. College of Pharmacy — Animal Facility Management System"
-date: "2026-10-27"
+date: "2026-11-18"
 ---
 
 # LMCPAFM — QA Validation Pack (single document)
@@ -9,7 +9,7 @@ date: "2026-10-27"
 **Institution:** L. M. College of Pharmacy, Ahmedabad  
 **System:** LMCP Animal Facility Management (LMCPAFM)  
 **Pack version:** 1.0  
-**Generated:** 2026-10-27  
+**Generated:** 2026-11-18  
 **Classification:** Internal use — QA / UAT only (not for public web)
 
 This file combines **test procedures**, a **printable checklist**, and **role SOPs** so you can export **one PDF** for external or internal QA.
@@ -269,7 +269,7 @@ Simple-English standard operating procedures by audience:
 
 | Audience | Document | Contents |
 |----------|----------|----------|
-| **Students / research scholars** | [sop_student_personnel.md](Docs/sop_student_personnel.md) | Account, profile, helping on Form B, permissions, after approval |
+| **Collaborating researchers** (LMCP students & external institutes) | [sop_student_personnel.md](Docs/sop_student_personnel.md) · **PDF:** [LMCPAFM-Student-Form-B-SOP.pdf](Docs/LMCPAFM-Student-Form-B-SOP.pdf) | Account, profile, Form B with LMCP Pharmacology faculty, permissions |
 | **Faculty (PI / co-investigators)** | [sop_faculty_personnel.md](Docs/sop_faculty_personnel.md) | Registration, roster, certified animal-handling faculty, Form B, passwords, requisitions |
 | **System administrators** | [sop_admin_personnel.md](Docs/sop_admin_personnel.md) | Users, roster CSV, certified faculty, passwords/SMTP, master data, go-live |
 | **Animal house staff (daily ops)** | [sop_facility_daily_operations.md](Docs/sop_facility_daily_operations.md) | Cleaning, entry, env logs, cages, feeding, quarantine, waste |
@@ -326,7 +326,9 @@ You use LMCPAFM to prepare and **submit CPCSEA Form B**, track IAEC review, and 
 
 **Forgot your password later?** On the login page, click **Forgot password?**, enter your institutional email, and follow the link in the email (link expires after about one hour). If email does not arrive, contact the LMCPAFM administrator.
 
-**Support staff** with the same email domain use **staff** accounts — they do **not** use this faculty registration path. Admin-created **staff** and **IAEC** accounts also receive a temporary password and must change it on first login.
+**Animal facility staff** (cage care, inventory, daily logs) use **`staff`** accounts from admin — they are **not** pharmacology investigators and do **not** use this SOP as their primary guide.
+
+**Pharmacology faculty** are **`investigator`** accounts created **only by admin** (not self-service in production policy). They receive a temporary password and must change it on first login. Each Form B must **link** at least one such admin-created pharmacology faculty member before submit.
 
 ---
 
@@ -1070,24 +1072,25 @@ For IAEC secretariat or technical system issues, contact the institutional IAEC 
 
 # Part 7 — Student / scholar SOP
 
-**Who should read this:** M.Pharm, Ph.D., or other **research students** who help prepare an animal ethics (**Form B**) application under a faculty guide.  
-**Who should NOT use this as their main guide:** Animal house **support staff** (they get a **staff** account from the administrator, not student self-registration).
+**Who should read this:** LMCP **students and research scholars**, and **faculty or students from other institutes** preparing **Form B** with **LMCP Pharmacology faculty** (including use of the LMCP animal facility under LMCP supervision).  
+**Who should NOT use this as their main guide:** Animal house **support staff** (they get a **staff** account from the administrator, not collaborating-researcher self-registration).
 
 **System:** LMCP Animal Facility Management (LMCPAFM)  
 **Institution:** L. M. College of Pharmacy (LMCP), Ahmedabad  
 
 ---
 
-## 1. What students do in LMCPAFM
+## 1. What collaborating researchers do in LMCPAFM
 
-Students usually **do not submit** Form B to IAEC. Your faculty guide (Principal Investigator) submits. Your typical jobs are:
+You **prepare** draft Form B content; **LMCP Pharmacology faculty** on your team **submits** to IAEC. Typical jobs:
 
-1. Create your own login (if your guide asks you to).  
-2. Complete a short **Investigator Profile**.  
-3. Help **type and save** Form B sections after your guide **adds and links** you on the project team.  
-4. After IAEC approval, help with **experiment records** only if your guide allows it on the **Project Workspace**.
+1. Create your own login (self-registration or account from your guide).  
+2. Complete a short **Investigator Profile** (use your **home institution name** if you are from another college).  
+3. **Start a new Form B** or help **type and save** sections after an LMCP guide **adds and links** you on Step 2.  
+4. On Step 2, ensure at least one **LMCP Pharmacology department faculty** member is on the team and **linked** to their LMCPAFM account.  
+5. After IAEC approval, help with **experiment records** only if your LMCP faculty guide allows it on the **Project Workspace**.
 
-You **cannot** replace your guide for IAEC approval. At least one **LMCP faculty member** and one **admin-certified animal-handling faculty** (linked on Step 2) must be on every Form B before submission. Students do **not** receive requisition/allocation menus.
+You **cannot** submit Form B without linked **administrator-provisioned LMCP Pharmacology faculty** and **certified animal-handling** faculty on the form. Collaborating researchers do **not** receive requisition/allocation menus unless policy assigns that role separately.
 
 ---
 
@@ -1095,8 +1098,8 @@ You **cannot** replace your guide for IAEC approval. At least one **LMCP faculty
 
 | You need | Why |
 |----------|-----|
-| LMCP institutional email (for example `@lmcp.ac.in`) | Login and identity |
-| Approval from your guide to use LMCPAFM | They must add you on Form B Step 2 |
+| A working email address you can access | Login and identity |
+| Agreement with LMCP Pharmacology faculty to collaborate | They must be on Form B Step 2 and linked |
 | PDFs ready if your guide asks you to upload | Funding proof, certificates (guide decides) |
 
 **Do not** register as an investigator if you are **only** animal house support staff. Ask the administrator for a **staff** account instead.
@@ -1117,9 +1120,9 @@ If the administrator created an account for you:
 
 ### Option B — You register yourself
 
-1. Open the login page → **Register as Investigator**.  
-2. Enter your **full name**, **institutional email**, and a **password** (at least 8 characters).  
-3. If you see an error that your email is **not on the faculty roster**, that means only **approved faculty emails** can self-register. **Students:** your guide must either add you on Form B after registering themselves, or ask the administrator to create your investigator account.  
+1. Open the login page → **Register as a collaborating researcher**.  
+2. Enter your **full name**, **email**, and a **password** (at least 8 characters).  
+3. **LMCP faculty** must use **Register as Investigator** with an `@lmcp.ac.in` address (and may need to be on the approved faculty roster).  
 4. After registration, log in.
 
 ---
@@ -1128,12 +1131,12 @@ If the administrator created an account for you:
 
 1. After login, open **Investigator Profile** from the menu.  
 2. Fill in all required fields:
-   - Institutional email  
+   - Email (same as login; institutional only if you checked **I am LMCP faculty**)  
    - Institution name  
    - Department  
    - Designation (for example “Research Scholar”, “M.Pharm Student”)  
    - Qualification  
-3. **Important:** If you are **not** LMCP faculty, **uncheck** **“I am LMCP faculty”**.  
+3. Collaborating-researcher accounts do **not** show **“I am LMCP faculty”** — you cannot mark yourself as LMCP faculty. Faculty must use **Register as Investigator** with `@lmcp.ac.in`.  
 4. Click **Save**.
 
 Until this profile is complete, you may not be able to open Form B steps, even if your guide linked you.
@@ -1164,21 +1167,179 @@ You **cannot** click final **Submit Form B**. Your guide submits.
 
 ---
 
-## 6. Helping fill Form B (draft only)
+## 6. General rules while you type Form B
 
-1. Log in → **Investigator Dashboard** → open the project / Form B.  
-2. Walk through **Steps 1 to 7** only as your guide directs.  
-3. On **every step**, click **Save and continue** (or **Save**).  
-   - **Typing alone does not save.** If you leave without saving, data is lost.  
-4. **Step 2:** Upload **funding proof PDF** if your guide asks you to. You cannot go to Step 2b without it.  
-5. **Step 2b (Annexure I):** Study phases, groups, animal counts, and fates — follow your protocol document carefully. Fate counts must match group sizes.  
-6. **Step 7:** All declaration checkboxes must be ticked before submit — your guide usually checks this at review.
-
-**After submission:** Form B becomes **read-only** for everyone. You can open the **view** page and download PDFs but **cannot edit**. Contact your guide or IAEC for approved changes.
+1. Work only from the **protocol outline** your guide gives you (dissertation synopsis, approved draft, or literature plan).  
+2. On **every step**, click **Save and continue**. Typed text is **not saved** until you do.  
+3. **Do not submit** Form B — your **LMCP Pharmacology faculty** guide submits after review.  
+4. **Do not** change LMCP establishment fields (college name, CPCSEA registration) — they are fixed for LMCP.  
+5. **Do not** inflate animal numbers, hide painful procedures, or copy another student’s old Form B without your guide’s approval.  
+6. If a field is unclear, **leave it blank and ask your guide** rather than guessing.
 
 ---
 
-## 7. After IAEC approval (if your guide allows)
+## 7. LMCP student / institute projects — funding proof (no separate sponsor letter)
+
+Most M.Pharm / Ph.D. projects at LMCP are **Institutional** or **Self-funded**. Students often **do not** have a DST/industry **sanction letter**. IAEC still needs a **funding proof PDF** on Step 2.
+
+### What to enter on Step 2 (funding fields)
+
+| Field | What to enter |
+|-------|----------------|
+| **Funding agency** | **Institutional** (college-supported project) or **Self-funded** — as your guide directs |
+| **Funding agency address** | L. M. College of Pharmacy, Ahmedabad — full postal address your guide provides |
+| **Funding proof reference** | e.g. “Student project undertaking dated DD-MM-YYYY” or registration letter reference |
+
+### Create and upload this PDF
+
+Save as PDF and upload under **funding proof** on Step 2 (your guide may sign the printout).
+
+**Suggested title:** *LMCP — Student Research Project Undertaking (Funding Proof)*
+
+| Item | What to write |
+|------|----------------|
+| **Name of student** | Your full name (same as LMCPAFM login) |
+| **Program** | e.g. M.Pharm (Pharmacology), Ph.D. (Pharmaceutical Sciences) |
+| **Department** | Your department at LMCP |
+| **Enrollment number** | College roll / enrollment number |
+| **Project type** | One of: **Major Master Project**, **Minor Master Project**, **External Grant supported additional Project**, **Doctoral Project** |
+| **Guide / Supervisor name** | LMCP faculty guide (must match someone on Form B Step 2) |
+| **Dissertation / project title** | Same as Form B project title |
+| **Undertaking** | See text below |
+
+**Undertaking (include verbatim or equivalent):**
+
+> The project is Institute/Self/Research Grant Supported Project and I have taken due permission from college authorities and guide to conduct the project at college.
+
+Add **date**, **student signature**, and **guide signature** if your department requires it before upload.
+
+A fill-in template is in `Docs/templates/student_project_funding_undertaking.md` (export to PDF before upload).
+
+**When a real grant exists:** use the official sanction letter PDF instead; set **Funding agency** to Government/Industry as applicable and cite the letter number in **Funding proof reference**.
+
+---
+
+## 8. Form B — step-by-step: what to fill and what to avoid
+
+Use the same screens as faculty (`Form B` Steps **1–7**). Below is **student-oriented** guidance. Your guide reviews everything before submission.
+
+### Step 1 — Establishment and Principal Investigator (PI)
+
+| Field | Student: what to fill | Do **not** |
+|-------|------------------------|------------|
+| Establishment / CPCSEA blocks | **Read only** — leave as LMCP defaults | Do not try to edit |
+| Type of research | Usually **Educational** for thesis/dissertation — confirm with guide | Do not pick “Contract Research” unless guide says so |
+| Principal investigator | Name of **faculty PI** on the project (often pre-filled from whoever started the draft) | Do not list yourself as PI unless guide explicitly made you draft-PI |
+| Designation, department, qualifications | **Faculty PI’s** details (from guide) | Do not use student designation here unless you are the listed PI |
+| Contact email & phone | **PI’s working email/phone** for IAEC notices — must be saved on this step | Do not leave prefilled email unsaved (click **Save and continue**) |
+| Experience in animal experimentation | **PI’s** narrative (guide may dictate text) | Do not claim experience you do not have |
+| Research type | As guide directs | — |
+
+**You skip:** Nothing on this step is optional if your guide asks you to complete Step 1 — but **content must be PI-accurate**.
+
+---
+
+### Step 2 — Project details, team, funding
+
+| Field | Student: what to fill | Do **not** |
+|-------|------------------------|------------|
+| Project title | Official dissertation/thesis title | Informal or working titles unless guide approves |
+| Duration & dates | Months and start/end dates guide gives you | End date before start date |
+| Summary, objectives, outcomes | Text from synopsis — scientific, concise | Paste unrelated literature |
+| **Investigators** | Add **yourself** only if guide asks; role **`student_contributor`**, type **`student`**, **link** your LMCPAFM account | Do not remove LMCP Pharmacology faculty; do not set yourself as `faculty` |
+| Funding (see Section 7) | Institutional/Self + undertaking PDF | Do not leave funding proof empty |
+| Attachments | Upload **funding proof** PDF | Do not continue without upload |
+
+**Critical:** At least one **LMCP Pharmacology department faculty** (administrator-created account) must appear and be **linked** before submit — guide usually does this.
+
+---
+
+### Step 2b — Study plan (Annexure I)
+
+| Area | Student: what to fill | Do **not** |
+|------|------------------------|------------|
+| Design rationale | Why this experimental design (from protocol) | Vague one-liners |
+| Phases | Codes, names, dates, animal caps per guide’s design | Animal caps that exceed what guide approved |
+| Groups | Control/treatment counts, species/strain (**one project species/strain** unless mixed study) | Mismatched species per group without guide approval |
+| Dosing | For treatment/sham groups: agent, dose, route, frequency | Incomplete dosing rows on treatment groups |
+| Endpoints | What is measured and when | Empty endpoints |
+| Fates | Sacrifice/euthanasia/etc. — **counts must sum to group size** | Fate totals ≠ animal count |
+
+Use **Preview Annexure PDF** before leaving Step 2b.
+
+---
+
+### Step 3 — Justification for animals
+
+| Field | Student: what to fill | Do **not** |
+|-------|------------------------|------------|
+| Why animals are necessary | Scientific need — why in vitro is insufficient | “Because it is mandatory for degree” alone |
+| Alternatives / 3Rs narrative | What non-animal work was or will be done | Leave blank |
+| Species/strain/number justification | Match **2b** and statistics synopsis | Numbers contradicting Step 2b |
+| Animal requirement table | Species, strain, sex, age, weight in **grams**, source (usually **institutional animal house**), year-wise breakup summing to total | Weights not in grams; breakup sum wrong |
+| Similar experiments here/elsewhere | Honest Yes/No with short narrative | False “No” if college already did similar work |
+
+---
+
+### Step 4 — Procedures (pain, anaesthesia, surgery, euthanasia)
+
+| Field | Student: what to fill | Do **not** |
+|-------|------------------------|------------|
+| Procedure description | Step-by-step from approved protocol | Skip painful steps |
+| Pain category | Honest A–E category | Under-state pain |
+| Anaesthesia / analgesia | As protocol; “None” only where truly Category A/B | Leave painful procedures without analgesia plan |
+| Injections / blood withdrawal | **All four** injection fields if any one is filled; **both** blood fields if one is filled | Partial rows |
+| Survival surgery / euthanasia | Complete if Yes; euthanasia method per college SOP | “TBD” |
+
+---
+
+### Step 5 — Housing and husbandry
+
+| Field | Student: what to fill | Do **not** |
+|-------|------------------------|------------|
+| Housing, feeding, enrichment | Standard LMCP animal house options unless guide specifies special cages | Invent non-approved housing |
+| Transport, reuse, rehabilitation | “In-house” / “Not applicable” when true | — |
+| Carcass disposal | Institutional biomedical waste SOP wording | — |
+
+---
+
+### Step 6 — Personnel and training
+
+| Field | Student: what to fill | Do **not** |
+|-------|------------------------|------------|
+| Authorized personnel rows | **You**, your guide, and anyone who will handle animals — real contact details | Fake emails; people not on Step 2 team |
+| Training / competency | Basic handling, CPCSEA modules, dates — as actually completed | Claim training not done |
+
+Certified **LMCP faculty** animal handlers must be listed — guide adds them.
+
+---
+
+### Step 7 — Hazards and declarations
+
+| Field | Student: what to fill | Do **not** |
+|-------|------------------------|------------|
+| Hazardous agents | **No** if none; if **Yes**, details + upload matching certificate PDFs | Yes without certificates |
+| Safety measures & endpoints | From protocol | Empty if hazards = Yes |
+| Declarations (all checkboxes) | Tick **only after guide confirms** text is final | Tick blindly before guide review |
+| Signature name, date, place | Usually **faculty PI** signs — guide directs | Student signs as PI unless guide is PI-in-name-only on paper |
+
+---
+
+### Review screen
+
+| You may | Guide must |
+|---------|------------|
+| Open review, download draft PDFs, fix typos if still draft | Run final checklist, **Submit Form B**, attend IAEC queries |
+
+---
+
+## 9. After submission (read-only)
+
+Form B becomes **read-only** for everyone. You can **view** and download PDFs but **cannot edit**. Changes go through your guide and IAEC after submission.
+
+---
+
+## 10. After IAEC approval (if your guide allows)
 
 When the project status is **approved** and a **protocol number** exists:
 
@@ -1194,7 +1355,7 @@ If a button is disabled or says **Forbidden**, the project may not be fully appr
 
 ---
 
-## 8. What students must not do
+## 11. What students must not do
 
 - Do **not** submit Form B unless the administrator explicitly gave you submit permission (not normal for students).  
 - Do **not** check **“I am LMCP faculty”** on your profile if you are a student.  
@@ -1204,7 +1365,7 @@ If a button is disabled or says **Forbidden**, the project may not be fully appr
 
 ---
 
-## 9. Troubleshooting
+## 12. Troubleshooting
 
 | Problem | What to do |
 |---------|------------|
@@ -1214,15 +1375,17 @@ If a button is disabled or says **Forbidden**, the project may not be fully appr
 | Submit button missing or fails | Normal for students — guide must submit. |
 | “Complete investigator profile” | Finish **Investigator Profile** and save. |
 | Lost work on a step | You likely skipped **Save and continue**. Re-enter and save. |
+| Cannot go past Step 2 | **Funding proof** PDF missing — upload undertaking (Section 7) or sponsor letter. |
+| Funding proof rejected informally by guide | Wrong project type on undertaking; guide signature missing; title mismatch with Step 2. |
 
 ---
 
-## 10. Quick page reference
+## 13. Quick page reference
 
 | Task | Menu / page |
 |------|-------------|
 | Log in | Login |
-| Register (if allowed) | Register as Investigator |
+| Register (collaborating researcher) | Registration → collaborating researcher |
 | Profile | Investigator Profile |
 | Your projects | Investigator Dashboard |
 | Form B steps | Form B Step 1 … Step 7, then Review |
@@ -1230,7 +1393,7 @@ If a button is disabled or says **Forbidden**, the project may not be fully appr
 
 ---
 
-## 11. Who to contact
+## 14. Who to contact
 
 | Issue | Contact |
 |-------|---------|
@@ -1238,7 +1401,7 @@ If a button is disabled or says **Forbidden**, the project may not be fully appr
 | Scientific content, submission | Your **faculty guide (PI)** |
 | IAEC meetings, protocol | **IAEC office** / Member Secretary |
 
-**More detail for Form B fields:** see `Docs/form_b_investigator_sop.md` (written for investigators; students use the same screens when editing).
+**Full field glossary (faculty):** `Docs/form_b_investigator_sop.md` — use when your guide asks for extra detail on a single field.
 
 ---
 
@@ -2235,11 +2398,13 @@ The same **institutional email domain** (for example `@lmcp.ac.in`) is used by f
 | **Faculty PI** | `investigator` | Self-register **if on faculty roster** (when enforced), **or** admin pre-creates investigator |
 | **Faculty certified for animal handling** (~10–15) | `investigator` + **certified** flag | Admin **Create User** (tick certified) or CSV import with `animal_handler=yes` |
 | **Student / scholar** | `investigator` (limited) | Usually admin pre-create **or** register only if college allows; linked on Form B Step 2 by PI |
-| **Animal house support** | `staff` | **Admin only** — Create User → role **staff** |
+| **Animal house support** | `staff` | **Admin only** — Create User → role **staff** (facility day-to-day work, inventory, logs — **not** pharmacology investigators) |
 | **IAEC member / secretary** | `iaec` | **Admin only** |
 | **System coordinator** | `admin` | Bootstrap script or another admin |
 
-**Tell support staff clearly:** Do **not** use “Register as Investigator”. You will receive a **staff** login.
+**Tell support staff clearly:** Do **not** use “Register as Investigator”. You will receive a **staff** login. **Staff cannot create users or open the user directory** — only **admin** can.
+
+**Pharmacology department faculty** are **`investigator`** accounts (admin-created), **not** `staff`. Create them on **Admin Dashboard → Create User** with role **investigator** and certification when they handle animal requisitions.
 
 ---
 

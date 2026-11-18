@@ -14,6 +14,7 @@ export interface ResourceDocument {
   category: string;
   markdown: string;
   html: string;
+  source_updated_at: string | null;
 }
 
 export async function getResourceCatalog(): Promise<ResourceCatalogItem[]> {

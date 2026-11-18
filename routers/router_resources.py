@@ -1,10 +1,13 @@
+from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from crud.exceptions import CRUDValidationError
+from crud.investigator_profile import get_or_create_profile
+from database.database import get_db
 from dependencies.auth import get_current_user, user_role_names
 from models.user import User
 from utils.qa_sop_pack import (
@@ -45,6 +48,22 @@ class ResourceDocumentResponse(BaseModel):
     category: str
     markdown: str
     html: str
+    source_updated_at: datetime | None = None
+
+
+def _is_self_registered_scholar(db: Session, user: User) -> bool:
+    profile = get_or_create_profile(db, user.id)
+    return bool(profile.is_self_registered_scholar)
+
+
+def _require_qa_pack_access(user: User) -> None:
+    roles = set(user_role_names(user))
+    if roles.intersection({"admin", "iaec"}):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="QA validation pack is for administrators and IAEC only",
+    )
 
 
 def _render_markdown(text: str) -> str:
@@ -57,8 +76,12 @@ def _render_markdown(text: str) -> str:
 
 
 @router.get("/catalog", response_model=ResourceCatalogResponse)
-def list_resource_catalog(current_user: User = Depends(get_current_user)):
+def list_resource_catalog(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     roles = set(user_role_names(current_user))
+    scholar = _is_self_registered_scholar(db, current_user)
     items = [
         ResourceCatalogItem(
             slug=doc.slug,
@@ -66,15 +89,27 @@ def list_resource_catalog(current_user: User = Depends(get_current_user)):
             summary=doc.summary,
             category=doc.category,
         )
-        for doc in available_docs_for_user(roles)
+        for doc in available_docs_for_user(
+            roles, is_self_registered_scholar=scholar
+        )
     ]
     return ResourceCatalogResponse(items=items)
 
 
 @router.get("/docs/student-guide.pdf")
-def download_student_form_b_sop_pdf(current_user: User = Depends(get_current_user)):
+def download_student_form_b_sop_pdf(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Form B guide for collaborating researchers (students / external institutes)."""
-    del current_user
+    doc = get_catalog_doc("student-guide")
+    if doc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guide not found")
+    roles = set(user_role_names(current_user))
+    scholar = _is_self_registered_scholar(db, current_user)
+    if not user_can_view_doc(roles, doc, is_self_registered_scholar=scholar):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to view this guide")
+
     if not _STUDENT_SOP.is_file():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -85,28 +120,40 @@ def download_student_form_b_sop_pdf(current_user: User = Depends(get_current_use
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": 'attachment; filename="LMCPAFM-Student-Form-B-SOP.pdf"'
+            "Content-Disposition": 'attachment; filename="LMCPAFM-Student-Form-B-SOP.pdf"',
+            "Cache-Control": "no-store",
         },
     )
 
 
 @router.get("/docs/{slug}", response_model=ResourceDocumentResponse)
-def get_resource_document(slug: str, current_user: User = Depends(get_current_user)):
+def get_resource_document(
+    slug: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     doc = get_catalog_doc(slug)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guide not found")
 
     roles = set(user_role_names(current_user))
-    if not user_can_view_doc(roles, doc):
+    scholar = _is_self_registered_scholar(db, current_user)
+    if not user_can_view_doc(roles, doc, is_self_registered_scholar=scholar):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to view this guide")
 
+    root = _REPO_ROOT
+    path = (root / doc.relative_path).resolve()
     try:
-        markdown_text = read_doc_markdown(doc)
+        markdown_text = read_doc_markdown(doc, repo_root=root)
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Guide file is not deployed on this server",
         ) from exc
+
+    source_updated_at = None
+    if path.is_file():
+        source_updated_at = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
 
     return ResourceDocumentResponse(
         slug=doc.slug,
@@ -115,13 +162,14 @@ def get_resource_document(slug: str, current_user: User = Depends(get_current_us
         category=doc.category,
         markdown=markdown_text,
         html=_render_markdown(markdown_text),
+        source_updated_at=source_updated_at,
     )
 
 
 @router.get("/qa-pack/download")
 def download_qa_sop_pack(current_user: User = Depends(get_current_user)):
-    """Zip of QA/UAT markdown for sharing offline (any logged-in user)."""
-    del current_user
+    """Zip of QA/UAT markdown for sharing offline (admin / IAEC)."""
+    _require_qa_pack_access(current_user)
     try:
         zip_bytes = build_qa_sop_zip_bytes()
     except CRUDValidationError as exc:
@@ -138,7 +186,7 @@ def download_qa_sop_pack(current_user: User = Depends(get_current_user)):
 @router.get("/qa-pack/combined.pdf")
 def download_combined_qa_pdf(current_user: User = Depends(get_current_user)):
     """Single combined QA validation pack as a PDF."""
-    del current_user
+    _require_qa_pack_access(current_user)
     try:
         pdf_bytes, filename = combined_qa_pack_pdf()
     except CRUDValidationError as exc:
@@ -154,7 +202,7 @@ def download_combined_qa_pdf(current_user: User = Depends(get_current_user)):
 @router.get("/qa-pack/combined.md")
 def download_combined_qa_markdown(current_user: User = Depends(get_current_user)):
     """Single combined QA validation markdown file."""
-    del current_user
+    _require_qa_pack_access(current_user)
     try:
         text, filename = combined_qa_pack_markdown()
     except CRUDValidationError as exc:

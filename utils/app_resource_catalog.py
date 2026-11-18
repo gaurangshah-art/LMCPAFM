@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -15,8 +16,10 @@ class AppResourceDoc:
     summary: str
     relative_path: str
     category: str
-    """Role names that may view this doc. Empty tuple = all authenticated users."""
+    """Role names that may view this doc. Empty tuple = not shown (assign explicit roles)."""
     audiences: tuple[str, ...] = ()
+    """When the user has only the investigator role: faculty vs scholar filtering."""
+    investigator_scope: Literal["any", "faculty", "scholar"] = "any"
     sort_order: int = 100
 
 
@@ -27,6 +30,7 @@ CATALOG: tuple[AppResourceDoc, ...] = (
         summary="Start here — which guide applies to your role.",
         relative_path="Docs/sop_personnel_index.md",
         category="Start here",
+        audiences=("admin", "iaec"),
         sort_order=10,
     ),
     AppResourceDoc(
@@ -35,6 +39,7 @@ CATALOG: tuple[AppResourceDoc, ...] = (
         summary="Review pack and publication notes for coordinators.",
         relative_path="Docs/sop_master_index.md",
         category="Start here",
+        audiences=("admin",),
         sort_order=20,
     ),
     AppResourceDoc(
@@ -44,6 +49,7 @@ CATALOG: tuple[AppResourceDoc, ...] = (
         relative_path="Docs/sop_faculty_personnel.md",
         category="Investigator",
         audiences=("investigator",),
+        investigator_scope="faculty",
         sort_order=30,
     ),
     AppResourceDoc(
@@ -53,6 +59,7 @@ CATALOG: tuple[AppResourceDoc, ...] = (
         relative_path="Docs/form_b_investigator_sop.md",
         category="Investigator",
         audiences=("investigator", "iaec"),
+        investigator_scope="faculty",
         sort_order=40,
     ),
     AppResourceDoc(
@@ -62,6 +69,7 @@ CATALOG: tuple[AppResourceDoc, ...] = (
         relative_path="Docs/sop_student_personnel.md",
         category="Investigator",
         audiences=("investigator",),
+        investigator_scope="scholar",
         sort_order=50,
     ),
     AppResourceDoc(
@@ -106,6 +114,7 @@ CATALOG: tuple[AppResourceDoc, ...] = (
         summary="Structured test scenarios for all roles on staging.",
         relative_path="Docs/faculty_evaluation_sop.md",
         category="Quality assurance",
+        audiences=("admin", "iaec"),
         sort_order=100,
     ),
     AppResourceDoc(
@@ -114,6 +123,7 @@ CATALOG: tuple[AppResourceDoc, ...] = (
         summary="Printable pass/fail sheet for evaluators.",
         relative_path="Docs/faculty_evaluation_checklist.md",
         category="Quality assurance",
+        audiences=("admin", "iaec"),
         sort_order=110,
     ),
     AppResourceDoc(
@@ -122,6 +132,7 @@ CATALOG: tuple[AppResourceDoc, ...] = (
         summary="Single-document UAT pack with embedded role SOPs.",
         relative_path="Docs/lmcpafm_qa_validation_pack.md",
         category="Quality assurance",
+        audiences=("admin", "iaec"),
         sort_order=120,
     ),
 )
@@ -133,20 +144,44 @@ def get_catalog_doc(slug: str) -> AppResourceDoc | None:
     return _SLUG_INDEX.get(slug)
 
 
-def user_can_view_doc(user_roles: set[str], doc: AppResourceDoc) -> bool:
+def investigator_only_user(user_roles: set[str]) -> bool:
+    return user_roles == {"investigator"}
+
+
+def user_can_view_doc(
+    user_roles: set[str],
+    doc: AppResourceDoc,
+    *,
+    is_self_registered_scholar: bool = False,
+) -> bool:
     if "admin" in user_roles:
         return True
     if not doc.audiences:
-        return True
-    return bool(user_roles.intersection(doc.audiences))
+        return False
+    if not user_roles.intersection(doc.audiences):
+        return False
+
+    if investigator_only_user(user_roles):
+        if doc.investigator_scope == "scholar":
+            return is_self_registered_scholar
+        if doc.investigator_scope == "faculty":
+            return not is_self_registered_scholar
+    return True
 
 
-def available_docs_for_user(user_roles: set[str], repo_root: Path | None = None) -> list[AppResourceDoc]:
+def available_docs_for_user(
+    user_roles: set[str],
+    repo_root: Path | None = None,
+    *,
+    is_self_registered_scholar: bool = False,
+) -> list[AppResourceDoc]:
     root = repo_root or REPO_ROOT
     roles = set(user_roles)
     rows: list[AppResourceDoc] = []
     for doc in sorted(CATALOG, key=lambda row: (row.sort_order, row.title)):
-        if not user_can_view_doc(roles, doc):
+        if not user_can_view_doc(
+            roles, doc, is_self_registered_scholar=is_self_registered_scholar
+        ):
             continue
         if not (root / doc.relative_path).is_file():
             continue
