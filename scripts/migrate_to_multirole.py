@@ -1,5 +1,11 @@
-import sys
+"""Backfill user_roles from legacy users.role before Alembic drops the column.
+
+Prefer `alembic upgrade head` (revision j1k2l3m4n5o6), which performs the same
+backfill and removes users.role. Use this script only for manual repair on a DB
+that still has the legacy column and has not yet applied that migration.
+"""
 from pathlib import Path
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))

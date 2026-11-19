@@ -150,7 +150,35 @@ Set-Location C:/LMCPAFM
 docker run --rm -p 8000:8000 --env-file .env lmcpafm-backend
 ```
 
-The container startup command runs `alembic upgrade head` before starting Uvicorn.
+The container startup script (`scripts/docker_entrypoint.sh`) runs `alembic upgrade head` before starting Uvicorn. The Docker healthcheck allows up to **120s** for migrations on first boot.
+
+### If `backend` is unhealthy on staging
+
+1. **Pull latest code** on the VM (`git pull`) so Alembic has a single head (`c9d0e1f2a3b4` after `d1e2f3a4b5c6`).
+2. **Read logs** (migration errors appear before Uvicorn starts):
+
+   ```bash
+   sudo docker compose -f compose.yaml -f compose.postgres.yaml -f compose.prod.yaml logs backend --tail 120
+   ```
+
+3. **Rebuild without cache** if the build log shows only `CACHED` layers and you expect new code:
+
+   ```bash
+   sudo docker compose -f compose.yaml -f compose.postgres.yaml -f compose.prod.yaml build --no-cache backend frontend
+   sudo docker compose -f compose.yaml -f compose.postgres.yaml -f compose.prod.yaml up -d backend frontend
+   ```
+
+4. **Check readiness** from the host:
+
+   ```bash
+   curl -s http://127.0.0.1:8000/health/ready
+   ```
+
+Common failure: `alembic upgrade head` exits (duplicate table/column, or multiple heads). Fix the DB revision or deploy the merged migration chain, then recreate the backend container.
+
+**Form B PDF download returns 400 (`Attachment file not found on disk`):** Uploaded PDFs must live on the persistent volume. `compose.yaml` sets `FORMB_ATTACHMENT_DIR=/data/form_b_attachments` (same `lmcpafm_data` volume as the DB). After a redeploy without this variable, funding-proof rows may exist in Postgres while files are missing — upgrade backend and recreate the container with current compose, then retry download (main Form B PDF still generates; funding annex is skipped if the file is gone).
+
+**Port / healthcheck:** In `.env`, `PORT` is only the **host** port mapped to container `8000`. The API always listens on **8000 inside the container**. If logs show `Uvicorn ... port 8001` while healthchecks probe `8000`, the backend stays **unhealthy** — set `PORT` in compose to `8000` internally (current `compose.yaml`) or use `compose.oracle.yaml`, which forces `PORT: 8000` in the container.
 
 The image also includes a Docker healthcheck that probes `GET /health/ready` on the local container port.
 

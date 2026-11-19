@@ -1,41 +1,47 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../api/client";
+import { createMeeting } from "../../api/iaecApi";
+import { getApiErrorMessage } from "../../api/errors";
 
 export function IaecCreateMeeting() {
   const navigate = useNavigate();
 
-  const [meetingYear, setMeetingYear] = useState("");
   const [meetingNumber, setMeetingNumber] = useState("");
   const [meetingDate, setMeetingDate] = useState("");
+  const [meetingTime, setMeetingTime] = useState("");
+  const [venue, setVenue] = useState("");
+  const [minutes, setMinutes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   function validateMeeting() {
-    if (!meetingYear) return "Meeting year is required.";
     if (!meetingNumber.trim()) return "Meeting number is required.";
     if (!meetingDate) return "Meeting date is required.";
+    if (!meetingTime.trim()) return "Meeting time is required.";
+    if (!venue.trim()) return "Meeting venue is required.";
     return null;
   }
 
   async function handleCreate() {
     const error = validateMeeting();
     if (error) {
-      alert(error);
+      setErrorMessage(error);
       return;
     }
 
     setLoading(true);
+    setErrorMessage(null);
     try {
-      await api.post("/iaec/meetings", {
-        meeting_year: Number(meetingYear),
-        meeting_number: Number(meetingNumber),
-        meeting_date: meetingDate,
+      await createMeeting({
+        date: meetingDate,
+        meeting_number: meetingNumber.trim(),
+        meeting_time: meetingTime.trim(),
+        venue: venue.trim(),
+        minutes,
       });
-
-      alert("Meeting created successfully.");
-      navigate("/iaec/dashboard");
-    } catch {
-      alert("Failed to create meeting.");
+      navigate("/iaec-dashboard");
+    } catch (err) {
+      setErrorMessage(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -45,33 +51,16 @@ export function IaecCreateMeeting() {
     <div className="page-card">
       <header className="section-header">
         <h2>Create IAEC Meeting</h2>
-        <p>Define meeting year, number, and date.</p>
+        <p>Define meeting number, schedule, and venue for invitation emails.</p>
       </header>
 
+      {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
+
       <div className="form-grid">
-
-        <label>
-          Meeting Year
-          <select
-            value={meetingYear}
-            onChange={(e) => setMeetingYear(e.target.value)}
-          >
-            <option value="">Select year</option>
-            {Array.from({ length: 5 }).map((_, i) => {
-              const year = new Date().getFullYear() + i;
-              return (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              );
-            })}
-          </select>
-        </label>
-
         <label>
           Meeting Number
           <input
-            type="number"
+            type="text"
             value={meetingNumber}
             onChange={(e) => setMeetingNumber(e.target.value)}
             placeholder="e.g., 8"
@@ -87,15 +76,42 @@ export function IaecCreateMeeting() {
           />
         </label>
 
+        <label>
+          Meeting Time
+          <input
+            type="time"
+            value={meetingTime}
+            onChange={(e) => setMeetingTime(e.target.value)}
+          />
+        </label>
+
+        <label className="full-width">
+          Venue
+          <input
+            type="text"
+            value={venue}
+            onChange={(e) => setVenue(e.target.value)}
+            placeholder="e.g., IAEC Conference Room, L.M. College of Pharmacy"
+          />
+        </label>
+
+        <label className="full-width">
+          Minutes
+          <textarea
+            value={minutes}
+            onChange={(e) => setMinutes(e.target.value)}
+            rows={4}
+          />
+        </label>
       </div>
 
       <div className="wizard-actions">
-        <button className="btn-secondary" onClick={() => navigate("/iaec/dashboard")}>
-          ← Back
+        <button type="button" className="btn-secondary" onClick={() => navigate("/iaec-dashboard")}>
+          Back
         </button>
 
-        <button className="btn" onClick={handleCreate} disabled={loading}>
-          Create Meeting →
+        <button type="button" className="btn" onClick={() => void handleCreate()} disabled={loading}>
+          {loading ? "Creating..." : "Create Meeting"}
         </button>
       </div>
     </div>

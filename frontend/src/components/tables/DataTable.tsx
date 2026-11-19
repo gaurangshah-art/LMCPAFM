@@ -17,25 +17,40 @@ export function DataTable<T>({ columns, rows, emptyText }: DataTableProps<T>) {
   }
 
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            {columns.map((col) => (
-              <th key={col.header}>{col.header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>
+    <>
+      <div className="table-wrap table-desktop">
+        <table>
+          <thead>
+            <tr>
               {columns.map((col) => (
-                <td key={col.header}>{col.cell(row)}</td>
+                <th key={col.header}>{col.header}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={index}>
+                {columns.map((col) => (
+                  <td key={col.header}>{col.cell(row)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="table-cards table-mobile" aria-label="Data list">
+        {rows.map((row, index) => (
+          <article key={index} className="table-card">
+            {columns.map((col) => (
+              <div key={col.header} className="table-card-row">
+                <span className="table-card-label">{col.header}</span>
+                <div className="table-card-value">{col.cell(row)}</div>
+              </div>
+            ))}
+          </article>
+        ))}
+      </div>
+    </>
   );
 }

@@ -1,0 +1,4 @@
+label,location,room_code,capacity,status
+C1,Rack A / Shelf 1,R1,5,active
+C2,Rack A / Shelf 2,R1,5,active
+C3,Rack B / Shelf 1,R1,5,active

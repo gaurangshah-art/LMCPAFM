@@ -1,13 +1,14 @@
 from enum import Enum
 from typing import List
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserRole(str, Enum):
     investigator = "investigator"
     iaec = "iaec"
     staff = "staff"
+    admin = "admin"
 
 
 class UserCreate(BaseModel):
@@ -16,6 +17,7 @@ class UserCreate(BaseModel):
     password: str
     roles: List[UserRole]
     status: bool = True
+    is_certified_animal_handler: bool = False
 
 
 class UserRead(BaseModel):
@@ -24,5 +26,12 @@ class UserRead(BaseModel):
     email: EmailStr
     roles: List[str]
     status: bool
+    must_change_password: bool = False
+    is_certified_animal_handler: bool = False
+    admin_provisioned: bool = False
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str = Field(min_length=8)

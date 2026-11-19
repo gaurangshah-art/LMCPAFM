@@ -37,11 +37,11 @@ export function ExperimentPage() {
 
   return (
     <div className="page-grid">
-      <PageSection title="Create Experiment" subtitle="POST /experiment/">
+      <PageSection title="Create Experiment" subtitle="Log an experiment session against an allocation">
         <ExperimentForm onCreated={setExperiment} />
       </PageSection>
 
-      <PageSection title="Experiment Lookup" subtitle="GET /experiment/{exp_id}">
+      <PageSection title="Experiment Lookup" subtitle="Open an existing experiment record by ID">
         <div className="lookup-row">
           <select
             value={lookupId}

@@ -1,0 +1,58 @@
+import { apiClient } from "./client";
+
+export interface ResourceCatalogItem {
+  slug: string;
+  title: string;
+  summary: string;
+  category: string;
+}
+
+export interface ResourceDocument {
+  slug: string;
+  title: string;
+  summary: string;
+  category: string;
+  markdown: string;
+  html: string;
+  source_updated_at: string | null;
+}
+
+export async function getResourceCatalog(): Promise<ResourceCatalogItem[]> {
+  const { data } = await apiClient.get<{ items: ResourceCatalogItem[] }>("/resources/catalog");
+  return data.items;
+}
+
+export async function getResourceDocument(slug: string): Promise<ResourceDocument> {
+  const { data } = await apiClient.get<ResourceDocument>(`/resources/docs/${slug}`);
+  return data;
+}
+
+async function downloadBlob(path: string, fallbackFilename: string): Promise<{ blob: Blob; filename: string }> {
+  const response = await apiClient.get(path, { responseType: "blob" });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? fallbackFilename;
+  return { blob: response.data as Blob, filename };
+}
+
+export async function downloadQaSopPackZip(): Promise<{ blob: Blob; filename: string }> {
+  return downloadBlob("/resources/qa-pack/download", "LMCPAFM-QA-SOP-Pack.zip");
+}
+
+export async function downloadStudentFormBSopPdf(): Promise<{ blob: Blob; filename: string }> {
+  return downloadBlob(
+    "/resources/docs/student-guide.pdf",
+    "LMCPAFM-Student-Form-B-SOP.pdf",
+  );
+}
+
+export async function downloadQaPackPdf(): Promise<{ blob: Blob; filename: string }> {
+  const response = await apiClient.get("/resources/qa-pack/combined.pdf", {
+    responseType: "blob",
+    timeout: 120000,
+  });
+  const disposition = response.headers["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? "LMCPAFM-QA-Validation-Pack.pdf";
+  return { blob: response.data as Blob, filename };
+}

@@ -1,4 +1,6 @@
-from pydantic import BaseModel, EmailStr
+from typing import List, Literal
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
@@ -9,3 +11,36 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class InvestigatorRegisterRequest(BaseModel):
+    name: str = Field(min_length=1)
+    email: EmailStr
+    password: str = Field(min_length=8)
+    account_type: Literal["faculty", "student"] = "faculty"
+
+
+class InvestigatorRegisterResponse(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+    roles: List[str]
+    status: bool
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1)
+    new_password: str = Field(min_length=8)

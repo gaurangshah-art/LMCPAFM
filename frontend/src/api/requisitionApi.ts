@@ -17,6 +17,25 @@ export async function getRequisition(reqId: number): Promise<AnimalRequisition> 
   return data;
 }
 
+export interface AnimalRequisitionAmendPayload {
+  date: string;
+  purpose: string;
+  items: AnimalRequisitionCreate["items"];
+}
+
+export async function amendRequisition(
+  reqId: number,
+  payload: AnimalRequisitionAmendPayload,
+): Promise<AnimalRequisition> {
+  const { data } = await apiClient.put<AnimalRequisition>(`/iaec/requisition/${reqId}`, payload);
+  return data;
+}
+
+export async function cancelRequisition(reqId: number): Promise<AnimalRequisition> {
+  const { data } = await apiClient.post<AnimalRequisition>(`/iaec/requisition/${reqId}/cancel`);
+  return data;
+}
+
 // ⭐ NEW — required by RequisitionViewPage.tsx
 export async function getRequisitionById(reqId: number): Promise<AnimalRequisition> {
   const { data } = await apiClient.get<AnimalRequisition>(`/iaec/requisition/${reqId}`);

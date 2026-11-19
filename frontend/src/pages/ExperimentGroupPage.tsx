@@ -6,6 +6,7 @@ import {
   createIAECExperiment,
   updateIAECExperiment,
   deleteIAECExperiment,
+  getExperimentPlanningStatus,
 } from "../api/iaecApi";
 
 import {
@@ -15,7 +16,7 @@ import {
 
 import { getApiErrorMessage } from "../api/errors";
 
-import type { AnimalExperiment, ExperimentGroup } from "../api/types";
+import type { AnimalExperiment, ExperimentGroup, ExperimentPlanningStatus } from "../api/types";
 
 import { useLookupOptions } from "../hooks/useLookupOptions";
 
@@ -41,6 +42,7 @@ export function ExperimentGroupPage() {
 
   const [groupError, setGroupError] = useState<string | null>(null);
   const [experimentError, setExperimentError] = useState<string | null>(null);
+  const [planningStatus, setPlanningStatus] = useState<ExperimentPlanningStatus | null>(null);
 
   const approvedProtocols = useLookupOptions(getApprovedProtocolOptions);
   const approvedGroups = useLookupOptions(getApprovedExperimentGroupOptions);
@@ -60,8 +62,12 @@ export function ExperimentGroupPage() {
 
       const data = await getGroupsByProject(Number(projectIdInput));
       setGroups(data);
+
+      const planning = await getExperimentPlanningStatus(Number(projectIdInput));
+      setPlanningStatus(planning);
     } catch (error) {
       setGroupError(getApiErrorMessage(error));
+      setPlanningStatus(null);
     } finally {
       setIsLoadingGroups(false);
     }
@@ -139,12 +145,12 @@ export function ExperimentGroupPage() {
   return (
     <div className="page-grid">
       {/* CREATE GROUP */}
-      <PageSection title="Create Experiment Group" subtitle="POST /iaec/group">
+      <PageSection title="Create Experiment Group" subtitle="Define groups and planned animal counts for an approved protocol">
         <ExperimentGroupForm onCreated={handleGroupCreate} />
       </PageSection>
 
       {/* LIST GROUPS */}
-      <PageSection title="Groups By Project" subtitle="GET /iaec/group/{project_id}">
+      <PageSection title="Groups By Project" subtitle="View experiment groups for a selected protocol">
         <div className="lookup-row">
           <select
             value={projectIdInput}
@@ -172,18 +178,28 @@ export function ExperimentGroupPage() {
         {isLoadingGroups && <LoadingState label="Loading groups..." />}
         {groupError && <ErrorAlert message={groupError} />}
 
+        {planningStatus ? (
+          <div className="info-card compact-info-card">
+            <strong>Planning Summary</strong>
+            <p>Approved animals: {planningStatus.approved_animal_count ?? "-"}</p>
+            <p>Planned total: {planningStatus.planned_animal_total}</p>
+            <p>Remaining capacity: {planningStatus.remaining_animals ?? "-"}</p>
+            <p>{planningStatus.message}</p>
+          </div>
+        ) : null}
+
         <ExperimentGroupTable groups={groups} />
       </PageSection>
 
       {/* CREATE EXPERIMENT */}
-      <PageSection title="Create IAEC Experiment" subtitle="POST /iaec/experiment">
+      <PageSection title="Create IAEC Experiment" subtitle="Register an experiment under an approved group">
         <IAECAnimalExperimentForm onCreated={handleExperimentCreate} />
       </PageSection>
 
       {/* LIST EXPERIMENTS */}
       <PageSection
         title="IAEC Experiments By Group"
-        subtitle="GET /iaec/experiment/{group_id}"
+        subtitle="List experiments registered for a group"
       >
         <div className="lookup-row">
           <select

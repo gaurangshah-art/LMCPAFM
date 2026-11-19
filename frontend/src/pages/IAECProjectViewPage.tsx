@@ -31,32 +31,46 @@ export function IAECProjectViewPage() {
   const [error, setError] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
+  const [prevProjectId, setPrevProjectId] = useState(projectId);
 
-  async function loadProject() {
-    try {
-      setLoading(true);
-
-      const proj = await getProjectById(projectId);
-      setProject(proj);
-
-      const grp = await getGroupsByProject(projectId);
-      setGroups(grp);
-
-      const expMap: Record<number, AnimalExperiment[]> = {};
-      for (const g of grp) {
-        expMap[g.id] = await getIAECExperimentsByGroup(g.id);
-      }
-      setExperiments(expMap);
-
-    } catch {
-      setError("Failed to load project details.");
-    } finally {
-      setLoading(false);
-    }
+  if (prevProjectId !== projectId) {
+    setPrevProjectId(projectId);
+    setLoading(true);
   }
 
   useEffect(() => {
-    void loadProject();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const proj = await getProjectById(projectId);
+        if (cancelled) return;
+        setProject(proj);
+
+        const grp = await getGroupsByProject(projectId);
+        if (cancelled) return;
+        setGroups(grp);
+
+        const expMap: Record<number, AnimalExperiment[]> = {};
+        for (const g of grp) {
+          expMap[g.id] = await getIAECExperimentsByGroup(g.id);
+          if (cancelled) return;
+        }
+        setExperiments(expMap);
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load project details.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   async function handleAddComment() {

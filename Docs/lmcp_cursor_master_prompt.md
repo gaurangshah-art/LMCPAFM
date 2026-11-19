@@ -155,10 +155,11 @@ Build in this order:
 
 ### Phase 5: cleanup
 
-- Switch reads away from legacy `users.role`
-- Use `user_roles` as source of truth
-- Use `investigator_profile` for reusable faculty data
-- Retire legacy paths only after successful verification
+- Switch reads away from legacy `users.role` — **done** (`user_roles` is source of truth; column dropped)
+- Use `investigator_profile` for reusable faculty data — **done**
+- Add `investigator_profile_user_id` on `form_b_investigator` — **done**
+- Rename `form_b_investigator.role` to `project_role` — **done**
+- Retire legacy paths only after successful verification — **ongoing ops validation**
 
 
 
