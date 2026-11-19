@@ -47,6 +47,22 @@ export function getApiErrorMessage(error: unknown): string {
   return "Unexpected error";
 }
 
+/** Use after blob downloads — axios leaves error bodies as Blob, not JSON. */
+export async function getApiErrorMessageAsync(error: unknown): Promise<string> {
+  if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+    try {
+      const text = await error.response.data.text();
+      const body = JSON.parse(text) as ApiErrorResponse;
+      if (typeof body.detail === "string" && body.detail.trim()) {
+        return body.detail;
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return getApiErrorMessage(error);
+}
+
 export function isNotFoundError(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 404;
 }

@@ -356,7 +356,8 @@ def _load_application_context(db: Session, project_id: int) -> dict:
     co_investigators = [
         {"name": row.name, "role": row.project_role, "type": row.investigator_type or "-"}
         for row in investigators
-        if row.project_role.lower() not in {"principal_investigator", "principal investigator"}
+        if (row.project_role or "").strip().lower()
+        not in {"principal_investigator", "principal investigator"}
     ]
 
     study_plan = None

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from crud.exceptions import CRUDNotFoundError
+from crud.exceptions import CRUDNotFoundError, CRUDValidationError
 from crud.formb_attachments import read_attachment_bytes
 from crud.formb_application_pdf import render_cpcsea_form_b_application_pdf
 from database.lmcpafm_models import FormB, FormBAttachment, IAECProject
@@ -47,18 +47,26 @@ def render_form_b_complete_pdf(
         .first()
     )
     if funding_attachment is not None:
-        content, filename, content_type = read_attachment_bytes(funding_attachment)
-        funding_pdf = attachment_bytes_to_pdf(
-            content,
-            title="Annexure - Funding Proof / Sponsor Letter",
-            content_type=content_type,
-            filename=filename,
-            embed_first_page_only=True,
-            include_title_on_generated_pages=False,
-        )
-        if funding_pdf:
-            parts.append(funding_pdf)
+        try:
+            content, filename, content_type = read_attachment_bytes(funding_attachment)
+        except CRUDValidationError:
+            # DB row can outlive container storage (e.g. after redeploy without /data mount).
+            content = None
+        if content:
+            funding_pdf = attachment_bytes_to_pdf(
+                content,
+                title="Annexure - Funding Proof / Sponsor Letter",
+                content_type=content_type,
+                filename=filename,
+                embed_first_page_only=True,
+                include_title_on_generated_pages=False,
+            )
+            if funding_pdf:
+                parts.append(funding_pdf)
 
     if len(parts) == 1:
         return parts[0]
-    return merge_pdf_documents(*parts)
+    try:
+        return merge_pdf_documents(*parts)
+    except Exception:
+        return parts[0]

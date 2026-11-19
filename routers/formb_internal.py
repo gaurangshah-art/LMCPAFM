@@ -406,7 +406,15 @@ def download_form_b_application_pdf(
 
     try:
         form_b = get_member_form_b(db, current_user, form_b_id)
-        pdf_bytes = render_form_b_application_pdf(db, form_b.project_id)
+        try:
+            pdf_bytes = render_form_b_application_pdf(db, form_b.project_id)
+        except CRUDValidationError as exc:
+            if "attachment file not found" in str(exc).casefold():
+                from crud.formb_application_pdf import render_cpcsea_form_b_application_pdf
+
+                pdf_bytes = render_cpcsea_form_b_application_pdf(db, form_b.project_id)
+            else:
+                raise
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",

@@ -8,6 +8,7 @@ services:
       - ${LMCPAFM_ENV_FILE:-.env}
     environment:
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/LMCPAFM.db}
+      FORMB_ATTACHMENT_DIR: /data/form_b_attachments
       # Always listen on 8000 inside the container; host binding uses PORT below.
       PORT: "8000"
     ports:

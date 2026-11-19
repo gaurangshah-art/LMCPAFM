@@ -479,6 +479,7 @@ export async function getFormBReview(formBId: number): Promise<FormBReviewData> 
 export async function downloadFormBApplicationPdf(formBId: number): Promise<void> {
   const response = await apiClient.get(`/formb/${formBId}/application.pdf`, {
     responseType: "blob",
+    timeout: 120_000,
   });
   const blobUrl = window.URL.createObjectURL(response.data);
   const link = document.createElement("a");

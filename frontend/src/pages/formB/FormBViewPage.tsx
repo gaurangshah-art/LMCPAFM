@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getApiErrorMessage } from "../../api/errors";
+import { getApiErrorMessage, getApiErrorMessageAsync } from "../../api/errors";
 import {
   downloadFormBApplicationPdf,
   getFormBReview,
@@ -58,7 +58,7 @@ export function FormBViewPage() {
     try {
       await downloadFormBApplicationPdf(formBId);
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error));
+      setErrorMessage(await getApiErrorMessageAsync(error));
     } finally {
       setDownloading(false);
     }
